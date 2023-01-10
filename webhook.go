@@ -18,6 +18,7 @@ import (
 
 	"github.com/adnanh/webhook/internal/hook"
 	"github.com/adnanh/webhook/internal/https"
+	"github.com/adnanh/webhook/internal/link"
 	"github.com/adnanh/webhook/internal/middleware"
 	"github.com/adnanh/webhook/internal/pidfile"
 	"github.com/adnanh/webhook/internal/platform"
@@ -274,7 +275,7 @@ func main() {
 	// Clean up input
 	*httpMethods = strings.ToUpper(strings.ReplaceAll(*httpMethods, " ", ""))
 
-	hooksURL := makeRoutePattern(hooksURLPrefix)
+	hooksURL := link.MakeRoutePattern(hooksURLPrefix)
 
 	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprint(w, "OK")
@@ -292,7 +293,7 @@ func main() {
 
 	// Serve HTTP
 	if !*secure {
-		log.Printf("serving hooks on http://%s%s", addr, makeHumanPattern(hooksURLPrefix))
+		log.Printf("serving hooks on http://%s%s", addr, link.MakeHumanPattern(hooksURLPrefix))
 		log.Print(svr.Serve(ln))
 
 		return
@@ -307,7 +308,7 @@ func main() {
 	}
 	svr.TLSNextProto = make(map[string]func(*http.Server, *tls.Conn, http.Handler)) // disable http/2
 
-	log.Printf("serving hooks on https://%s%s", addr, makeHumanPattern(hooksURLPrefix))
+	log.Printf("serving hooks on https://%s%s", addr, link.MakeHumanPattern(hooksURLPrefix))
 	log.Print(svr.ServeTLS(ln, *cert, *key))
 }
 
@@ -798,23 +799,4 @@ func valuesToMap(values map[string][]string) map[string]interface{} {
 	}
 
 	return ret
-}
-
-// makeRoutePattern builds a pattern matching URL for the mux.
-func makeRoutePattern(prefix *string) string {
-	return makeBaseURL(prefix) + "/{id:.*}"
-}
-
-// makeHumanPattern builds a human-friendly URL for display.
-func makeHumanPattern(prefix *string) string {
-	return makeBaseURL(prefix) + "/{id}"
-}
-
-// makeBaseURL creates the base URL before any mux pattern matching.
-func makeBaseURL(prefix *string) string {
-	if prefix == nil || *prefix == "" {
-		return ""
-	}
-
-	return "/" + *prefix
 }
