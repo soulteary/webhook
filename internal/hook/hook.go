@@ -403,7 +403,7 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 			if p := strings.SplitN(s, ".", 2); len(p) > 1 {
 				index, err := strconv.ParseUint(p[0], 10, 64)
 
-				if err != nil || paramsValueSliceLength <= int(index) {
+				if err != nil || uint64(paramsValueSliceLength) <= index {
 					return nil, &ParameterNodeError{s}
 				}
 
@@ -412,7 +412,7 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 
 			index, err := strconv.ParseUint(s, 10, 64)
 
-			if err != nil || paramsValueSliceLength <= int(index) {
+			if err != nil || uint64(paramsValueSliceLength) <= index {
 				return nil, &ParameterNodeError{s}
 			}
 
