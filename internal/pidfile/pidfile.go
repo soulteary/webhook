@@ -17,7 +17,7 @@ type PIDFile struct {
 }
 
 func checkPIDFileAlreadyExists(path string) error {
-	if pidByte, err := os.ReadFile(path); err == nil {
+	if pidByte, err := os.ReadFile(filepath.Clean(path)); err == nil {
 		pidString := strings.TrimSpace(string(pidByte))
 		if pid, err := strconv.Atoi(pidString); err == nil {
 			if processExists(pid) {
