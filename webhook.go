@@ -284,8 +284,10 @@ func main() {
 
 	// Create common HTTP server settings
 	svr := &http.Server{
-		Addr:    addr,
-		Handler: r,
+		Addr:              addr,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       5 * time.Second,
 	}
 
 	// Serve HTTP
