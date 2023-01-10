@@ -362,7 +362,7 @@ func ReplaceParameter(s string, params, value interface{}) bool {
 			if p := strings.SplitN(s, ".", 2); len(p) > 1 {
 				index, err := strconv.ParseUint(p[0], 10, 64)
 
-				if err != nil || paramsValueSliceLength <= int(index) {
+				if err != nil || uint64(paramsValueSliceLength) <= index {
 					return false
 				}
 
