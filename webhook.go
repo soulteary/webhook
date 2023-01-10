@@ -151,7 +151,7 @@ func main() {
 	}
 
 	if *logPath != "" {
-		file, err := os.OpenFile(*logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
+		file, err := os.OpenFile(*logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
 			logQueue = append(logQueue, fmt.Sprintf("error opening log file %q: %v", *logPath, err))
 			// we'll bail out below
