@@ -20,6 +20,7 @@ import (
 	"github.com/adnanh/webhook/internal/https"
 	"github.com/adnanh/webhook/internal/link"
 	"github.com/adnanh/webhook/internal/middleware"
+	"github.com/adnanh/webhook/internal/monitor"
 	"github.com/adnanh/webhook/internal/pidfile"
 	"github.com/adnanh/webhook/internal/platform"
 	"github.com/adnanh/webhook/internal/version"
@@ -256,7 +257,7 @@ func main() {
 			}
 		}
 
-		go watchForFileChange()
+		go monitor.WatchForFileChange(watcher, reloadHooks, removeHooks)
 	}
 
 	r := mux.NewRouter()
@@ -751,39 +752,5 @@ func removeHooks(hooksFilePath string) {
 	if !*verbose && !*noPanic && lenLoadedHooks() == 0 {
 		log.SetOutput(os.Stdout)
 		log.Fatalln("couldn't load any hooks from file!\naborting webhook execution since the -verbose flag is set to false.\nIf, for some reason, you want webhook to run without the hooks, either use -verbose flag, or -nopanic")
-	}
-}
-
-func watchForFileChange() {
-	for {
-		select {
-		case event := <-(*watcher).Events:
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				log.Printf("hooks file %s modified\n", event.Name)
-				reloadHooks(event.Name)
-			} else if event.Op&fsnotify.Remove == fsnotify.Remove {
-				if _, err := os.Stat(event.Name); os.IsNotExist(err) {
-					log.Printf("hooks file %s removed, no longer watching this file for changes, removing hooks that were loaded from it\n", event.Name)
-					(*watcher).Remove(event.Name)
-					removeHooks(event.Name)
-				}
-			} else if event.Op&fsnotify.Rename == fsnotify.Rename {
-				time.Sleep(100 * time.Millisecond)
-				if _, err := os.Stat(event.Name); os.IsNotExist(err) {
-					// file was removed
-					log.Printf("hooks file %s removed, no longer watching this file for changes, and removing hooks that were loaded from it\n", event.Name)
-					(*watcher).Remove(event.Name)
-					removeHooks(event.Name)
-				} else {
-					// file was overwritten
-					log.Printf("hooks file %s overwritten\n", event.Name)
-					reloadHooks(event.Name)
-					(*watcher).Remove(event.Name)
-					(*watcher).Add(event.Name)
-				}
-			}
-		case err := <-(*watcher).Errors:
-			log.Println("watcher error:", err)
-		}
 	}
 }
