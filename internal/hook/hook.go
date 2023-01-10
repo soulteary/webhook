@@ -3,6 +3,7 @@ package hook
 import (
 	"bytes"
 	"crypto/hmac"
+	"path/filepath"
 
 	// #nosec
 	"crypto/sha1"
@@ -793,7 +794,7 @@ func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
 	}
 
 	// parse hook file for hooks
-	file, e := os.ReadFile(path)
+	file, e := os.ReadFile(filepath.Clean(path))
 
 	if e != nil {
 		return e
