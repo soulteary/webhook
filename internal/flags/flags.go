@@ -2,6 +2,7 @@ package flags
 
 import (
 	"flag"
+	"strings"
 
 	"github.com/adnanh/webhook/internal/hook"
 	"github.com/adnanh/webhook/internal/rules"
@@ -25,6 +26,15 @@ func ParseEnvs() AppFlags {
 	flags.SetUID = GetEnvInt(ENV_KEY_UID, DEFAULT_UID)
 	flags.HttpMethods = GetEnvStr(ENV_KEY_HTTP_METHODS, DEFAULT_HTTP_METHODS)
 	flags.PidPath = GetEnvStr(ENV_KEY_PID_FILE, DEFAULT_PID_FILE)
+
+	hooks := strings.Split(GetEnvStr(ENV_KEY_HOOKS, ""), ",")
+	var hooksFiles hook.HooksFiles
+	for _, hook := range hooks {
+		hooksFiles.Set(hook)
+	}
+	if len(hooksFiles) > 0 {
+		flags.HooksFiles = hooksFiles
+	}
 	return flags
 }
 
@@ -47,11 +57,12 @@ func ParseCLI(flags AppFlags) AppFlags {
 		HttpMethods     = flag.String("http-methods", DEFAULT_HTTP_METHODS, `set default allowed HTTP methods (ie. "POST"); separate methods with comma`)
 		PidPath         = flag.String("pidfile", DEFAULT_PID_FILE, "create PID file at the given path")
 
-		JustDisplayVersion = flag.Bool("version", false, "display webhook version and quit")
-		ResponseHeaders    hook.ResponseHeaders
+		ShowVersion     = flag.Bool("version", false, "display webhook version and quit")
+		ResponseHeaders hook.ResponseHeaders
 	)
 
-	flag.Var(&rules.HooksFiles, "hooks", "path to the json file containing defined hooks the webhook should serve, use multiple times to load from different files")
+	hooksFiles := rules.HooksFiles
+	flag.Var(&hooksFiles, "hooks", "path to the json file containing defined hooks the webhook should serve, use multiple times to load from different files")
 	flag.Var(&ResponseHeaders, "header", "response header to return, specified in format name=value, use multiple times to set multiple headers")
 
 	flag.Parse()
@@ -120,13 +131,14 @@ func ParseCLI(flags AppFlags) AppFlags {
 		flags.PidPath = *PidPath
 	}
 
-	if *JustDisplayVersion {
+	if *ShowVersion {
 		flags.ShowVersion = true
 	}
 
-	if len(rules.HooksFiles) > 0 {
-		flags.HooksFiles = rules.HooksFiles
+	if len(hooksFiles) > 0 {
+		flags.HooksFiles = append(flags.HooksFiles, hooksFiles...)
 	}
+	rules.HooksFiles = flags.HooksFiles
 
 	if len(ResponseHeaders) > 0 {
 		flags.ResponseHeaders = ResponseHeaders
