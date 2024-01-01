@@ -38,6 +38,8 @@ docker pull soulteary/webhook:3.0.0
 
 ### 下载预构建程序
 
+[![](.github/release.png)](https://github.com/soulteary/webhook/releases)
+
 不同架构的预编译二进制文件可在 [GitHub 发布](https://github.com/soulteary/webhook/releases) 页面获取。
 
 ## 配置
