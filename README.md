@@ -17,6 +17,21 @@ If you use Mattermost or Slack, you can set up an "Outgoing webhook integration"
 
 Everything else is the responsibility of the command's author.
 
+# Hookdoo
+<a href="https://www.hookdoo.com/?github"><img src="https://hookdoo.com/img/Hookdoo_Logo_1.png" height="96" alt="hookdoo" align="left" /></a>
+
+If you don't have time to waste configuring, hosting, debugging and maintaining your webhook instance, we offer a __SaaS__ solution that has all of the capabilities webhook provides, plus a lot more, and all that packaged in a nice friendly web interface. If you are interested, find out more at [hookdoo website](https://www.hookdoo.com/?ref=github-webhook-readme). If you have any questions, you can contact us at info@hookdoo.com
+
+#
+
+<a href="https://www.hookdeck.com/?ref=adnanh-webhook"><img src="http://hajdarevic.net/hookdeck-logo.svg" height="17" alt="hookdeck" align="left" /></a> If you need a way of inspecting, monitoring and replaying webhooks without the back and forth troubleshooting, [give Hookdeck a try!](https://www.hookdeck.com/?ref=adnanh-webhook)
+
+# Nango
+
+<a href="https://www.nango.dev?utm_source=github&utm_medium=oss-banner&utm_campaign=adnanh-webhook"><img src="https://uploads-ssl.webflow.com/64f77a831b9d50c279dc926c/656a436fa14ac7bdd490de84_Nango_Github_Banner_1200x398.png" height="110" alt="Nango" align="left" /></a>
+
+Building integrations to receive webhooks from an external API? Check out [Nango](https://www.nango.dev?utm_source=github&utm_medium=oss-banner&utm_campaign=adnanh-webhook), an open source platform for **product integrations**. Nango provides a unified API, helps you deal with OAuth, and syncs data between your application and external APIs.
+
 # Getting started
 ## Installation
 ### Building from source
@@ -121,6 +136,7 @@ Check out [Hook examples page](docs/Hook-Examples.md) for more complex examples 
  - VIDEO: [Gitlab CI/CD configuration using Docker and adnanh/webhook to deploy on VPS - Tutorial #1](https://www.youtube.com/watch?v=Qhn-lXjyrZA&feature=youtu.be) by [Yes! Let's Learn Software Engineering](https://www.youtube.com/channel/UCH4XJf2BZ_52fbf8fOBMF3w)
  - [Integrate automatic deployment in 20 minutes using webhooks + Nginx setup](https://anksus.me/blog/integrate-automatic-deployment-in-20-minutes-using-webhooks) by [Anksus](https://github.com/Anksus)
  - [Automatically redeploy your static blog with Gitea, Uberspace & Webhook](https://by.arran.nz/posts/code/webhook-deploy/) by [Arran](https://arran.nz)
+- [Automatically Updating My Zola Site Using a Webhook](https://osc.garden/blog/updating-site-with-webhook/) by [Óscar Fernández](https://osc.garden/)
  - ...
  - Want to add your own? Open an Issue or create a PR :-)
  
