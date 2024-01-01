@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -16,7 +15,6 @@ import (
 	"time"
 
 	"github.com/adnanh/webhook/internal/hook"
-	"github.com/adnanh/webhook/internal/https"
 	"github.com/adnanh/webhook/internal/link"
 	"github.com/adnanh/webhook/internal/middleware"
 	"github.com/adnanh/webhook/internal/monitor"
@@ -39,14 +37,8 @@ var (
 	noPanic            = flag.Bool("nopanic", false, "do not panic if hooks cannot be loaded when webhook is not running in verbose mode")
 	hotReload          = flag.Bool("hotreload", false, "watch hooks file for changes and reload them automatically")
 	hooksURLPrefix     = flag.String("urlprefix", "hooks", "url prefix to use for served hooks (protocol://yourserver:port/PREFIX/:hook-id)")
-	secure             = flag.Bool("secure", false, "use HTTPS instead of HTTP")
 	asTemplate         = flag.Bool("template", false, "parse hooks file as a Go template")
-	cert               = flag.String("cert", "cert.pem", "path to the HTTPS certificate pem file")
-	key                = flag.String("key", "key.pem", "path to the HTTPS certificate private key pem file")
 	justDisplayVersion = flag.Bool("version", false, "display webhook version and quit")
-	justListCiphers    = flag.Bool("list-cipher-suites", false, "list available TLS cipher suites")
-	tlsMinVersion      = flag.String("tls-min-version", "1.2", "minimum TLS version (1.0, 1.1, 1.2, 1.3)")
-	tlsCipherSuites    = flag.String("cipher-suites", "", "comma-separated list of supported TLS cipher suites")
 	useXRequestID      = flag.Bool("x-request-id", false, "use X-Request-Id header, if present, as request ID")
 	xRequestIDLimit    = flag.Int("x-request-id-limit", 0, "truncate X-Request-Id header to limit; default no limit")
 	maxMultipartMem    = flag.Int64("max-multipart-mem", 1<<20, "maximum memory in bytes for parsing multipart form data before disk caching")
@@ -83,15 +75,6 @@ func main() {
 
 	if *justDisplayVersion {
 		fmt.Println("webhook version " + version.Version)
-		os.Exit(0)
-	}
-
-	if *justListCiphers {
-		err := https.WriteTLSSupportedCipherStrings(os.Stdout, https.GetTLSMinVersion(*tlsMinVersion))
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
 		os.Exit(0)
 	}
 
@@ -279,24 +262,8 @@ func main() {
 	}
 
 	// Serve HTTP
-	if !*secure {
-		log.Printf("serving hooks on http://%s%s", addr, link.MakeHumanPattern(hooksURLPrefix))
-		log.Print(svr.Serve(ln))
-
-		return
-	}
-
-	// Server HTTPS
-	svr.TLSConfig = &tls.Config{
-		CipherSuites:             https.GetTLSCipherSuites(*tlsCipherSuites),
-		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-		MinVersion:               https.GetTLSMinVersion(*tlsMinVersion),
-		PreferServerCipherSuites: true,
-	}
-	svr.TLSNextProto = make(map[string]func(*http.Server, *tls.Conn, http.Handler)) // disable http/2
-
-	log.Printf("serving hooks on https://%s%s", addr, link.MakeHumanPattern(hooksURLPrefix))
-	log.Print(svr.ServeTLS(ln, *cert, *key))
+	log.Printf("serving hooks on http://%s%s", addr, link.MakeHumanPattern(hooksURLPrefix))
+	log.Print(svr.Serve(ln))
 }
 
 func hookHandler(w http.ResponseWriter, r *http.Request) {

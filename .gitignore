@@ -5,3 +5,5 @@ webhook
 /test/hookecho
 build
 coverage.out
+config.json
+redeploy.sh

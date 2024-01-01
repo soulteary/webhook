@@ -110,11 +110,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 ## 使用 HTTPS
 
-[webhook][w] 默认使用 http 提供服务。如果你希望 [webhook][w] 使用 https 提供安全内容，可以在启动 [webhook][w] 时使用 `-secure` 参数。必须使用 `-cert /path/to/cert.pem` 和 `-key /path/to/key.pem` 参数，携带包含服务器证书和匹配私钥的文件。如果证书由证书颁发机构签名，则证书文件应该是服务器证书后跟 CA 证书的连接。
-
-命令行参数中，也提供了 TLS 版本和密码套件选择标志。要列出可用的密码套件，请使用 `-list-cipher-suites` 参数。 `-tls-min-version` 参数可以与 `-list-cipher-suites` 参数一起使用。
-
-当然，更简单的方案是使用反向代理或者使用 traefik 等服务来提供 HTTPS 服务。
+[webhook][w] 默认使用 http 提供服务。如果你希望 [webhook][w] 使用 https 提供 HTTPS 服务，更简单的方案是使用反向代理或者使用 traefik 等服务来提供 HTTPS 服务。
 
 ## 跨域 CORS 请求头
 
