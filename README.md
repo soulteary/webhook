@@ -1,57 +1,42 @@
-# What is webhook? ![build-status][badge]
+# 什么是 webhook? ![build-status][badge]
 
  <img src="./docs/logo/logo-128x128.png" alt="Webhook" align="left" />
  
- [webhook][w] is a lightweight configurable tool written in Go, that allows you to easily create HTTP endpoints (hooks) on your server, which you can use to execute configured commands. You can also pass data from the HTTP request (such as headers, payload or query variables) to your commands. [webhook][w] also allows you to specify rules which have to be satisfied in order for the hook to be triggered.
+ [webhook][w] 是一个用 Go 语言编写的轻量可配置实用工具，它允许你在服务器上轻松创建 HTTP 服务（钩子），你可以使用这些服务来执行配置好的命令。你还可以将 HTTP 请求中的数据（如请求头内容、请求体以及请求参数）传递给你配置好的命令。[webhook][w] 还允许根据具体的条件规则来便触发钩子。
 
-For example, if you're using Github or Bitbucket, you can use [webhook][w] to set up a hook that runs a redeploy script for your project on your staging server, whenever you push changes to the master branch of your project.
+例如，如果你使用的是 Github 或 Gitea，可以使用 [webhook][w] 设置一个钩子，在每次你推送更改到项目的某个分支时，这个钩子会在你的暂存服务器上运行一个重新部署脚本。
 
-If you use Mattermost or Slack, you can set up an "Outgoing webhook integration" or "Slash command" to run various commands on your server, which can then report back directly to you or your channels using the "Incoming webhook integrations", or the appropriate response body.
+如果你使用 飞书、Mattermost 或 Slack，你可以设置一个“传出 Webhook 集成”或“斜杠命令”，来在你的服务器上运行各种命令，然后可以通过“传入 Webhook 集成”或处理合适的响应体，直接向你或你的 IM 会话或频道报告执行结果。
 
-[webhook][w] aims to do nothing more than it should do, and that is:
- 1. receive the request,
- 2. parse the headers, payload and query variables,
- 3. check if the specified rules for the hook are satisfied,
- 3. and finally, pass the specified arguments to the specified command via
-    command line arguments or via environment variables.
+[webhook][w] 的目标只做它应该做的事情，那就是：
 
-Everything else is the responsibility of the command's author.
+ 1. 接收请求，
+ 2. 解析请求头、请求体和请求参数，
+ 3. 检查钩子指定的运行规则是否得到满足，
+ 4. 最后，通过命令行参数或环境变量将指定的参数传递给指定的命令。
 
-# Hookdoo
-<a href="https://www.hookdoo.com/?github"><img src="https://hookdoo.com/img/Hookdoo_Logo_1.png" height="96" alt="hookdoo" align="left" /></a>
+其他的所有事情，都需要命令作者的来完成。
 
-If you don't have time to waste configuring, hosting, debugging and maintaining your webhook instance, we offer a __SaaS__ solution that has all of the capabilities webhook provides, plus a lot more, and all that packaged in a nice friendly web interface. If you are interested, find out more at [hookdoo website](https://www.hookdoo.com/?ref=github-webhook-readme). If you have any questions, you can contact us at info@hookdoo.com
+# 入门
 
-#
+## 软件安装
 
-<a href="https://www.hookdeck.com/?ref=adnanh-webhook"><img src="http://hajdarevic.net/hookdeck-logo.svg" height="17" alt="hookdeck" align="left" /></a> If you need a way of inspecting, monitoring and replaying webhooks without the back and forth troubleshooting, [give Hookdeck a try!](https://www.hookdeck.com/?ref=adnanh-webhook)
+### 下载预构建程序
 
-# Nango
+不同架构的预编译二进制文件可在 [GitHub 发布](https://github.com/soulteary/webhook/releases) 页面获取。
 
-<a href="https://www.nango.dev?utm_source=github&utm_medium=oss-banner&utm_campaign=adnanh-webhook"><img src="https://uploads-ssl.webflow.com/64f77a831b9d50c279dc926c/656a436fa14ac7bdd490de84_Nango_Github_Banner_1200x398.png" height="110" alt="Nango" align="left" /></a>
+## 配置
 
-Building integrations to receive webhooks from an external API? Check out [Nango](https://www.nango.dev?utm_source=github&utm_medium=oss-banner&utm_campaign=adnanh-webhook), an open source platform for **product integrations**. Nango provides a unified API, helps you deal with OAuth, and syncs data between your application and external APIs.
+我们可以来定义一些你希望 [webhook][w] 提供 HTTP 服务使用的钩子。
 
-# Getting started
-## Installation
-### Building from source
-To get started, first make sure you've properly set up your [Go](http://golang.org/doc/install) 1.19 or newer environment and then run
-```bash
-$ go build github.com/adnanh/webhook
-```
-to build the latest version of the [webhook][w].
+[webhook][w] 支持 JSON 或 YAML 配置文件，我们先来看看如何实现 JSON 配置。
 
-### Download prebuilt binaries
-Prebuilt binaries for different architectures are available at [GitHub Releases](https://github.com/soulteary/webhook/releases).
+首先，创建一个名为 hooks.json 的空文件。这个文件将包含 [webhook][w] 将要启动为 HTTP 服务的钩子的数组。查看 [Hook definition page](docs/Hook-Definition.md)，可以查看钩子可以包含哪些属性，以及如何使用它们的详细描述。
 
-## Configuration
-Next step is to define some hooks you want [webhook][w] to serve.
-[webhook][w] supports JSON or YAML configuration files, but we'll focus primarily on JSON in the following example.
-Begin by creating an empty file named `hooks.json`. This file will contain an array of hooks the [webhook][w] will serve. Check [Hook definition page](docs/Hook-Definition.md) to see the detailed description of what properties a hook can contain, and how to use them.
+让我们定义一个简单的名为 redeploy-webhook 的钩子，它将运行位于 `/var/scripts/redeploy.sh` 的重新部署脚本。确保你的 bash 脚本在顶部有 `#!/bin/sh`。
 
-Let's define a simple hook named `redeploy-webhook` that will run a redeploy script located in `/var/scripts/redeploy.sh`. Make sure that your bash script has `#!/bin/sh` shebang on top.
+我们的 hooks.json 文件将如下所示：
 
-Our `hooks.json` file will now look like this:
 ```json
 [
   {
@@ -62,116 +47,72 @@ Our `hooks.json` file will now look like this:
 ]
 ```
 
-**NOTE:** If you prefer YAML, the equivalent `hooks.yaml` file would be:
+如果你更喜欢使用 YAML，相应的 hooks.yaml 文件内容为：
+
 ```yaml
 - id: redeploy-webhook
   execute-command: "/var/scripts/redeploy.sh"
   command-working-directory: "/var/webhook"
 ```
 
-You can now run [webhook][w] using
+接下来，你可以通过下面的命令来执行 [webhook][w]：
+
 ```bash
 $ /path/to/webhook -hooks hooks.json -verbose
 ```
 
-It will start up on default port 9000 and will provide you with one HTTP endpoint
+程序将在默认的 9000 端口启动，并提供一个公开可访问的 HTTP 服务地址：
+
 ```http
 http://yourserver:9000/hooks/redeploy-webhook
 ```
 
-Check [webhook parameters page](docs/Webhook-Parameters.md) to see how to override the ip, port and other settings such as hook hotreload, verbose output, etc, when starting the [webhook][w].
+查看 [webhook 参数](docs/Webhook-Parameters.md) 了解如何在启动 [webhook][w] 时设置 IP、端口以及其它设置，例如钩子的热重载，详细输出等。
 
-By performing a simple HTTP GET or POST request to that endpoint, your specified redeploy script would be executed. Neat!
+当有任何 HTTP GET 或 POST 请求访问到服务地址后，你设置的重新部署脚本将被执行。
 
-However, hook defined like that could pose a security threat to your system, because anyone who knows your endpoint, can send a request and execute your command. To prevent that, you can use the `"trigger-rule"` property for your hook, to specify the exact circumstances under which the hook would be triggered. For example, you can use them to add a secret that you must supply as a parameter in order to successfully trigger the hook. Please check out the [Hook rules page](docs/Hook-Rules.md) for detailed list of available rules and their  usage.
+不过，像这样定义的钩子可能会对你的系统构成安全威胁，因为任何知道你端点的人都可以发送请求并执行命令。为了防止这种情况，你可以使用钩子的 "trigger-rule" 属性来指定触发钩子的确切条件。例如，你可以使用它们添加一个秘密参数，必须提供这个参数才能成功触发钩子。请查看 [Hook 规则](docs/Hook-Rules.md) 以获取可用规则及其使用方法的详细列表。
 
-## Multipart Form Data
-[webhook][w] provides limited support the parsing of multipart form data.
-Multipart form data can contain two types of parts: values and files.
-All form _values_ are automatically added to the `payload` scope.
-Use the `parse-parameters-as-json` settings to parse a given value as JSON.
-All files are ignored unless they match one of the following criteria:
+## 表单数据
 
-1. The `Content-Type` header is `application/json`.
-1. The part is named in the `parse-parameters-as-json` setting.
+[webhook][w] 提供了对表单数据的有限解析支持。
 
-In either case, the given file part will be parsed as JSON and added to the `payload` map.
+表单数据通常可以包含两种类型的部分：值和文件。
+所有表单 _值_ 会自动添加到 `payload` 范围内。
+使用 `parse-parameters-as-json` 设置将给定值解析为 JSON。
+除非符合以下标准之一，否则所有文件都会被忽略：
 
-## Templates
-[webhook][w] can parse the hooks configuration file as a Go template when given the `-template` [CLI parameter](docs/Webhook-Parameters.md). See the [Templates page](docs/Templates.md) for more details on template usage.
+ 1. `Content-Type` 标头是 `application/json`。
+ 2. 部分在 `parse-parameters-as-json` 设置中被命名。
 
-## Using HTTPS
-[webhook][w] by default serves hooks using http. If you want [webhook][w] to serve secure content using https, you can use the `-secure` flag while starting [webhook][w]. Files containing a certificate and matching private key for the server must be provided using the `-cert /path/to/cert.pem` and `-key /path/to/key.pem` flags. If the certificate is signed by a certificate authority, the cert file should be the concatenation of the server's certificate followed by the CA's certificate.
+在任一情况下，给定的文件部分将被解析为 JSON 并添加到 payload 映射中。
 
-TLS version and cipher suite selection flags are available from the command line. To list available cipher suites, use the `-list-cipher-suites` flag.  The `-tls-min-version` flag can be used with `-list-cipher-suites`.
+## 模版
 
-## CORS Headers
-If you want to set CORS headers, you can use the `-header name=value` flag while starting [webhook][w] to set the appropriate CORS headers that will be returned with each response.
+当使用 `-template` [命令行参数](docs/Webhook-Parameters.md)时，[webhook][w] 可以将钩子配置文件解析为 Go 模板。有关模板使用的更多详情，请查看[模版](docs/Templates.md)。
 
-## Interested in running webhook inside of a Docker container?
-You can use one of the following Docker images, or create your own (please read [this discussion](https://github.com/adnanh/webhook/issues/63)):
-- [almir/webhook](https://github.com/almir/docker-webhook)
-- [roxedus/webhook](https://github.com/Roxedus/docker-webhook)
-- [thecatlady/webhook](https://github.com/thecatlady/docker-webhook)
+## 使用 HTTPS
 
-## Examples
-Check out [Hook examples page](docs/Hook-Examples.md) for more complex examples of hooks.
+[webhook][w] 默认使用 http 提供服务。如果你希望 [webhook][w] 使用 https 提供安全内容，可以在启动 [webhook][w] 时使用 `-secure` 参数。必须使用 `-cert /path/to/cert.pem` 和 `-key /path/to/key.pem` 参数，携带包含服务器证书和匹配私钥的文件。如果证书由证书颁发机构签名，则证书文件应该是服务器证书后跟 CA 证书的连接。
 
-### Guides featuring webhook
- - [Plex 2 Telegram](https://gitlab.com/-/snippets/1972594) by [@psyhomb](https://github.com/psyhomb)
- - [Webhook & JIRA](https://sites.google.com/site/mrxpalmeiras/more/jira-webhooks) by [@perfecto25](https://github.com/perfecto25)
- - [Trigger Ansible AWX job runs on SCM (e.g. git) commit](http://jpmens.net/2017/10/23/trigger-awx-job-runs-on-scm-commit/) by [@jpmens](http://mens.de/)
- - [Deploy using GitHub webhooks](https://davidauthier.wearemd.com/blog/deploy-using-github-webhooks.html) by [@awea](https://davidauthier.wearemd.com)
- - [Setting up Automatic Deployment and Builds Using Webhooks](https://willbrowning.me/setting-up-automatic-deployment-and-builds-using-webhooks/) by [Will Browning](https://willbrowning.me/about/)
- - [Auto deploy your Node.js app on push to GitHub in 3 simple steps](https://webhookrelay.com/blog/2018/07/17/auto-deploy-on-git-push/) by Karolis Rusenas
- - [Automate Static Site Deployments with Salt, Git, and Webhooks](https://www.linode.com/docs/applications/configuration-management/automate-a-static-site-deployment-with-salt/) by [Linode](https://www.linode.com)
- - [Using Prometheus to Automatically Scale WebLogic Clusters on Kubernetes](https://blogs.oracle.com/weblogicserver/using-prometheus-to-automatically-scale-weblogic-clusters-on-kubernetes-v5) by [Marina Kogan](https://blogs.oracle.com/author/9a4fe754-1cc2-4c64-95fc-360642b62927)
- - [Github Pages and Jekyll - A New Platform for LACNIC Labs](https://labs.lacnic.net/a-new-platform-for-lacniclabs/) by [Carlos Martínez Cagnazzo](https://twitter.com/carlosm3011)
- - [How to Deploy React Apps Using Webhooks and Integrating Slack on Ubuntu](https://www.alibabacloud.com/blog/how-to-deploy-react-apps-using-webhooks-and-integrating-slack-on-ubuntu_594116) by Arslan Ud Din Shafiq
- - [Private webhooks](https://ihateithe.re/2018/01/private-webhooks/) by [Thomas](https://ihateithe.re/colophon/)
- - [Adventures in webhooks](https://medium.com/@draketech/adventures-in-webhooks-2d6584501c62) by [Drake](https://medium.com/@draketech)
- - [GitHub pro tips](http://notes.spencerlyon.com/2016/01/04/github-pro-tips/) by [Spencer Lyon](http://notes.spencerlyon.com/)
- - [XiaoMi Vacuum + Amazon Button = Dash Cleaning](https://www.instructables.com/id/XiaoMi-Vacuum-Amazon-Button-Dash-Cleaning/) by [c0mmensal](https://www.instructables.com/member/c0mmensal/)
- - [Set up Automated Deployments From Github With Webhook](https://maximorlov.com/automated-deployments-from-github-with-webhook/) by [Maxim Orlov](https://twitter.com/_maximization)
- - VIDEO: [Gitlab CI/CD configuration using Docker and adnanh/webhook to deploy on VPS - Tutorial #1](https://www.youtube.com/watch?v=Qhn-lXjyrZA&feature=youtu.be) by [Yes! Let's Learn Software Engineering](https://www.youtube.com/channel/UCH4XJf2BZ_52fbf8fOBMF3w)
- - [Integrate automatic deployment in 20 minutes using webhooks + Nginx setup](https://anksus.me/blog/integrate-automatic-deployment-in-20-minutes-using-webhooks) by [Anksus](https://github.com/Anksus)
- - [Automatically redeploy your static blog with Gitea, Uberspace & Webhook](https://by.arran.nz/posts/code/webhook-deploy/) by [Arran](https://arran.nz)
-- [Automatically Updating My Zola Site Using a Webhook](https://osc.garden/blog/updating-site-with-webhook/) by [Óscar Fernández](https://osc.garden/)
- - ...
- - Want to add your own? Open an Issue or create a PR :-)
- 
-## Community Contributions
-See the [webhook-contrib][wc] repository for a collections of tools and helpers related to [webhook][w] that have been contributed by the [webhook][w] community.
+命令行参数中，也提供了 TLS 版本和密码套件选择标志。要列出可用的密码套件，请使用 `-list-cipher-suites` 参数。 `-tls-min-version` 参数可以与 `-list-cipher-suites` 参数一起使用。
 
-## Need help?
-Check out [existing issues](https://github.com/soulteary/webhook/issues) to see if someone else also had the same problem, or [open a new one](https://github.com/soulteary/webhook/issues/new).
+当然，更简单的方案是使用反向代理或者使用 traefik 等服务来提供 HTTPS 服务。
 
-# License
+## 跨域 CORS 请求头
 
-The MIT License (MIT)
+如果你想设置 CORS 头，可以在启动 [webhook][w] 时使用 `-header name=value` 标志来设置将随每个响应返回的适当 CORS 头。
 
-Copyright (c) 2023 soulteary <soulteary@gmail.com>
-Copyright (c) 2015 Adnan Hajdarevic <adnanh@gmail.com>
+## 使用示例
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+查看 [Hook 示例](docs/Hook-Examples.md) 来学习各种新鲜的使用。
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+# 为什么要作一个开源软件的分叉
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+主要有两个原因：
 
+1. 作者维护的版本是从比较陈旧的版本升级上来的，包含了许多不再被需要的内容，我在几年前曾经提交过一个[改进版本的 PR](https://github.com/adnanh/webhook/pull/570)，但是因为种种原因被作者忽略，**与其继续使用明知道不可靠的程序，不如将它变的可靠。**
+2. 除了更容易从社区合并未被原始仓库作者合并的社区功能外，还可以快速对有安全风险的依赖作更新，以及我希望这个程序接下来能够中文更加友好，包括文档。
 
 [w]: https://github.com/soulteary/webhook
-[wc]: https://github.com/soulteary/webhook-contrib
 [badge]: https://github.com/soulteary/webhook/workflows/build/badge.svg
