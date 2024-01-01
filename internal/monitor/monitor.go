@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/adnanh/webhook/internal/rules"
+	"github.com/soulteary/webhook/internal/rules"
 	fsnotify "gopkg.in/fsnotify.v1"
 )
 

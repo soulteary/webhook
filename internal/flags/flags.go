@@ -4,8 +4,8 @@ import (
 	"flag"
 	"strings"
 
-	"github.com/adnanh/webhook/internal/hook"
-	"github.com/adnanh/webhook/internal/rules"
+	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/rules"
 )
 
 func ParseEnvs() AppFlags {

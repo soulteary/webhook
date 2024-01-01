@@ -3,8 +3,8 @@ package rules_test
 import (
 	"testing"
 
-	"github.com/adnanh/webhook/internal/hook"
-	"github.com/adnanh/webhook/internal/rules"
+	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert" // You might want to get this assertion library for convenience.
 )
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/adnanh/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/hook"
 )
 
 func TestParameterNodeError_Error(t *testing.T) {

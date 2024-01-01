@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/adnanh/webhook/internal/pidfile"
+	"github.com/soulteary/webhook/internal/pidfile"
 )
 
 func SetupSignals(signals chan os.Signal, reloadFn func(), pidFile *pidfile.PIDFile) {

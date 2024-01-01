@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/adnanh/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/hook"
 )
 
 var (

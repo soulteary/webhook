@@ -3,7 +3,7 @@ package link_test
 import (
 	"testing"
 
-	"github.com/adnanh/webhook/internal/link"
+	"github.com/soulteary/webhook/internal/link"
 )
 
 func TestMakeBaseURL(t *testing.T) {

@@ -1,6 +1,6 @@
 package flags
 
-import "github.com/adnanh/webhook/internal/hook"
+import "github.com/soulteary/webhook/internal/hook"
 
 const (
 	DEFAULT_HOST = "0.0.0.0"
