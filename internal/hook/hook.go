@@ -53,14 +53,14 @@ const (
 
 // ParameterNodeError describes an error walking a parameter node.
 type ParameterNodeError struct {
-	key string
+	Key string
 }
 
 func (e *ParameterNodeError) Error() string {
 	if e == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("parameter node not found: %s", e.key)
+	return fmt.Sprintf("parameter node not found: %s", e.Key)
 }
 
 // IsParameterNodeError returns whether err is of type ParameterNodeError.
@@ -78,7 +78,7 @@ type SignatureError struct {
 	Signature  string
 	Signatures []string
 
-	emptyPayload bool
+	EmptyPayload bool
 }
 
 func (e *SignatureError) Error() string {
@@ -87,7 +87,7 @@ func (e *SignatureError) Error() string {
 	}
 
 	var empty string
-	if e.emptyPayload {
+	if e.EmptyPayload {
 		empty = " on empty payload"
 	}
 
@@ -191,7 +191,7 @@ func ValidateMAC(payload []byte, mac hash.Hash, signatures []string) (string, er
 
 	e := &SignatureError{Signatures: signatures}
 	if len(payload) == 0 {
-		e.emptyPayload = true
+		e.EmptyPayload = true
 	}
 
 	return actualMAC, e
