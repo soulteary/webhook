@@ -507,7 +507,10 @@ func hookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if matchedHook.StreamCommandOutput {
-			handleHook(matchedHook, req, w)
+			_, err := handleHook(matchedHook, req, w)
+			if err != nil {
+				fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
+			}
 		} else if matchedHook.CaptureCommandOutput {
 			response, err := handleHook(matchedHook, req, nil)
 

@@ -19,7 +19,10 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 			} else if event.Op&fsnotify.Remove == fsnotify.Remove {
 				if _, err := os.Stat(event.Name); os.IsNotExist(err) {
 					log.Printf("hooks file %s removed, no longer watching this file for changes, removing hooks that were loaded from it\n", event.Name)
-					(*watcher).Remove(event.Name)
+					err = (*watcher).Remove(event.Name)
+					if err != nil {
+						log.Printf("error removing file %s from watcher: %s\n", event.Name, err)
+					}
 					rules.RemoveHooks(event.Name, verbose, noPanic)
 				}
 			} else if event.Op&fsnotify.Rename == fsnotify.Rename {
@@ -27,14 +30,23 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 				if _, err := os.Stat(event.Name); os.IsNotExist(err) {
 					// file was removed
 					log.Printf("hooks file %s removed, no longer watching this file for changes, and removing hooks that were loaded from it\n", event.Name)
-					(*watcher).Remove(event.Name)
+					err = (*watcher).Remove(event.Name)
+					if err != nil {
+						log.Printf("error removing file %s from watcher: %s\n", event.Name, err)
+					}
 					rules.RemoveHooks(event.Name, verbose, noPanic)
 				} else {
 					// file was overwritten
 					log.Printf("hooks file %s overwritten\n", event.Name)
 					rules.ReloadHooks(event.Name, asTemplate)
-					(*watcher).Remove(event.Name)
-					(*watcher).Add(event.Name)
+					err = (*watcher).Remove(event.Name)
+					if err != nil {
+						log.Printf("error removing file %s from watcher: %s\n", event.Name, err)
+					}
+					err = (*watcher).Add(event.Name)
+					if err != nil {
+						log.Printf("error adding file %s to watcher: %s\n", event.Name, err)
+					}
 				}
 			}
 		case err := <-(*watcher).Errors:
