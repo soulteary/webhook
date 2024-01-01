@@ -1,5 +1,7 @@
 package flags
 
+import "github.com/adnanh/webhook/internal/hook"
+
 const (
 	DEFAULT_HOST = "0.0.0.0"
 	DEFAULT_PORT = 9000
@@ -21,3 +23,48 @@ const (
 	DEFAULT_GID                = 0
 	DEFAULT_UID                = 0
 )
+
+const (
+	ENV_KEY_HOST = "HOST"
+	ENV_KEY_PORT = "PORT"
+
+	ENV_KEY_VERBOSE    = "VERBOSE"
+	ENV_KEY_DEBUG      = "DEBUG"
+	ENV_KEY_NO_PANIC   = "NO_PANIC"
+	ENV_KEY_LOG_PATH   = "LOG_PATH"
+	ENV_KEY_HOT_RELOAD = "HOT_RELOAD"
+
+	ENV_KEY_HOOKS_URLPREFIX = "URL_PREFIX"
+	ENV_KEY_HOOKS           = "HOOKS"
+	ENV_KEY_TEMPLATE        = "TEMPLATE"
+	ENV_KEY_HTTP_METHODS    = "HTTP_METHODS"
+	ENV_KEY_PID_FILE        = "PID_FILE"
+	ENV_KEY_X_REQUEST_ID    = "X_REQUEST_ID"
+	ENV_KEY_MAX_MPART_MEM   = "MAX_MPART_MEM"
+	ENV_KEY_GID             = "GID"
+	ENV_KEY_UID             = "UID"
+	ENV_KEY_HEADER          = "HEADER"
+)
+
+type AppFlags struct {
+	Host            string
+	Port            int
+	Verbose         bool
+	LogPath         string
+	Debug           bool
+	NoPanic         bool
+	HotReload       bool
+	HooksURLPrefix  string
+	AsTemplate      bool
+	UseXRequestID   bool
+	XRequestIDLimit int
+	MaxMultipartMem int64
+	SetGID          int
+	SetUID          int
+	HttpMethods     string
+	PidPath         string
+
+	ShowVersion     bool
+	HooksFiles      hook.HooksFiles
+	ResponseHeaders hook.ResponseHeaders
+}

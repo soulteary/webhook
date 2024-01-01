@@ -48,20 +48,20 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 }
 
 func main() {
-	flags.Parse()
+	appFlags := flags.Parse()
 
-	if *flags.JustDisplayVersion {
+	if appFlags.ShowVersion {
 		fmt.Println("webhook version " + version.Version)
 		os.Exit(0)
 	}
 
-	if (*flags.SetUID != 0 || *flags.SetGID != 0) && (*flags.SetUID == 0 || *flags.SetGID == 0) {
+	if (appFlags.SetUID != 0 || appFlags.SetGID != 0) && (appFlags.SetUID == 0 || appFlags.SetGID == 0) {
 		fmt.Println("error: setuid and setgid options must be used together")
 		os.Exit(1)
 	}
 
-	if *flags.Debug || *flags.LogPath != "" {
-		*flags.Verbose = true
+	if appFlags.Debug || appFlags.LogPath != "" {
+		appFlags.Verbose = true
 	}
 
 	if len(rules.HooksFiles) == 0 {
@@ -73,7 +73,7 @@ func main() {
 	// log file opening prior to writing our first log message.
 	var logQueue []string
 
-	addr := fmt.Sprintf("%s:%d", *flags.Host, *flags.Port)
+	addr := fmt.Sprintf("%s:%d", appFlags.Host, appFlags.Port)
 
 	// Open listener early so we can drop privileges.
 	ln, err := net.Listen("tcp", addr)
@@ -82,18 +82,18 @@ func main() {
 		// we'll bail out below
 	}
 
-	if *flags.SetUID != 0 {
-		err := platform.DropPrivileges(*flags.SetUID, *flags.SetGID)
+	if appFlags.SetUID != 0 {
+		err := platform.DropPrivileges(appFlags.SetUID, appFlags.SetGID)
 		if err != nil {
 			logQueue = append(logQueue, fmt.Sprintf("error dropping privileges: %s", err))
 			// we'll bail out below
 		}
 	}
 
-	if *flags.LogPath != "" {
-		file, err := os.OpenFile(*flags.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	if appFlags.LogPath != "" {
+		file, err := os.OpenFile(appFlags.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
-			logQueue = append(logQueue, fmt.Sprintf("error opening log file %q: %v", *flags.LogPath, err))
+			logQueue = append(logQueue, fmt.Sprintf("error opening log file %q: %v", appFlags.LogPath, err))
 			// we'll bail out below
 		} else {
 			log.SetOutput(file)
@@ -111,15 +111,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if !*flags.Verbose {
+	if !appFlags.Verbose {
 		log.SetOutput(io.Discard)
 	}
 
 	// Create pidfile
-	if *flags.PidPath != "" {
+	if appFlags.PidPath != "" {
 		var err error
 
-		pidFile, err = pidfile.New(*flags.PidPath)
+		pidFile, err = pidfile.New(appFlags.PidPath)
 		if err != nil {
 			log.Fatalf("Error creating pidfile: %v", err)
 		}
@@ -136,7 +136,7 @@ func main() {
 	log.Println("version " + version.Version + " starting")
 
 	// set os signal watcher
-	if *flags.AsTemplate {
+	if appFlags.AsTemplate {
 		platform.SetupSignals(signals, rules.ReloadAllHooksAsTemplate, pidFile)
 	} else {
 		platform.SetupSignals(signals, rules.ReloadAllHooksNotAsTemplate, pidFile)
@@ -148,7 +148,7 @@ func main() {
 
 		newHooks := hook.Hooks{}
 
-		err := newHooks.LoadFromFile(hooksFilePath, *flags.AsTemplate)
+		err := newHooks.LoadFromFile(hooksFilePath, appFlags.AsTemplate)
 		if err != nil {
 			log.Printf("couldn't load hooks from file! %+v\n", err)
 		} else {
@@ -174,12 +174,12 @@ func main() {
 
 	rules.HooksFiles = newHooksFiles
 
-	if !*flags.Verbose && !*flags.NoPanic && rules.LenLoadedHooks() == 0 {
+	if !appFlags.Verbose && !appFlags.NoPanic && rules.LenLoadedHooks() == 0 {
 		log.SetOutput(os.Stdout)
 		log.Fatalln("couldn't load any hooks from file!\naborting webhook execution since the -verbose flag is set to false.\nIf, for some reason, you want webhook to start without the hooks, either use -verbose flag, or -nopanic")
 	}
 
-	if *flags.HotReload {
+	if appFlags.HotReload {
 		var err error
 
 		watcher, err = fsnotify.NewWatcher()
@@ -199,35 +199,36 @@ func main() {
 			}
 		}
 
-		go monitor.WatchForFileChange(watcher, *flags.AsTemplate, *flags.Verbose, *flags.NoPanic, rules.ReloadHooks, rules.RemoveHooks)
+		go monitor.WatchForFileChange(watcher, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, rules.ReloadHooks, rules.RemoveHooks)
 	}
 
 	r := mux.NewRouter()
 
 	r.Use(middleware.RequestID(
-		middleware.UseXRequestIDHeaderOption(*flags.UseXRequestID),
-		middleware.XRequestIDLimitOption(*flags.XRequestIDLimit),
+		middleware.UseXRequestIDHeaderOption(appFlags.UseXRequestID),
+		middleware.XRequestIDLimitOption(appFlags.XRequestIDLimit),
 	))
 	r.Use(middleware.NewLogger())
 	r.Use(chimiddleware.Recoverer)
 
-	if *flags.Debug {
+	if appFlags.Debug {
 		r.Use(middleware.Dumper(log.Writer()))
 	}
 
 	// Clean up input
-	*flags.HttpMethods = strings.ToUpper(strings.ReplaceAll(*flags.HttpMethods, " ", ""))
+	appFlags.HttpMethods = strings.ToUpper(strings.ReplaceAll(appFlags.HttpMethods, " ", ""))
 
-	hooksURL := link.MakeRoutePattern(flags.HooksURLPrefix)
+	hooksURL := link.MakeRoutePattern(&appFlags.HooksURLPrefix)
 
 	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		for _, responseHeader := range flags.ResponseHeaders {
+		for _, responseHeader := range appFlags.ResponseHeaders {
 			w.Header().Set(responseHeader.Name, responseHeader.Value)
 		}
 
 		fmt.Fprint(w, "OK")
 	})
 
+	hookHandler := createHookHandler(appFlags)
 	r.HandleFunc(hooksURL, hookHandler)
 
 	// Create common HTTP server settings
@@ -239,262 +240,264 @@ func main() {
 	}
 
 	// Serve HTTP
-	log.Printf("serving hooks on http://%s%s", addr, link.MakeHumanPattern(flags.HooksURLPrefix))
+	log.Printf("serving hooks on http://%s%s", addr, link.MakeHumanPattern(&appFlags.HooksURLPrefix))
 	log.Print(svr.Serve(ln))
 }
 
-func hookHandler(w http.ResponseWriter, r *http.Request) {
-	req := &hook.Request{
-		ID:         middleware.GetReqID(r.Context()),
-		RawRequest: r,
-	}
-
-	log.Printf("[%s] incoming HTTP %s request from %s\n", req.ID, r.Method, r.RemoteAddr)
-
-	// TODO: rename this to avoid confusion with Request.ID
-	id := mux.Vars(r)["id"]
-
-	matchedHook := rules.MatchLoadedHook(id)
-	if matchedHook == nil {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "Hook not found.")
-		return
-	}
-
-	// Check for allowed methods
-	var allowedMethod bool
-
-	switch {
-	case len(matchedHook.HTTPMethods) != 0:
-		for i := range matchedHook.HTTPMethods {
-			// TODO(moorereason): refactor config loading and reloading to
-			// sanitize these methods once at load time.
-			if r.Method == strings.ToUpper(strings.TrimSpace(matchedHook.HTTPMethods[i])) {
-				allowedMethod = true
-				break
-			}
-		}
-	case *flags.HttpMethods != "":
-		for _, v := range strings.Split(*flags.HttpMethods, ",") {
-			if r.Method == v {
-				allowedMethod = true
-				break
-			}
-		}
-	default:
-		allowedMethod = true
-	}
-
-	if !allowedMethod {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		log.Printf("[%s] HTTP %s method not allowed for hook %q", req.ID, r.Method, id)
-
-		return
-	}
-
-	log.Printf("[%s] %s got matched\n", req.ID, id)
-
-	for _, responseHeader := range flags.ResponseHeaders {
-		w.Header().Set(responseHeader.Name, responseHeader.Value)
-	}
-
-	var err error
-
-	// set contentType to IncomingPayloadContentType or header value
-	req.ContentType = r.Header.Get("Content-Type")
-	if len(matchedHook.IncomingPayloadContentType) != 0 {
-		req.ContentType = matchedHook.IncomingPayloadContentType
-	}
-
-	isMultipart := strings.HasPrefix(req.ContentType, "multipart/form-data;")
-
-	if !isMultipart {
-		req.Body, err = io.ReadAll(r.Body)
-		if err != nil {
-			log.Printf("[%s] error reading the request body: %+v\n", req.ID, err)
-		}
-	}
-
-	req.ParseHeaders(r.Header)
-	req.ParseQuery(r.URL.Query())
-
-	switch {
-	case strings.Contains(req.ContentType, "json"):
-		err = req.ParseJSONPayload()
-		if err != nil {
-			log.Printf("[%s] %s", req.ID, err)
+func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &hook.Request{
+			ID:         middleware.GetReqID(r.Context()),
+			RawRequest: r,
 		}
 
-	case strings.Contains(req.ContentType, "x-www-form-urlencoded"):
-		err = req.ParseFormPayload()
-		if err != nil {
-			log.Printf("[%s] %s", req.ID, err)
-		}
+		log.Printf("[%s] incoming HTTP %s request from %s\n", req.ID, r.Method, r.RemoteAddr)
 
-	case strings.Contains(req.ContentType, "xml"):
-		err = req.ParseXMLPayload()
-		if err != nil {
-			log.Printf("[%s] %s", req.ID, err)
-		}
+		// TODO: rename this to avoid confusion with Request.ID
+		id := mux.Vars(r)["id"]
 
-	case isMultipart:
-		err = r.ParseMultipartForm(*flags.MaxMultipartMem)
-		if err != nil {
-			msg := fmt.Sprintf("[%s] error parsing multipart form: %+v\n", req.ID, err)
-			log.Println(msg)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "Error occurred while parsing multipart form.")
+		matchedHook := rules.MatchLoadedHook(id)
+		if matchedHook == nil {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "Hook not found.")
 			return
 		}
 
-		for k, v := range r.MultipartForm.Value {
-			log.Printf("[%s] found multipart form value %q", req.ID, k)
+		// Check for allowed methods
+		var allowedMethod bool
 
-			if req.Payload == nil {
-				req.Payload = make(map[string]interface{})
-			}
-
-			// TODO(moorereason): support duplicate, named values
-			req.Payload[k] = v[0]
-		}
-
-		for k, v := range r.MultipartForm.File {
-			// Force parsing as JSON regardless of Content-Type.
-			var parseAsJSON bool
-			for _, j := range matchedHook.JSONStringParameters {
-				if j.Source == "payload" && j.Name == k {
-					parseAsJSON = true
+		switch {
+		case len(matchedHook.HTTPMethods) != 0:
+			for i := range matchedHook.HTTPMethods {
+				// TODO(moorereason): refactor config loading and reloading to
+				// sanitize these methods once at load time.
+				if r.Method == strings.ToUpper(strings.TrimSpace(matchedHook.HTTPMethods[i])) {
+					allowedMethod = true
 					break
 				}
 			}
-
-			// TODO(moorereason): we need to support multiple parts
-			// with the same name instead of just processing the first
-			// one. Will need #215 resolved first.
-
-			// MIME encoding can contain duplicate headers, so check them
-			// all.
-			if !parseAsJSON && len(v[0].Header["Content-Type"]) > 0 {
-				for _, j := range v[0].Header["Content-Type"] {
-					if j == "application/json" {
-						parseAsJSON = true
-						break
-					}
+		case appFlags.HttpMethods != "":
+			for _, v := range strings.Split(appFlags.HttpMethods, ",") {
+				if r.Method == v {
+					allowedMethod = true
+					break
 				}
 			}
+		default:
+			allowedMethod = true
+		}
 
-			if parseAsJSON {
-				log.Printf("[%s] parsing multipart form file %q as JSON\n", req.ID, k)
+		if !allowedMethod {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			log.Printf("[%s] HTTP %s method not allowed for hook %q", req.ID, r.Method, id)
 
-				f, err := v[0].Open()
-				if err != nil {
-					msg := fmt.Sprintf("[%s] error parsing multipart form file: %+v\n", req.ID, err)
-					log.Println(msg)
-					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprint(w, "Error occurred while parsing multipart form file.")
-					return
-				}
+			return
+		}
 
-				decoder := json.NewDecoder(f)
-				decoder.UseNumber()
+		log.Printf("[%s] %s got matched\n", req.ID, id)
 
-				var part map[string]interface{}
-				err = decoder.Decode(&part)
-				if err != nil {
-					log.Printf("[%s] error parsing JSON payload file: %+v\n", req.ID, err)
-				}
+		for _, responseHeader := range appFlags.ResponseHeaders {
+			w.Header().Set(responseHeader.Name, responseHeader.Value)
+		}
+
+		var err error
+
+		// set contentType to IncomingPayloadContentType or header value
+		req.ContentType = r.Header.Get("Content-Type")
+		if len(matchedHook.IncomingPayloadContentType) != 0 {
+			req.ContentType = matchedHook.IncomingPayloadContentType
+		}
+
+		isMultipart := strings.HasPrefix(req.ContentType, "multipart/form-data;")
+
+		if !isMultipart {
+			req.Body, err = io.ReadAll(r.Body)
+			if err != nil {
+				log.Printf("[%s] error reading the request body: %+v\n", req.ID, err)
+			}
+		}
+
+		req.ParseHeaders(r.Header)
+		req.ParseQuery(r.URL.Query())
+
+		switch {
+		case strings.Contains(req.ContentType, "json"):
+			err = req.ParseJSONPayload()
+			if err != nil {
+				log.Printf("[%s] %s", req.ID, err)
+			}
+
+		case strings.Contains(req.ContentType, "x-www-form-urlencoded"):
+			err = req.ParseFormPayload()
+			if err != nil {
+				log.Printf("[%s] %s", req.ID, err)
+			}
+
+		case strings.Contains(req.ContentType, "xml"):
+			err = req.ParseXMLPayload()
+			if err != nil {
+				log.Printf("[%s] %s", req.ID, err)
+			}
+
+		case isMultipart:
+			err = r.ParseMultipartForm(appFlags.MaxMultipartMem)
+			if err != nil {
+				msg := fmt.Sprintf("[%s] error parsing multipart form: %+v\n", req.ID, err)
+				log.Println(msg)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "Error occurred while parsing multipart form.")
+				return
+			}
+
+			for k, v := range r.MultipartForm.Value {
+				log.Printf("[%s] found multipart form value %q", req.ID, k)
 
 				if req.Payload == nil {
 					req.Payload = make(map[string]interface{})
 				}
-				req.Payload[k] = part
-			}
-		}
 
-	default:
-		log.Printf("[%s] error parsing body payload due to unsupported content type header: %s\n", req.ID, req.ContentType)
-	}
-
-	// handle hook
-	errors := matchedHook.ParseJSONParameters(req)
-	for _, err := range errors {
-		log.Printf("[%s] error parsing JSON parameters: %s\n", req.ID, err)
-	}
-
-	var ok bool
-
-	if matchedHook.TriggerRule == nil {
-		ok = true
-	} else {
-		// Save signature soft failures option in request for evaluators
-		req.AllowSignatureErrors = matchedHook.TriggerSignatureSoftFailures
-
-		ok, err = matchedHook.TriggerRule.Evaluate(req)
-		if err != nil {
-			if !hook.IsParameterNodeError(err) {
-				msg := fmt.Sprintf("[%s] error evaluating hook: %s", req.ID, err)
-				log.Println(msg)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, "Error occurred while evaluating hook rules.")
-				return
+				// TODO(moorereason): support duplicate, named values
+				req.Payload[k] = v[0]
 			}
 
-			log.Printf("[%s] %v", req.ID, err)
+			for k, v := range r.MultipartForm.File {
+				// Force parsing as JSON regardless of Content-Type.
+				var parseAsJSON bool
+				for _, j := range matchedHook.JSONStringParameters {
+					if j.Source == "payload" && j.Name == k {
+						parseAsJSON = true
+						break
+					}
+				}
+
+				// TODO(moorereason): we need to support multiple parts
+				// with the same name instead of just processing the first
+				// one. Will need #215 resolved first.
+
+				// MIME encoding can contain duplicate headers, so check them
+				// all.
+				if !parseAsJSON && len(v[0].Header["Content-Type"]) > 0 {
+					for _, j := range v[0].Header["Content-Type"] {
+						if j == "application/json" {
+							parseAsJSON = true
+							break
+						}
+					}
+				}
+
+				if parseAsJSON {
+					log.Printf("[%s] parsing multipart form file %q as JSON\n", req.ID, k)
+
+					f, err := v[0].Open()
+					if err != nil {
+						msg := fmt.Sprintf("[%s] error parsing multipart form file: %+v\n", req.ID, err)
+						log.Println(msg)
+						w.WriteHeader(http.StatusInternalServerError)
+						fmt.Fprint(w, "Error occurred while parsing multipart form file.")
+						return
+					}
+
+					decoder := json.NewDecoder(f)
+					decoder.UseNumber()
+
+					var part map[string]interface{}
+					err = decoder.Decode(&part)
+					if err != nil {
+						log.Printf("[%s] error parsing JSON payload file: %+v\n", req.ID, err)
+					}
+
+					if req.Payload == nil {
+						req.Payload = make(map[string]interface{})
+					}
+					req.Payload[k] = part
+				}
+			}
+
+		default:
+			log.Printf("[%s] error parsing body payload due to unsupported content type header: %s\n", req.ID, req.ContentType)
 		}
-	}
 
-	if ok {
-		log.Printf("[%s] %s hook triggered successfully\n", req.ID, matchedHook.ID)
-
-		for _, responseHeader := range matchedHook.ResponseHeaders {
-			w.Header().Set(responseHeader.Name, responseHeader.Value)
+		// handle hook
+		errors := matchedHook.ParseJSONParameters(req)
+		for _, err := range errors {
+			log.Printf("[%s] error parsing JSON parameters: %s\n", req.ID, err)
 		}
 
-		if matchedHook.StreamCommandOutput {
-			_, err := handleHook(matchedHook, req, w)
+		var ok bool
+
+		if matchedHook.TriggerRule == nil {
+			ok = true
+		} else {
+			// Save signature soft failures option in request for evaluators
+			req.AllowSignatureErrors = matchedHook.TriggerSignatureSoftFailures
+
+			ok, err = matchedHook.TriggerRule.Evaluate(req)
 			if err != nil {
-				fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
-			}
-		} else if matchedHook.CaptureCommandOutput {
-			response, err := handleHook(matchedHook, req, nil)
+				if !hook.IsParameterNodeError(err) {
+					msg := fmt.Sprintf("[%s] error evaluating hook: %s", req.ID, err)
+					log.Println(msg)
+					w.WriteHeader(http.StatusInternalServerError)
+					fmt.Fprint(w, "Error occurred while evaluating hook rules.")
+					return
+				}
 
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				if matchedHook.CaptureCommandOutputOnError {
-					fmt.Fprint(w, response)
+				log.Printf("[%s] %v", req.ID, err)
+			}
+		}
+
+		if ok {
+			log.Printf("[%s] %s hook triggered successfully\n", req.ID, matchedHook.ID)
+
+			for _, responseHeader := range matchedHook.ResponseHeaders {
+				w.Header().Set(responseHeader.Name, responseHeader.Value)
+			}
+
+			if matchedHook.StreamCommandOutput {
+				_, err := handleHook(matchedHook, req, w)
+				if err != nil {
+					fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
+				}
+			} else if matchedHook.CaptureCommandOutput {
+				response, err := handleHook(matchedHook, req, nil)
+
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					if matchedHook.CaptureCommandOutputOnError {
+						fmt.Fprint(w, response)
+					} else {
+						w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+						fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
+					}
 				} else {
-					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-					fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
+					// Check if a success return code is configured for the hook
+					if matchedHook.SuccessHttpResponseCode != 0 {
+						writeHttpResponseCode(w, req.ID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
+					}
+					fmt.Fprint(w, response)
 				}
 			} else {
+				go handleHook(matchedHook, req, nil)
+
 				// Check if a success return code is configured for the hook
 				if matchedHook.SuccessHttpResponseCode != 0 {
 					writeHttpResponseCode(w, req.ID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
 				}
-				fmt.Fprint(w, response)
-			}
-		} else {
-			go handleHook(matchedHook, req, nil)
 
-			// Check if a success return code is configured for the hook
-			if matchedHook.SuccessHttpResponseCode != 0 {
-				writeHttpResponseCode(w, req.ID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
+				fmt.Fprint(w, matchedHook.ResponseMessage)
 			}
-
-			fmt.Fprint(w, matchedHook.ResponseMessage)
+			return
 		}
-		return
+
+		// Check if a return code is configured for the hook
+		if matchedHook.TriggerRuleMismatchHttpResponseCode != 0 {
+			writeHttpResponseCode(w, req.ID, matchedHook.ID, matchedHook.TriggerRuleMismatchHttpResponseCode)
+		}
+
+		// if none of the hooks got triggered
+		log.Printf("[%s] %s got matched, but didn't get triggered because the trigger rules were not satisfied\n", req.ID, matchedHook.ID)
+
+		fmt.Fprint(w, "Hook rules were not satisfied.")
 	}
-
-	// Check if a return code is configured for the hook
-	if matchedHook.TriggerRuleMismatchHttpResponseCode != 0 {
-		writeHttpResponseCode(w, req.ID, matchedHook.ID, matchedHook.TriggerRuleMismatchHttpResponseCode)
-	}
-
-	// if none of the hooks got triggered
-	log.Printf("[%s] %s got matched, but didn't get triggered because the trigger rules were not satisfied\n", req.ID, matchedHook.ID)
-
-	fmt.Fprint(w, "Hook rules were not satisfied.")
 }
 
 func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
