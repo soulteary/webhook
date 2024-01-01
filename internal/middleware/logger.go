@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 // Logger is a middleware that logs useful data about each HTTP request.

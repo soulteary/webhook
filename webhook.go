@@ -25,7 +25,7 @@ import (
 	"github.com/adnanh/webhook/internal/rules"
 	"github.com/adnanh/webhook/internal/version"
 
-	chimiddleware "github.com/go-chi/chi/middleware"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/mux"
 	fsnotify "gopkg.in/fsnotify.v1"
 )
