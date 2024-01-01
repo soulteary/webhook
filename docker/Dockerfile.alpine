@@ -1,4 +1,4 @@
-FROM golang:1.20.1-alpine3.16 AS Builder
+FROM golang:1.21.5-alpine3.19 as builder
 ENV GOPROXY=https://goproxy.cn
 ENV CGO_ENABLED=0
 WORKDIR /app
@@ -6,7 +6,7 @@ COPY . .
 RUN go mod download -x
 RUN GOOS=linux GOARCH=amd64 go build -ldflags "-w -s"  -o webhook
 
-FROM alpine:3.16
+FROM alpine:3.19
 LABEL maintainer "soulteary <soulteary@gmail.com>"
 COPY --from=builder /app/webhook /bin/
 CMD webhook
