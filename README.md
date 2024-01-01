@@ -21,6 +21,21 @@
 
 ## 软件安装
 
+### Docker
+
+![](.github/dockerhub.png)
+
+你可以使用下面的任一命令来下载本仓库自动构建的可执行程序镜像：
+
+```bash
+docker pull soulteary/webhook:latest
+docker pull soulteary/webhook:3.0.0
+```
+
+然后我们可以基于这个镜像来构建和完善我们命令所需要的运行环境。
+
+**参考教程【TBD】**
+
 ### 下载预构建程序
 
 不同架构的预编译二进制文件可在 [GitHub 发布](https://github.com/soulteary/webhook/releases) 页面获取。
