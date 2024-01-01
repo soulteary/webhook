@@ -1,0 +1,23 @@
+package flags
+
+const (
+	DEFAULT_HOST = "0.0.0.0"
+	DEFAULT_PORT = 9000
+
+	DEFAULT_LOG_PATH     = ""
+	DEFAULT_URL_PREFIX   = "hooks"
+	DEFAULT_HTTP_METHODS = ""
+	DEFAULT_PID_FILE     = ""
+
+	DEFAULT_ENABLE_VERBOSE        = false
+	DEFAULT_ENABLE_DEBUG          = false
+	DEFAULT_ENABLE_NO_PANIC       = false
+	DEFAULT_ENABLE_HOT_RELOAD     = false
+	DEFAULT_ENABLE_PARSE_TEMPLATE = false
+	DEFAULT_ENABLE_X_REQUEST_ID   = false
+
+	DEFAULT_X_REQUEST_ID_LIMIT = 0
+	DEFAULT_MAX_MPART_MEM      = 1 << 20
+	DEFAULT_GID                = 0
+	DEFAULT_UID                = 0
+)
