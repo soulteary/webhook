@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/adnanh/webhook/internal/flags"
 	"github.com/adnanh/webhook/internal/hook"
 	"github.com/adnanh/webhook/internal/link"
 	"github.com/adnanh/webhook/internal/middleware"
@@ -29,26 +29,6 @@ import (
 )
 
 var (
-	ip                 = flag.String("ip", "0.0.0.0", "ip the webhook should serve hooks on")
-	port               = flag.Int("port", 9000, "port the webhook should serve hooks on")
-	verbose            = flag.Bool("verbose", false, "show verbose output")
-	logPath            = flag.String("logfile", "", "send log output to a file; implicitly enables verbose logging")
-	debug              = flag.Bool("debug", false, "show debug output")
-	noPanic            = flag.Bool("nopanic", false, "do not panic if hooks cannot be loaded when webhook is not running in verbose mode")
-	hotReload          = flag.Bool("hotreload", false, "watch hooks file for changes and reload them automatically")
-	hooksURLPrefix     = flag.String("urlprefix", "hooks", "url prefix to use for served hooks (protocol://yourserver:port/PREFIX/:hook-id)")
-	asTemplate         = flag.Bool("template", false, "parse hooks file as a Go template")
-	justDisplayVersion = flag.Bool("version", false, "display webhook version and quit")
-	useXRequestID      = flag.Bool("x-request-id", false, "use X-Request-Id header, if present, as request ID")
-	xRequestIDLimit    = flag.Int("x-request-id-limit", 0, "truncate X-Request-Id header to limit; default no limit")
-	maxMultipartMem    = flag.Int64("max-multipart-mem", 1<<20, "maximum memory in bytes for parsing multipart form data before disk caching")
-	setGID             = flag.Int("setgid", 0, "set group ID after opening listening port; must be used with setuid")
-	setUID             = flag.Int("setuid", 0, "set user ID after opening listening port; must be used with setgid")
-	httpMethods        = flag.String("http-methods", "", `set default allowed HTTP methods (ie. "POST"); separate methods with comma`)
-	pidPath            = flag.String("pidfile", "", "create PID file at the given path")
-
-	responseHeaders hook.ResponseHeaders
-
 	watcher *fsnotify.Watcher
 	signals chan os.Signal
 	pidFile *pidfile.PIDFile
@@ -68,23 +48,20 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 }
 
 func main() {
-	flag.Var(&rules.HooksFiles, "hooks", "path to the json file containing defined hooks the webhook should serve, use multiple times to load from different files")
-	flag.Var(&responseHeaders, "header", "response header to return, specified in format name=value, use multiple times to set multiple headers")
+	flags.Parse()
 
-	flag.Parse()
-
-	if *justDisplayVersion {
+	if *flags.JustDisplayVersion {
 		fmt.Println("webhook version " + version.Version)
 		os.Exit(0)
 	}
 
-	if (*setUID != 0 || *setGID != 0) && (*setUID == 0 || *setGID == 0) {
+	if (*flags.SetUID != 0 || *flags.SetGID != 0) && (*flags.SetUID == 0 || *flags.SetGID == 0) {
 		fmt.Println("error: setuid and setgid options must be used together")
 		os.Exit(1)
 	}
 
-	if *debug || *logPath != "" {
-		*verbose = true
+	if *flags.Debug || *flags.LogPath != "" {
+		*flags.Verbose = true
 	}
 
 	if len(rules.HooksFiles) == 0 {
@@ -96,7 +73,7 @@ func main() {
 	// log file opening prior to writing our first log message.
 	var logQueue []string
 
-	addr := fmt.Sprintf("%s:%d", *ip, *port)
+	addr := fmt.Sprintf("%s:%d", *flags.Host, *flags.Port)
 
 	// Open listener early so we can drop privileges.
 	ln, err := net.Listen("tcp", addr)
@@ -105,18 +82,18 @@ func main() {
 		// we'll bail out below
 	}
 
-	if *setUID != 0 {
-		err := platform.DropPrivileges(*setUID, *setGID)
+	if *flags.SetUID != 0 {
+		err := platform.DropPrivileges(*flags.SetUID, *flags.SetGID)
 		if err != nil {
 			logQueue = append(logQueue, fmt.Sprintf("error dropping privileges: %s", err))
 			// we'll bail out below
 		}
 	}
 
-	if *logPath != "" {
-		file, err := os.OpenFile(*logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	if *flags.LogPath != "" {
+		file, err := os.OpenFile(*flags.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
-			logQueue = append(logQueue, fmt.Sprintf("error opening log file %q: %v", *logPath, err))
+			logQueue = append(logQueue, fmt.Sprintf("error opening log file %q: %v", *flags.LogPath, err))
 			// we'll bail out below
 		} else {
 			log.SetOutput(file)
@@ -134,15 +111,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if !*verbose {
+	if !*flags.Verbose {
 		log.SetOutput(io.Discard)
 	}
 
 	// Create pidfile
-	if *pidPath != "" {
+	if *flags.PidPath != "" {
 		var err error
 
-		pidFile, err = pidfile.New(*pidPath)
+		pidFile, err = pidfile.New(*flags.PidPath)
 		if err != nil {
 			log.Fatalf("Error creating pidfile: %v", err)
 		}
@@ -159,7 +136,7 @@ func main() {
 	log.Println("version " + version.Version + " starting")
 
 	// set os signal watcher
-	if *asTemplate {
+	if *flags.AsTemplate {
 		platform.SetupSignals(signals, rules.ReloadAllHooksAsTemplate, pidFile)
 	} else {
 		platform.SetupSignals(signals, rules.ReloadAllHooksNotAsTemplate, pidFile)
@@ -171,7 +148,7 @@ func main() {
 
 		newHooks := hook.Hooks{}
 
-		err := newHooks.LoadFromFile(hooksFilePath, *asTemplate)
+		err := newHooks.LoadFromFile(hooksFilePath, *flags.AsTemplate)
 		if err != nil {
 			log.Printf("couldn't load hooks from file! %+v\n", err)
 		} else {
@@ -197,12 +174,12 @@ func main() {
 
 	rules.HooksFiles = newHooksFiles
 
-	if !*verbose && !*noPanic && rules.LenLoadedHooks() == 0 {
+	if !*flags.Verbose && !*flags.NoPanic && rules.LenLoadedHooks() == 0 {
 		log.SetOutput(os.Stdout)
 		log.Fatalln("couldn't load any hooks from file!\naborting webhook execution since the -verbose flag is set to false.\nIf, for some reason, you want webhook to start without the hooks, either use -verbose flag, or -nopanic")
 	}
 
-	if *hotReload {
+	if *flags.HotReload {
 		var err error
 
 		watcher, err = fsnotify.NewWatcher()
@@ -222,29 +199,29 @@ func main() {
 			}
 		}
 
-		go monitor.WatchForFileChange(watcher, *asTemplate, *verbose, *noPanic, rules.ReloadHooks, rules.RemoveHooks)
+		go monitor.WatchForFileChange(watcher, *flags.AsTemplate, *flags.Verbose, *flags.NoPanic, rules.ReloadHooks, rules.RemoveHooks)
 	}
 
 	r := mux.NewRouter()
 
 	r.Use(middleware.RequestID(
-		middleware.UseXRequestIDHeaderOption(*useXRequestID),
-		middleware.XRequestIDLimitOption(*xRequestIDLimit),
+		middleware.UseXRequestIDHeaderOption(*flags.UseXRequestID),
+		middleware.XRequestIDLimitOption(*flags.XRequestIDLimit),
 	))
 	r.Use(middleware.NewLogger())
 	r.Use(chimiddleware.Recoverer)
 
-	if *debug {
+	if *flags.Debug {
 		r.Use(middleware.Dumper(log.Writer()))
 	}
 
 	// Clean up input
-	*httpMethods = strings.ToUpper(strings.ReplaceAll(*httpMethods, " ", ""))
+	*flags.HttpMethods = strings.ToUpper(strings.ReplaceAll(*flags.HttpMethods, " ", ""))
 
-	hooksURL := link.MakeRoutePattern(hooksURLPrefix)
+	hooksURL := link.MakeRoutePattern(flags.HooksURLPrefix)
 
 	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		for _, responseHeader := range responseHeaders {
+		for _, responseHeader := range flags.ResponseHeaders {
 			w.Header().Set(responseHeader.Name, responseHeader.Value)
 		}
 
@@ -262,7 +239,7 @@ func main() {
 	}
 
 	// Serve HTTP
-	log.Printf("serving hooks on http://%s%s", addr, link.MakeHumanPattern(hooksURLPrefix))
+	log.Printf("serving hooks on http://%s%s", addr, link.MakeHumanPattern(flags.HooksURLPrefix))
 	log.Print(svr.Serve(ln))
 }
 
@@ -297,8 +274,8 @@ func hookHandler(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-	case *httpMethods != "":
-		for _, v := range strings.Split(*httpMethods, ",") {
+	case *flags.HttpMethods != "":
+		for _, v := range strings.Split(*flags.HttpMethods, ",") {
 			if r.Method == v {
 				allowedMethod = true
 				break
@@ -317,7 +294,7 @@ func hookHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[%s] %s got matched\n", req.ID, id)
 
-	for _, responseHeader := range responseHeaders {
+	for _, responseHeader := range flags.ResponseHeaders {
 		w.Header().Set(responseHeader.Name, responseHeader.Value)
 	}
 
@@ -361,7 +338,7 @@ func hookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case isMultipart:
-		err = r.ParseMultipartForm(*maxMultipartMem)
+		err = r.ParseMultipartForm(*flags.MaxMultipartMem)
 		if err != nil {
 			msg := fmt.Sprintf("[%s] error parsing multipart form: %+v\n", req.ID, err)
 			log.Println(msg)
