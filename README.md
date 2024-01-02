@@ -1,4 +1,6 @@
-# 什么是 WebHook (歪脖虎克)? ![build-status][badge]
+# 什么是 WebHook (歪脖虎克)?
+
+![build-status][badge] [![Go Report Card](report-badge)](report)
 
  <img src="./docs/logo/logo-600x600.jpg" alt="Webhook" align="left" width="180" />
  
@@ -10,10 +12,10 @@
 
 [webhook][w] 的目标只做它应该做的事情，那就是：
 
- 1. 接收请求，
- 2. 解析请求头、请求体和请求参数，
- 3. 检查钩子指定的运行规则是否得到满足，
- 4. 最后，通过命令行参数或环境变量将指定的参数传递给指定的命令。
+1.  接收请求，
+2.  解析请求头、请求体和请求参数，
+3.  检查钩子指定的运行规则是否得到满足，
+4.  最后，通过命令行参数或环境变量将指定的参数传递给指定的命令。
 
 其他的所有事情，都需要命令作者的来完成。
 
@@ -99,8 +101,8 @@ http://yourserver:9000/hooks/redeploy-webhook
 使用 `parse-parameters-as-json` 设置将给定值解析为 JSON。
 除非符合以下标准之一，否则所有文件都会被忽略：
 
- 1. `Content-Type` 标头是 `application/json`。
- 2. 部分在 `parse-parameters-as-json` 设置中被命名。
+1.  `Content-Type` 标头是 `application/json`。
+2.  部分在 `parse-parameters-as-json` 设置中被命名。
 
 在任一情况下，给定的文件部分将被解析为 JSON 并添加到 payload 映射中。
 
@@ -129,3 +131,5 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 [w]: https://github.com/soulteary/webhook
 [badge]: https://github.com/soulteary/webhook/workflows/build/badge.svg
+[report-badge]: https://goreportcard.com/badge/github.com/soulteary/webhook
+[report]: https://goreportcard.com/report/github.com/soulteary/webhook
