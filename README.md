@@ -1,6 +1,6 @@
 # 什么是 WebHook (歪脖虎克)?
 
-![build-status][badge] [![Go Report Card](report-badge)](report)
+![build-status][badge] [![Go Report Card](https://goreportcard.com/badge/github.com/soulteary/webhook)](https://goreportcard.com/report/github.com/soulteary/webhook)
 
  <img src="./docs/logo/logo-600x600.jpg" alt="Webhook" align="left" width="180" />
  
@@ -131,5 +131,3 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 [w]: https://github.com/soulteary/webhook
 [badge]: https://github.com/soulteary/webhook/workflows/build/badge.svg
-[report-badge]: https://goreportcard.com/badge/github.com/soulteary/webhook
-[report]: https://goreportcard.com/report/github.com/soulteary/webhook
