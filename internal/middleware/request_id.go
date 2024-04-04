@@ -7,7 +7,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 )
 
 // Key to use when setting the request ID.
@@ -35,7 +35,7 @@ func RequestID(options ...RequestIDOption) func(http.Handler) http.Handler {
 			}
 
 			if id == "" {
-				id = uuid.Must(uuid.NewV4()).String()[:6]
+				id = uuid.Must(uuid.NewRandom()).String()[:6]
 			}
 
 			ctx = context.WithValue(ctx, RequestIDKey, id)
