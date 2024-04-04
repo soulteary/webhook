@@ -9,6 +9,7 @@ builds:
     id: macos
     goos: [darwin]
     goarch: [amd64, arm64]
+    main: ./bin
 
   - <<: *build_defaults
     id: linux
@@ -22,7 +23,7 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-amd64-{{ .Tag }}"
       - "soulteary/webhook:linux-amd64"
-    dockerfile: docker/Dockerfile.gorelease
+    dockerfile: docker/goreleaser/Dockerfile
     use: buildx
     goarch: amd64
     build_flag_templates:
@@ -40,7 +41,7 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-arm64-{{ .Tag }}"
       - "soulteary/webhook:linux-arm64"
-    dockerfile: docker/Dockerfile.gorelease
+    dockerfile: docker/goreleaser/Dockerfile
     use: buildx
     goos: linux
     goarch: arm64
@@ -60,7 +61,7 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-armv7-{{ .Tag }}"
       - "soulteary/webhook:linux-armv7"
-    dockerfile: docker/Dockerfile.gorelease
+    dockerfile: docker/goreleaser/Dockerfile
     use: buildx
     goos: linux
     goarch: arm
@@ -80,7 +81,7 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-armv6-{{ .Tag }}"
       - "soulteary/webhook:linux-armv6"
-    dockerfile: docker/Dockerfile.gorelease
+    dockerfile: docker/goreleaser/Dockerfile
     use: buildx
     goos: linux
     goarch: arm
@@ -100,7 +101,7 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
       - "soulteary/webhook:linux-amd64-extend"
-    dockerfile: docker/Dockerfile.gorelease-extend
+    dockerfile: docker/goreleaser/Dockerfile.extend
     use: buildx
     goarch: amd64
     build_flag_templates:
@@ -118,7 +119,7 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-arm64-extend-{{ .Tag }}"
       - "soulteary/webhook:linux-arm64-extend"
-    dockerfile: docker/Dockerfile.gorelease-extend
+    dockerfile: docker/goreleaser/Dockerfile.extend
     use: buildx
     goos: linux
     goarch: arm64
@@ -138,7 +139,7 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-armv7-extend-{{ .Tag }}"
       - "soulteary/webhook:linux-armv7-extend"
-    dockerfile: docker/Dockerfile.gorelease-extend
+    dockerfile: docker/goreleaser/Dockerfile.extend
     use: buildx
     goos: linux
     goarch: arm
@@ -158,7 +159,7 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-armv6-extend-{{ .Tag }}"
       - "soulteary/webhook:linux-armv6-extend"
-    dockerfile: docker/Dockerfile.gorelease-extend
+    dockerfile: docker/goreleaser/Dockerfile.extend
     use: buildx
     goos: linux
     goarch: arm
