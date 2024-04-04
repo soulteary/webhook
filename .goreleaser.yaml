@@ -9,7 +9,6 @@ builds:
     id: macos
     goos: [darwin]
     goarch: [amd64, arm64]
-    main: ./bin
 
   - <<: *build_defaults
     id: linux

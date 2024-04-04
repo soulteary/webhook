@@ -4,7 +4,7 @@ ENV CGO_ENABLED=0
 WORKDIR /app
 COPY . .
 RUN go mod download -x
-RUN go build -ldflags "-w -s" -o webhook ./bin
+RUN go build -ldflags "-w -s" -o webhook .
 
 FROM debian:stretch
 LABEL maintainer "soulteary <soulteary@gmail.com>"
