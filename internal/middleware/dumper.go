@@ -46,7 +46,10 @@ func Dumper(w io.Writer) func(http.Handler) http.Handler {
 				buf.WriteString(sc.Text() + "\n")
 			}
 
-			w.Write(buf.Bytes())
+			_, err = w.Write(buf.Bytes())
+			if err != nil {
+				fmt.Println("Error writing to debug writer before buf reset: ", err)
+			}
 			buf.Reset()
 
 			// Dump Response
@@ -79,7 +82,10 @@ func Dumper(w io.Writer) func(http.Handler) http.Handler {
 					buf.WriteString(sc.Text() + "\n")
 				}
 			}
-			w.Write(buf.Bytes())
+			_, err = w.Write(buf.Bytes())
+			if err != nil {
+				fmt.Println("Error writing to debug writer: ", err)
+			}
 		})
 	}
 }

@@ -2,6 +2,7 @@ package flags
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 
 	"github.com/soulteary/webhook/internal/hook"
@@ -30,7 +31,10 @@ func ParseEnvs() AppFlags {
 	hooks := strings.Split(GetEnvStr(ENV_KEY_HOOKS, ""), ",")
 	var hooksFiles hook.HooksFiles
 	for _, hook := range hooks {
-		hooksFiles.Set(hook)
+		err := hooksFiles.Set(hook)
+		if err != nil {
+			fmt.Println("Error parsing hooks from environment variable: ", err)
+		}
 	}
 	if len(hooksFiles) > 0 {
 		flags.HooksFiles = hooksFiles
