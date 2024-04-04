@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.19.0
 	gopkg.in/fsnotify.v1 v1.4.7
 )
 
