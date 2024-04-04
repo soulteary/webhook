@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/soulteary/webhook/internal/rules"
-	fsnotify "gopkg.in/fsnotify.v1"
+    "github.com/fsnotify/fsnotify"
 )
 
 func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool, noPanic bool, reloadHooks func(hooksFilePath string, asTemplate bool), removeHooks func(hooksFilePath string, verbose bool, noPanic bool)) {

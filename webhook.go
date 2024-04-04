@@ -23,9 +23,9 @@ import (
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/soulteary/webhook/internal/version"
 
+	"github.com/fsnotify/fsnotify"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/mux"
-	fsnotify "gopkg.in/fsnotify.v1"
 )
 
 var (
