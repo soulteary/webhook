@@ -28,7 +28,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/ghodss/yaml"
+	"github.com/invopop/yaml"
 )
 
 // Constants used to specify the parameter source
