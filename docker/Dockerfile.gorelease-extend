@@ -1,8 +1,9 @@
 FROM alpine:3.19.0 as builder
 RUN apk --update add ca-certificates
 
-FROM scratch
+FROM alpine:3.19.0
 LABEL maintainer "soulteary <soulteary@gmail.com>"
+RUN apk --update add bash curl wget jq yq
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY webhook /usr/bin/webhook
 EXPOSE 8345/tcp
