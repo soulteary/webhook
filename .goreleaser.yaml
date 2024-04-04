@@ -7,8 +7,8 @@ builds:
       ldflags:
         - -w -s -X "github.com/soulteary/webhook/internal/version/version.Version={{ .Tag }}"
     id: macos
-    goos: [ darwin ]
-    goarch: [ amd64, arm64 ]
+    goos: [darwin]
+    goarch: [amd64, arm64]
 
   - <<: *build_defaults
     id: linux
@@ -19,7 +19,6 @@ builds:
       - "6"
 
 dockers:
-
   - image_templates:
       - "soulteary/webhook:linux-amd64-{{ .Tag }}"
       - "soulteary/webhook:linux-amd64"
@@ -45,7 +44,7 @@ dockers:
     use: buildx
     goos: linux
     goarch: arm64
-    goarm: ''
+    goarm: ""
     build_flag_templates:
       - "--pull"
       - "--platform=linux/arm64"
@@ -99,9 +98,9 @@ dockers:
       - "--label=org.opencontainers.image.licenses=MIT"
 
   - image_templates:
-      - "soulteary/webhook:linux-amd64-debug-{{ .Tag }}"
-      - "soulteary/webhook:linux-amd64-debug"
-    dockerfile: docker/Dockerfile.debug
+      - "soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-amd64-extend"
+    dockerfile: docker/Dockerfile.extend
     use: buildx
     goarch: amd64
     build_flag_templates:
@@ -117,13 +116,13 @@ dockers:
       - "--label=org.opencontainers.image.licenses=MIT"
 
   - image_templates:
-      - "soulteary/webhook:linux-arm64-debug-{{ .Tag }}"
-      - "soulteary/webhook:linux-arm64-debug"
-    dockerfile: docker/Dockerfile.debug
+      - "soulteary/webhook:linux-arm64-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-arm64-extend"
+    dockerfile: docker/Dockerfile.extend
     use: buildx
     goos: linux
     goarch: arm64
-    goarm: ''
+    goarm: ""
     build_flag_templates:
       - "--pull"
       - "--platform=linux/arm64"
@@ -137,9 +136,9 @@ dockers:
       - "--label=org.opencontainers.image.licenses=MIT"
 
   - image_templates:
-      - "soulteary/webhook:linux-armv7-debug-{{ .Tag }}"
-      - "soulteary/webhook:linux-armv7-debug"
-    dockerfile: docker/Dockerfile.debug
+      - "soulteary/webhook:linux-armv7-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv7-extend"
+    dockerfile: docker/Dockerfile.extend
     use: buildx
     goos: linux
     goarch: arm
@@ -157,9 +156,9 @@ dockers:
       - "--label=org.opencontainers.image.licenses=MIT"
 
   - image_templates:
-      - "soulteary/webhook:linux-armv6-debug-{{ .Tag }}"
-      - "soulteary/webhook:linux-armv6-debug"
-    dockerfile: docker/Dockerfile.debug
+      - "soulteary/webhook:linux-armv6-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv6-extend"
+    dockerfile: docker/Dockerfile.extend
     use: buildx
     goos: linux
     goarch: arm
@@ -184,13 +183,13 @@ docker_manifests:
       - "soulteary/webhook:linux-armv7-{{ .Tag }}"
       - "soulteary/webhook:linux-armv6-{{ .Tag }}"
     skip_push: "false"
-  
-  - name_template: "soulteary/webhook:debug-{{ .Tag }}"
+
+  - name_template: "soulteary/webhook:extend-{{ .Tag }}"
     image_templates:
-      - "soulteary/webhook:linux-amd64-debug-{{ .Tag }}"
-      - "soulteary/webhook:linux-arm64-debug-{{ .Tag }}"
-      - "soulteary/webhook:linux-armv7-debug-{{ .Tag }}"
-      - "soulteary/webhook:linux-armv6-debug-{{ .Tag }}"
+      - "soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-arm64-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv7-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv6-extend-{{ .Tag }}"
     skip_push: "false"
 
   - name_template: "soulteary/webhook:latest"

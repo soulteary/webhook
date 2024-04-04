@@ -6,6 +6,8 @@ WORKDIR /app
 COPY . .
 RUN go mod download -x
 RUN go build -ldflags "-w -s" -o webhook
+RUN upx -9 -o webhook.minify webhook && \
+    chmod +x webhook.minify
 
 FROM alpine:3.19
 LABEL maintainer "soulteary <soulteary@gmail.com>"

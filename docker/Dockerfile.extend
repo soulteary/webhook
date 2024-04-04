@@ -1,10 +1,17 @@
-FROM alpine:3.19.0 as builder
+FROM golang:1.22-alpine3.19 as builder
 RUN apk --update add ca-certificates upx
+ENV GOPROXY=https://goproxy.cn
+ENV CGO_ENABLED=0
+WORKDIR /app
+COPY . .
+RUN go mod download -x
+RUN go build -ldflags "-w -s" -o webhook
 RUN upx -9 -o webhook.minify webhook && \
     chmod +x webhook.minify
 
-FROM scratch
+FROM alpine:3.19
 LABEL maintainer "soulteary <soulteary@gmail.com>"
+RUN apk --update add bash curl wget jq yq
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY webhook.minify /usr/bin/webhook
 EXPOSE 8345/tcp
