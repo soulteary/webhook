@@ -1,0 +1,6 @@
+FROM alpine:3.19.0
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+RUN apk --update add ca-certificates bash curl wget jq yq
+COPY webhook /usr/bin/webhook
+EXPOSE 8345/tcp
+ENTRYPOINT ["/usr/bin/webhook"]

@@ -98,6 +98,83 @@ dockers:
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.licenses=MIT"
 
+  - image_templates:
+      - "soulteary/webhook:linux-amd64-debug-{{ .Tag }}"
+      - "soulteary/webhook:linux-amd64-debug"
+    dockerfile: docker/Dockerfile.debug
+    use: buildx
+    goarch: amd64
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.url=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.source=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  - image_templates:
+      - "soulteary/webhook:linux-arm64-debug-{{ .Tag }}"
+      - "soulteary/webhook:linux-arm64-debug"
+    dockerfile: docker/Dockerfile.debug
+    use: buildx
+    goos: linux
+    goarch: arm64
+    goarm: ''
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.url=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.source=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  - image_templates:
+      - "soulteary/webhook:linux-armv7-debug-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv7-debug"
+    dockerfile: docker/Dockerfile.debug
+    use: buildx
+    goos: linux
+    goarch: arm
+    goarm: "7"
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm/v7"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.url=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.source=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  - image_templates:
+      - "soulteary/webhook:linux-armv6-debug-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv6-debug"
+    dockerfile: docker/Dockerfile.debug
+    use: buildx
+    goos: linux
+    goarch: arm
+    goarm: "6"
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm/v6"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.url=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.source=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
 
 docker_manifests:
   - name_template: "soulteary/webhook:{{ .Tag }}"
@@ -106,6 +183,14 @@ docker_manifests:
       - "soulteary/webhook:linux-arm64-{{ .Tag }}"
       - "soulteary/webhook:linux-armv7-{{ .Tag }}"
       - "soulteary/webhook:linux-armv6-{{ .Tag }}"
+    skip_push: "false"
+  
+  - name_template: "soulteary/webhook:debug-{{ .Tag }}"
+    image_templates:
+      - "soulteary/webhook:linux-amd64-debug-{{ .Tag }}"
+      - "soulteary/webhook:linux-arm64-debug-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv7-debug-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv6-debug-{{ .Tag }}"
     skip_push: "false"
 
   - name_template: "soulteary/webhook:latest"
