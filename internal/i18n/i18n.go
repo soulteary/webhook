@@ -47,7 +47,7 @@ func LoadLocaleFiles(localesDir string, webhookLocalesEmbed embed.FS) (aliveLoca
 	}
 
 	for _, file := range localesFiles {
-		content, err := os.ReadFile(file)
+		content, err := os.ReadFile(filepath.Clean(file))
 		if err != nil {
 			fmt.Println(file, err)
 			continue
