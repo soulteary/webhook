@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/soulteary/webhook/internal/flags"
+	"github.com/soulteary/webhook/internal/fn"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/middleware"
 	"github.com/soulteary/webhook/internal/rules"
@@ -41,7 +42,8 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 
 		log.Printf("[%s] incoming HTTP %s request from %s\n", requestID, r.Method, r.RemoteAddr)
 
-		hookID := mux.Vars(r)["id"]
+		hookID := strings.TrimSpace(mux.Vars(r)["id"])
+		hookID = fn.GetEscapedLogItem(hookID)
 
 		matchedHook := rules.MatchLoadedHook(hookID)
 		if matchedHook == nil {
