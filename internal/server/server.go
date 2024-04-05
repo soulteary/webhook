@@ -33,12 +33,13 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 
 func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		requestID := middleware.GetReqID(r.Context())
 		req := &hook.Request{
-			ID:         middleware.GetReqID(r.Context()),
+			ID:         requestID,
 			RawRequest: r,
 		}
 
-		log.Printf("[%s] incoming HTTP %s request from %s\n", req.ID, r.Method, r.RemoteAddr)
+		log.Printf("[%s] incoming HTTP %s request from %s\n", requestID, r.Method, r.RemoteAddr)
 
 		hookID := mux.Vars(r)["id"]
 
@@ -75,12 +76,12 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 
 		if !allowedMethod {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			log.Printf("[%s] HTTP %s method not allowed for hook %q", req.ID, r.Method, hookID)
+			log.Printf("[%s] HTTP %s method not allowed for hook %q", requestID, r.Method, hookID)
 
 			return
 		}
 
-		log.Printf("[%s] %s got matched\n", req.ID, hookID)
+		log.Printf("[%s] %s got matched\n", requestID, hookID)
 
 		for _, responseHeader := range appFlags.ResponseHeaders {
 			w.Header().Set(responseHeader.Name, responseHeader.Value)
@@ -99,7 +100,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		if !isMultipart {
 			req.Body, err = io.ReadAll(r.Body)
 			if err != nil {
-				log.Printf("[%s] error reading the request body: %+v\n", req.ID, err)
+				log.Printf("[%s] error reading the request body: %+v\n", requestID, err)
 			}
 		}
 
@@ -110,25 +111,25 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		case strings.Contains(req.ContentType, "json"):
 			err = req.ParseJSONPayload()
 			if err != nil {
-				log.Printf("[%s] %s", req.ID, err)
+				log.Printf("[%s] %s", requestID, err)
 			}
 
 		case strings.Contains(req.ContentType, "x-www-form-urlencoded"):
 			err = req.ParseFormPayload()
 			if err != nil {
-				log.Printf("[%s] %s", req.ID, err)
+				log.Printf("[%s] %s", requestID, err)
 			}
 
 		case strings.Contains(req.ContentType, "xml"):
 			err = req.ParseXMLPayload()
 			if err != nil {
-				log.Printf("[%s] %s", req.ID, err)
+				log.Printf("[%s] %s", requestID, err)
 			}
 
 		case isMultipart:
 			err = r.ParseMultipartForm(appFlags.MaxMultipartMem)
 			if err != nil {
-				msg := fmt.Sprintf("[%s] error parsing multipart form: %+v\n", req.ID, err)
+				msg := fmt.Sprintf("[%s] error parsing multipart form: %+v\n", requestID, err)
 				log.Println(msg)
 				w.WriteHeader(http.StatusInternalServerError)
 				fmt.Fprint(w, "Error occurred while parsing multipart form.")
@@ -136,7 +137,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 			}
 
 			for k, v := range r.MultipartForm.Value {
-				log.Printf("[%s] found multipart form value %q", req.ID, k)
+				log.Printf("[%s] found multipart form value %q", requestID, k)
 
 				if req.Payload == nil {
 					req.Payload = make(map[string]interface{})
@@ -172,11 +173,11 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 				}
 
 				if parseAsJSON {
-					log.Printf("[%s] parsing multipart form file %q as JSON\n", req.ID, k)
+					log.Printf("[%s] parsing multipart form file %q as JSON\n", requestID, k)
 
 					f, err := v[0].Open()
 					if err != nil {
-						msg := fmt.Sprintf("[%s] error parsing multipart form file: %+v\n", req.ID, err)
+						msg := fmt.Sprintf("[%s] error parsing multipart form file: %+v\n", requestID, err)
 						log.Println(msg)
 						w.WriteHeader(http.StatusInternalServerError)
 						fmt.Fprint(w, "Error occurred while parsing multipart form file.")
@@ -189,7 +190,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					var part map[string]interface{}
 					err = decoder.Decode(&part)
 					if err != nil {
-						log.Printf("[%s] error parsing JSON payload file: %+v\n", req.ID, err)
+						log.Printf("[%s] error parsing JSON payload file: %+v\n", requestID, err)
 					}
 
 					if req.Payload == nil {
@@ -200,13 +201,13 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 			}
 
 		default:
-			log.Printf("[%s] error parsing body payload due to unsupported content type header: %s\n", req.ID, req.ContentType)
+			log.Printf("[%s] error parsing body payload due to unsupported content type header: %s\n", requestID, req.ContentType)
 		}
 
 		// handle hook
 		errors := matchedHook.ParseJSONParameters(req)
 		for _, err := range errors {
-			log.Printf("[%s] error parsing JSON parameters: %s\n", req.ID, err)
+			log.Printf("[%s] error parsing JSON parameters: %s\n", requestID, err)
 		}
 
 		var ok bool
@@ -220,19 +221,19 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 			ok, err = matchedHook.TriggerRule.Evaluate(req)
 			if err != nil {
 				if !hook.IsParameterNodeError(err) {
-					msg := fmt.Sprintf("[%s] error evaluating hook: %s", req.ID, err)
+					msg := fmt.Sprintf("[%s] error evaluating hook: %s", requestID, err)
 					log.Println(msg)
 					w.WriteHeader(http.StatusInternalServerError)
 					fmt.Fprint(w, "Error occurred while evaluating hook rules.")
 					return
 				}
 
-				log.Printf("[%s] %v", req.ID, err)
+				log.Printf("[%s] %v", requestID, err)
 			}
 		}
 
 		if ok {
-			log.Printf("[%s] %s hook triggered successfully\n", req.ID, matchedHook.ID)
+			log.Printf("[%s] %s hook triggered successfully\n", requestID, matchedHook.ID)
 
 			for _, responseHeader := range matchedHook.ResponseHeaders {
 				w.Header().Set(responseHeader.Name, responseHeader.Value)
@@ -257,7 +258,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 				} else {
 					// Check if a success return code is configured for the hook
 					if matchedHook.SuccessHttpResponseCode != 0 {
-						writeHttpResponseCode(w, req.ID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
+						writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
 					}
 					fmt.Fprint(w, response)
 				}
@@ -266,7 +267,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 
 				// Check if a success return code is configured for the hook
 				if matchedHook.SuccessHttpResponseCode != 0 {
-					writeHttpResponseCode(w, req.ID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
+					writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
 				}
 
 				fmt.Fprint(w, matchedHook.ResponseMessage)
@@ -276,11 +277,11 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 
 		// Check if a return code is configured for the hook
 		if matchedHook.TriggerRuleMismatchHttpResponseCode != 0 {
-			writeHttpResponseCode(w, req.ID, matchedHook.ID, matchedHook.TriggerRuleMismatchHttpResponseCode)
+			writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.TriggerRuleMismatchHttpResponseCode)
 		}
 
 		// if none of the hooks got triggered
-		log.Printf("[%s] %s got matched, but didn't get triggered because the trigger rules were not satisfied\n", req.ID, matchedHook.ID)
+		log.Printf("[%s] %s got matched, but didn't get triggered because the trigger rules were not satisfied\n", requestID, matchedHook.ID)
 
 		fmt.Fprint(w, "Hook rules were not satisfied.")
 	}
