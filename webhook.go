@@ -26,21 +26,59 @@ var (
 //go:embed locales/*.toml
 var WebhookLocales embed.FS
 
+func NeedEchoVersionInfo(appFlags flags.AppFlags) {
+	if appFlags.ShowVersion {
+		i18n.Println(i18n.MSG_WEBHOOK_VERSION, version.Version)
+		os.Exit(0)
+	}
+}
+
+func CheckPrivilegesParamsCorrect(appFlags flags.AppFlags) {
+	if (appFlags.SetUID != 0 || appFlags.SetGID != 0) && (appFlags.SetUID == 0 || appFlags.SetGID == 0) {
+		i18n.Println(i18n.MSG_SETUID_OR_SETGID_ERROR)
+		os.Exit(1)
+	}
+}
+
+func GetNetAddr(appFlags flags.AppFlags, logQueue *[]string) (string, *net.Listener) {
+	addr := fmt.Sprintf("%s:%d", appFlags.Host, appFlags.Port)
+	// Open listener early so we can drop privileges.
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		*logQueue = append(*logQueue, i18n.Sprintf(i18n.ERR_SERVER_LISTENING_PORT, err))
+	}
+	return addr, &ln
+}
+
+func DropPrivileges(appFlags flags.AppFlags, logQueue *[]string) {
+	if appFlags.SetUID != 0 {
+		err := platform.DropPrivileges(appFlags.SetUID, appFlags.SetGID)
+		if err != nil {
+			*logQueue = append(*logQueue, i18n.Sprintf(i18n.ERR_SERVER_LISTENING_PRIVILEGES, err))
+		}
+	}
+}
+
+func SetupLogger(appFlags flags.AppFlags, logQueue *[]string) (logFile *os.File, err error) {
+	if appFlags.LogPath != "" {
+		logFile, err = os.OpenFile(appFlags.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+		if err != nil {
+			*logQueue = append(*logQueue, i18n.Sprintf(i18n.ERR_SERVER_OPENING_LOG_FILE, appFlags.LogPath, err))
+		}
+	}
+	return logFile, err
+}
+
 func main() {
 	appFlags := flags.Parse()
 
 	i18n.GLOBAL_LOCALES = i18n.InitLocaleByFiles(i18n.LoadLocaleFiles(appFlags.I18nDir, WebhookLocales))
 	i18n.GLOBAL_LANG = appFlags.Lang
 
-	if appFlags.ShowVersion {
-		i18n.Println(i18n.MSG_WEBHOOK_VERSION, version.Version)
-		os.Exit(0)
-	}
-
-	if (appFlags.SetUID != 0 || appFlags.SetGID != 0) && (appFlags.SetUID == 0 || appFlags.SetGID == 0) {
-		i18n.Println(i18n.MSG_SETUID_OR_SETGID_ERROR)
-		os.Exit(1)
-	}
+	// check if we need to echo version info and quit app
+	NeedEchoVersionInfo(appFlags)
+	// check if the privileges params are correct, or exit(1)
+	CheckPrivilegesParamsCorrect(appFlags)
 
 	if appFlags.Debug || appFlags.LogPath != "" {
 		appFlags.Verbose = true
@@ -55,33 +93,15 @@ func main() {
 	// log file opening prior to writing our first log message.
 	var logQueue []string
 
-	addr := fmt.Sprintf("%s:%d", appFlags.Host, appFlags.Port)
-
-	// Open listener early so we can drop privileges.
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		logQueue = append(logQueue, i18n.Sprintf(i18n.ERR_SERVER_LISTENING_PORT, err))
-		// we'll bail out below
+	// set up net listener and get listening address
+	addr, ln := GetNetAddr(appFlags, &logQueue)
+	// drop privileges
+	DropPrivileges(appFlags, &logQueue)
+	// setup logger
+	logFile, err := SetupLogger(appFlags, &logQueue)
+	if err == nil && logFile != nil {
+		log.SetOutput(logFile)
 	}
-
-	if appFlags.SetUID != 0 {
-		err := platform.DropPrivileges(appFlags.SetUID, appFlags.SetGID)
-		if err != nil {
-			logQueue = append(logQueue, i18n.Sprintf(i18n.ERR_SERVER_LISTENING_PRIVILEGES, err))
-			// we'll bail out below
-		}
-	}
-
-	if appFlags.LogPath != "" {
-		file, err := os.OpenFile(appFlags.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
-		if err != nil {
-			logQueue = append(logQueue, i18n.Sprintf(i18n.ERR_SERVER_OPENING_LOG_FILE, appFlags.LogPath, err))
-			// we'll bail out below
-		} else {
-			log.SetOutput(file)
-		}
-	}
-
 	log.SetPrefix("[webhook] ")
 	log.SetFlags(log.Ldate | log.Ltime)
 
@@ -89,7 +109,6 @@ func main() {
 		for i := range logQueue {
 			log.Println(logQueue[i])
 		}
-
 		os.Exit(1)
 	}
 
@@ -136,5 +155,5 @@ func main() {
 		monitor.ApplyWatcher(appFlags)
 	}
 
-	server.Launch(appFlags, addr, ln)
+	server.Launch(appFlags, addr, *ln)
 }
