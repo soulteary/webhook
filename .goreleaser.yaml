@@ -5,7 +5,7 @@ builds:
       env:
         - CGO_ENABLED=0
       ldflags:
-        - -w -s -X "github.com/soulteary/webhook/internal/version/version.Version={{ .Tag }}"
+        - -w -s -X "github.com/soulteary/webhook/internal/version.Version={{ .Tag }}"
     id: macos
     goos: [darwin]
     goarch: [amd64, arm64]
