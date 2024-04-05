@@ -92,8 +92,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		var err error
 
 		// set contentType to IncomingPayloadContentType or header value
-		req.ContentType = strings.TrimSpace(r.Header.Get("Content-Type"))
-		req.ContentType = fn.RemoveNewlinesAndTabs(req.ContentType)
+		req.ContentType = r.Header.Get("Content-Type")
 		if len(matchedHook.IncomingPayloadContentType) != 0 {
 			req.ContentType = matchedHook.IncomingPayloadContentType
 		}
@@ -204,7 +203,8 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 			}
 
 		default:
-			log.Printf("[%s] error parsing body payload due to unsupported content type header: %s\n", requestID, req.ContentType)
+			logContent := fmt.Sprintf("[%s] error parsing body payload due to unsupported content type header: %s\n", requestID, req.ContentType)
+			log.Println(fn.RemoveNewlinesAndTabs(logContent))
 		}
 
 		// handle hook
