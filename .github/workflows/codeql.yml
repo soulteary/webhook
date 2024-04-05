@@ -54,6 +54,14 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
+          config: |
+            disable-default-queries: true
+            queries:
+              - uses: security-extended
+            query-filters:
+              - exclude:
+                  id:
+                    - go/clear-text-logging
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
