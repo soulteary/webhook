@@ -9,7 +9,6 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/soulteary/webhook/internal/flags"
-	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/i18n"
 	"github.com/soulteary/webhook/internal/monitor"
 	"github.com/soulteary/webhook/internal/pidfile"
@@ -127,36 +126,7 @@ func main() {
 	}
 
 	// load and parse hooks
-	for _, hooksFilePath := range rules.HooksFiles {
-		log.Printf("attempting to load hooks from %s\n", hooksFilePath)
-
-		newHooks := hook.Hooks{}
-
-		err := newHooks.LoadFromFile(hooksFilePath, appFlags.AsTemplate)
-		if err != nil {
-			log.Printf("couldn't load hooks from file! %+v\n", err)
-		} else {
-			log.Printf("found %d hook(s) in file\n", len(newHooks))
-
-			for _, hook := range newHooks {
-				if rules.MatchLoadedHook(hook.ID) != nil {
-					log.Fatalf("error: hook with the id %s has already been loaded!\nplease check your hooks file for duplicate hooks ids!\n", hook.ID)
-				}
-				log.Printf("\tloaded: %s\n", hook.ID)
-			}
-
-			rules.LoadedHooksFromFiles[hooksFilePath] = newHooks
-		}
-	}
-
-	newHooksFiles := rules.HooksFiles[:0]
-	for _, filePath := range rules.HooksFiles {
-		if _, ok := rules.LoadedHooksFromFiles[filePath]; ok {
-			newHooksFiles = append(newHooksFiles, filePath)
-		}
-	}
-
-	rules.HooksFiles = newHooksFiles
+	rules.ParseAndLoadHooks(appFlags.AsTemplate)
 
 	if !appFlags.Verbose && !appFlags.NoPanic && rules.LenLoadedHooks() == 0 {
 		log.SetOutput(os.Stdout)
