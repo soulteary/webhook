@@ -40,10 +40,9 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 
 		log.Printf("[%s] incoming HTTP %s request from %s\n", req.ID, r.Method, r.RemoteAddr)
 
-		// TODO: rename this to avoid confusion with Request.ID
-		id := mux.Vars(r)["id"]
+		hookID := mux.Vars(r)["id"]
 
-		matchedHook := rules.MatchLoadedHook(id)
+		matchedHook := rules.MatchLoadedHook(hookID)
 		if matchedHook == nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "Hook not found.")
@@ -76,12 +75,12 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 
 		if !allowedMethod {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			log.Printf("[%s] HTTP %s method not allowed for hook %q", req.ID, r.Method, id)
+			log.Printf("[%s] HTTP %s method not allowed for hook %q", req.ID, r.Method, hookID)
 
 			return
 		}
 
-		log.Printf("[%s] %s got matched\n", req.ID, id)
+		log.Printf("[%s] %s got matched\n", req.ID, hookID)
 
 		for _, responseHeader := range appFlags.ResponseHeaders {
 			w.Header().Set(responseHeader.Name, responseHeader.Value)
