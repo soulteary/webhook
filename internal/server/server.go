@@ -43,7 +43,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		log.Printf("[%s] incoming HTTP %s request from %s\n", requestID, r.Method, r.RemoteAddr)
 
 		hookID := strings.TrimSpace(mux.Vars(r)["id"])
-		hookID = fn.GetEscapedLogItem(hookID)
+		hookID = fn.RemoveNewlinesAndTabs(hookID)
 
 		matchedHook := rules.MatchLoadedHook(hookID)
 		if matchedHook == nil {
@@ -92,7 +92,8 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		var err error
 
 		// set contentType to IncomingPayloadContentType or header value
-		req.ContentType = r.Header.Get("Content-Type")
+		req.ContentType = strings.TrimSpace(r.Header.Get("Content-Type"))
+		req.ContentType = fn.RemoveNewlinesAndTabs(req.ContentType)
 		if len(matchedHook.IncomingPayloadContentType) != 0 {
 			req.ContentType = matchedHook.IncomingPayloadContentType
 		}
