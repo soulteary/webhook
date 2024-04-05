@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/i18n"
 	"github.com/soulteary/webhook/internal/monitor"
@@ -19,7 +18,6 @@ import (
 )
 
 var (
-	watcher *fsnotify.Watcher
 	signals chan os.Signal
 	pidFile *pidfile.PIDFile
 )

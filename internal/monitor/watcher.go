@@ -8,8 +8,11 @@ import (
 	"github.com/soulteary/webhook/internal/rules"
 )
 
+var watcher *fsnotify.Watcher
+
 func ApplyWatcher(appFlags flags.AppFlags) {
-	watcher, err := fsnotify.NewWatcher()
+	var err error
+	watcher, err = fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal("error creating file watcher instance\n", err)
 	}
