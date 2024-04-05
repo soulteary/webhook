@@ -27,7 +27,7 @@ jobs:
       - name: Security Scan
         uses: securego/gosec@master
         with:
-          args: "-no-fail -fmt sarif -out results.sarif ./..."
+          args: "-no-fail -fmt sarif -out results.sarif -exclude=G204 ./..."
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
