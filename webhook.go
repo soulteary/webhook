@@ -164,26 +164,7 @@ func main() {
 	}
 
 	if appFlags.HotReload {
-		var err error
-
-		watcher, err = fsnotify.NewWatcher()
-		if err != nil {
-			log.Fatal("error creating file watcher instance\n", err)
-		}
-		defer watcher.Close()
-
-		for _, hooksFilePath := range rules.HooksFiles {
-			// set up file watcher
-			log.Printf("setting up file watcher for %s\n", hooksFilePath)
-
-			err = watcher.Add(hooksFilePath)
-			if err != nil {
-				log.Print("error adding hooks file to the watcher\n", err)
-				return
-			}
-		}
-
-		go monitor.WatchForFileChange(watcher, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, rules.ReloadHooks, rules.RemoveHooks)
+		monitor.ApplyWatcher(appFlags)
 	}
 
 	server.Launch(appFlags, addr, ln)
