@@ -357,7 +357,8 @@ func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, e
 
 	cmd.Env = append(os.Environ(), envs...)
 
-	log.Printf("[%s] executing %s (%s) with arguments %q and environment %s using %s as cwd\n", r.ID, h.ExecuteCommand, cmd.Path, cmd.Args, envs, cmd.Dir)
+	logsContent := fmt.Sprintf("[%s] executing %s (%s) with arguments %q and environment %s using %s as cwd\n", r.ID, h.ExecuteCommand, cmd.Path, cmd.Args, envs, cmd.Dir)
+	log.Println(fn.RemoveNewlinesAndTabs(logsContent))
 
 	var out []byte
 	if w != nil {
