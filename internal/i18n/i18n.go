@@ -8,7 +8,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/fn"
 	"golang.org/x/text/language"
 )
@@ -39,9 +38,9 @@ type WebHookLocals struct {
 }
 
 // get alive locales
-func LoadLocaleFiles() (aliveLocales []WebHookLocals) {
+func LoadLocaleFiles(localesDir string) (aliveLocales []WebHookLocals) {
 	// TODO custom locales directory
-	localesFiles := fn.ScanDirByExt(flags.DEFAULT_LOCALES_DIR, ".toml")
+	localesFiles := fn.ScanDirByExt(localesDir, ".toml")
 	if len(localesFiles) == 0 {
 		return
 	}
@@ -74,6 +73,11 @@ type WebHookLocalizer struct {
 }
 
 var GLOBAL_LOCALES map[string]WebHookLocalizer
+var GLOBAL_LANG string
+
+func SetGlobalLocale(lang string) {
+	GLOBAL_LANG = lang
+}
 
 func InitLocaleByFiles(aliveLocales []WebHookLocals) (bundleMaps map[string]WebHookLocalizer) {
 	bundleMaps = make(map[string]WebHookLocalizer)
@@ -92,7 +96,7 @@ func InitLocaleByFiles(aliveLocales []WebHookLocals) (bundleMaps map[string]WebH
 }
 
 func GetMessage(messageID string) string {
-	locale := flags.DEFAULT_LOCALES
+	locale := GLOBAL_LANG
 	localizer, ok := GLOBAL_LOCALES[locale]
 	if !ok {
 		return fmt.Sprintf("locale %s not found", locale)

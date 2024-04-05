@@ -49,11 +49,13 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 }
 
 func main() {
-	i18n.GLOBAL_LOCALES = i18n.InitLocaleByFiles(i18n.LoadLocaleFiles())
+	appFlags := flags.Parse()
+
+	i18n.GLOBAL_LOCALES = i18n.InitLocaleByFiles(i18n.LoadLocaleFiles(appFlags.I18nDir))
+	i18n.GLOBAL_LANG = appFlags.Lang
+
 	sayHi := i18n.GetMessage("HelloWorld")
 	fmt.Println(sayHi)
-
-	appFlags := flags.Parse()
 
 	if appFlags.ShowVersion {
 		fmt.Println("webhook version " + version.Version)

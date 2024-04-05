@@ -28,6 +28,10 @@ func ParseEnvs() AppFlags {
 	flags.HttpMethods = GetEnvStr(ENV_KEY_HTTP_METHODS, DEFAULT_HTTP_METHODS)
 	flags.PidPath = GetEnvStr(ENV_KEY_PID_FILE, DEFAULT_PID_FILE)
 
+	// init i18n, set lang and i18n dir
+	flags.Lang = GetEnvStr(ENV_KEY_LANG, DEFAULT_LANG)
+	flags.I18nDir = GetEnvStr(ENV_KEY_I18N, DEFAULT_I18N_DIR)
+
 	hooks := strings.Split(GetEnvStr(ENV_KEY_HOOKS, ""), ",")
 	var hooksFiles hook.HooksFiles
 	for _, hook := range hooks {
@@ -60,6 +64,9 @@ func ParseCLI(flags AppFlags) AppFlags {
 		SetUID          = flag.Int("setuid", DEFAULT_UID, "set user ID after opening listening port; must be used with setgid")
 		HttpMethods     = flag.String("http-methods", DEFAULT_HTTP_METHODS, `set default allowed HTTP methods (ie. "POST"); separate methods with comma`)
 		PidPath         = flag.String("pidfile", DEFAULT_PID_FILE, "create PID file at the given path")
+
+		Lang    = flag.String("lang", DEFAULT_LANG, "set the language code for the webhook")
+		I18nDir = flag.String("lang-dir", DEFAULT_I18N_DIR, "set the directory for the i18n files")
 
 		ShowVersion     = flag.Bool("version", false, "display webhook version and quit")
 		ResponseHeaders hook.ResponseHeaders
@@ -146,6 +153,14 @@ func ParseCLI(flags AppFlags) AppFlags {
 
 	if len(ResponseHeaders) > 0 {
 		flags.ResponseHeaders = ResponseHeaders
+	}
+
+	if *Lang != DEFAULT_LANG {
+		flags.Lang = *Lang
+	}
+
+	if *I18nDir != DEFAULT_I18N_DIR {
+		flags.I18nDir = *I18nDir
 	}
 	return flags
 }

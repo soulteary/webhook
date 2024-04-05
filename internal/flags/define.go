@@ -23,8 +23,8 @@ const (
 	DEFAULT_GID                = 0
 	DEFAULT_UID                = 0
 
-	DEFAULT_LOCALES     = "en-US"
-	DEFAULT_LOCALES_DIR = "./locales"
+	DEFAULT_LANG     = "en-US"
+	DEFAULT_I18N_DIR = "./locales"
 )
 
 const (
@@ -47,6 +47,9 @@ const (
 	ENV_KEY_GID             = "GID"
 	ENV_KEY_UID             = "UID"
 	ENV_KEY_HEADER          = "HEADER"
+
+	ENV_KEY_LANG = "LANGUAGE"
+	ENV_KEY_I18N = "LANG_DIR"
 )
 
 type AppFlags struct {
@@ -70,4 +73,7 @@ type AppFlags struct {
 	ShowVersion     bool
 	HooksFiles      hook.HooksFiles
 	ResponseHeaders hook.ResponseHeaders
+
+	Lang    string
+	I18nDir string
 }
