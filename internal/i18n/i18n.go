@@ -1,7 +1,9 @@
 package i18n
 
 import (
+	"embed"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,17 +14,36 @@ import (
 	"golang.org/x/text/language"
 )
 
-type WebHookLocals struct {
+type WebHookLocales struct {
 	FileName string
 	Name     string
 	Content  []byte
 }
 
 // get alive locales
-func LoadLocaleFiles(localesDir string) (aliveLocales []WebHookLocals) {
+func LoadLocaleFiles(localesDir string, webhookLocalesEmbed embed.FS) (aliveLocales []WebHookLocales) {
 	localesFiles := fn.ScanDirByExt(localesDir, ".toml")
+	// when no locales files found, use the embed locales files
 	if len(localesFiles) == 0 {
-		return
+		files, err := webhookLocalesEmbed.ReadDir("locales")
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, file := range files {
+			fileName := file.Name()
+			data, err := webhookLocalesEmbed.ReadFile("locales/" + fileName)
+			if err != nil {
+				fmt.Println(file, err)
+				continue
+			}
+			locales, err := GetWebHookLocaleObject(fileName, data)
+			if err != nil {
+				fmt.Println(file, err)
+				continue
+			}
+			aliveLocales = append(aliveLocales, locales)
+		}
+		return aliveLocales
 	}
 
 	for _, file := range localesFiles {
@@ -32,17 +53,29 @@ func LoadLocaleFiles(localesDir string) (aliveLocales []WebHookLocals) {
 			continue
 		}
 
-		localeNameFromFile := strings.Replace(filepath.Base(file), ".toml", "", -1)
-		verified := fn.GetVerifiedLocalCode(localeNameFromFile)
-		if verified != "" {
-			aliveLocales = append(aliveLocales, WebHookLocals{
-				FileName: file,
-				Name:     localeNameFromFile,
-				Content:  content,
-			})
+		locales, err := GetWebHookLocaleObject(file, content)
+		if err != nil {
+			fmt.Println(file, err)
+			continue
 		}
+		aliveLocales = append(aliveLocales, locales)
 	}
 	return aliveLocales
+}
+
+func GetWebHookLocaleObject(fileName string, content []byte) (result WebHookLocales, err error) {
+	localeNameFromFile := strings.Replace(filepath.Base(fileName), ".toml", "", -1)
+	verified := fn.GetVerifiedLocalCode(localeNameFromFile)
+
+	if verified == "" {
+		return result, fmt.Errorf("invalid locale name")
+	}
+
+	return WebHookLocales{
+		FileName: fileName,
+		Name:     localeNameFromFile,
+		Content:  content,
+	}, nil
 }
 
 type WebHookLocalizer struct {
@@ -59,7 +92,7 @@ func SetGlobalLocale(lang string) {
 	GLOBAL_LANG = lang
 }
 
-func InitLocaleByFiles(aliveLocales []WebHookLocals) (bundleMaps map[string]WebHookLocalizer) {
+func InitLocaleByFiles(aliveLocales []WebHookLocales) (bundleMaps map[string]WebHookLocalizer) {
 	bundleMaps = make(map[string]WebHookLocalizer)
 	for _, locale := range aliveLocales {
 		bundle := i18n.NewBundle(language.MustParse(locale.Name))

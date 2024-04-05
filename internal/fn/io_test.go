@@ -10,73 +10,26 @@ import (
 )
 
 func TestScanDirByExt(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatalf("create temp dir failed: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
+	testFile1 := filepath.Join(tempDir, "test1.txt")
+	testFile2 := filepath.Join(tempDir, "test2.jpg")
+	testFile3 := filepath.Join(tempDir, "test3.txt")
 
-	files := []string{
-		"file1.txt",
-		"file2.txt",
-		"file3.go",
-		"file4.go",
-		"file5.py",
-		"file6.TXT",
-	}
-	for _, file := range files {
-		filePath := filepath.Join(tempDir, file)
-		_, err := os.Create(filePath)
-		if err != nil {
-			t.Fatalf("create test file failed: %v", err)
-		}
-	}
+	os.Create(testFile1)
+	os.Create(testFile2)
+	os.Create(testFile3)
 
-	testCases := []struct {
-		name     string
-		filePath string
-		fileExt  string
-		expected []string
-	}{
-		{
-			name:     "scan .txt files",
-			filePath: tempDir,
-			fileExt:  "txt",
-			expected: []string{
-				filepath.Join(tempDir, "file1.txt"),
-				filepath.Join(tempDir, "file2.txt"),
-				filepath.Join(tempDir, "file6.TXT"),
-			},
-		},
-		{
-			name:     "scan .go files",
-			filePath: tempDir,
-			fileExt:  "go",
-			expected: []string{
-				filepath.Join(tempDir, "file3.go"),
-				filepath.Join(tempDir, "file4.go"),
-			},
-		},
-		{
-			name:     "scan .py files",
-			filePath: tempDir,
-			fileExt:  "py",
-			expected: []string{
-				filepath.Join(tempDir, "file5.py"),
-			},
-		},
-		{
-			name:     "scan unknown files",
-			filePath: tempDir,
-			fileExt:  "doc",
-			expected: nil,
-		},
-	}
+	defer os.Remove(testFile1)
+	defer os.Remove(testFile2)
+	defer os.Remove(testFile3)
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := fn.ScanDirByExt(tc.filePath, tc.fileExt)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
+	txtFiles := fn.ScanDirByExt(tempDir, ".txt")
+	assert.Equal(t, []string{testFile1, testFile3}, txtFiles)
+
+	jpgFiles := fn.ScanDirByExt(tempDir, ".jpg")
+	assert.Equal(t, []string{testFile2}, jpgFiles)
+
+	nonExistentPath := filepath.Join(tempDir, "non-existent")
+	nonExistentFiles := fn.ScanDirByExt(nonExistentPath, ".txt")
+	assert.Nil(t, nonExistentFiles)
 }

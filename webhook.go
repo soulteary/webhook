@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"io"
 	"log"
@@ -22,10 +23,13 @@ var (
 	pidFile *pidfile.PIDFile
 )
 
+//go:embed locales/*.toml
+var WebhookLocales embed.FS
+
 func main() {
 	appFlags := flags.Parse()
 
-	i18n.GLOBAL_LOCALES = i18n.InitLocaleByFiles(i18n.LoadLocaleFiles(appFlags.I18nDir))
+	i18n.GLOBAL_LOCALES = i18n.InitLocaleByFiles(i18n.LoadLocaleFiles(appFlags.I18nDir, WebhookLocales))
 	i18n.GLOBAL_LANG = appFlags.Lang
 
 	if appFlags.ShowVersion {

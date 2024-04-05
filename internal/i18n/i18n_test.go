@@ -1,6 +1,7 @@
 package i18n_test
 
 import (
+	"embed"
 	"os"
 	"path/filepath"
 	"testing"
@@ -8,6 +9,8 @@ import (
 	"github.com/soulteary/webhook/internal/i18n"
 	"github.com/stretchr/testify/assert"
 )
+
+var embedFS embed.FS
 
 func TestLoadLocaleFiles(t *testing.T) {
 	tempDir := t.TempDir()
@@ -26,7 +29,7 @@ func TestLoadLocaleFiles(t *testing.T) {
 		invalid content
 	`)
 
-	aliveLocales := i18n.LoadLocaleFiles(tempDir)
+	aliveLocales := i18n.LoadLocaleFiles(tempDir, embedFS)
 	assert.Len(t, aliveLocales, 2)
 
 	assert.Equal(t, "en", aliveLocales[0].Name)
@@ -40,4 +43,14 @@ func createTOMLFile(t *testing.T, dir, name, content string) {
 	path := filepath.Join(dir, name)
 	err := os.WriteFile(path, []byte(content), 0644)
 	assert.NoError(t, err)
+}
+
+func TestGetWebHookLocaleObject(t *testing.T) {
+	locale, err := i18n.GetWebHookLocaleObject("en-US.toml", []byte{})
+	assert.NoError(t, err)
+	assert.Equal(t, "en-US", locale.Name)
+
+	_, err = i18n.GetWebHookLocaleObject("invalid.toml", []byte{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid locale name")
 }
