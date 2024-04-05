@@ -84,3 +84,15 @@ func GetMessage(messageID string) string {
 	}
 	return localizer.Localizer.MustLocalize(&i18n.LocalizeConfig{MessageID: messageID})
 }
+
+func Println(messageID string, a ...any) {
+	if len(a) == 0 {
+		fmt.Println(GetMessage(messageID))
+	} else {
+		fmt.Println(GetMessage(messageID), a)
+	}
+}
+
+func Sprintf(messageID string, a ...any) string {
+	return fmt.Sprintf(GetMessage(messageID), a)
+}

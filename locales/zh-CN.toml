@@ -1,1 +1,9 @@
-HelloWorld = "你好世界！"
+WEBHOOK_VERSION = "歪脖虎克(WebHook) 版本"
+SERVER_IS_STARTING = "版本 %s 正在启动"
+
+ERROR_SETUID_OR_SETGID = "错误: setuid 和 setgid 选项必须一起使用"
+ERROR_SERVER_LISTENING_PORT = "监听端口时发生错误: %s"
+ERROR_SERVER_LISTENING_PRIVILEGES = "设置权限时发生错误: %s"
+ERROR_SERVER_OPENING_LOG_FILE = "打开日志文件 %q 时发生错误: %v"
+ERROR_CREATING_PID_FILE = "创建 PID 文件时发生错误: %v"
+ERROR_COULD_NOT_LOAD_ANY_HOOKS = "无法从文件加载任何 hooks!\n你可以打开 -verbose 标志来查看详细信息\n如果您希望 Webhook 在没有 hooks 配置的情况下启动，可以使用 -verbose 标志或 -nopanic"

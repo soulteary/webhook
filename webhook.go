@@ -28,16 +28,13 @@ func main() {
 	i18n.GLOBAL_LOCALES = i18n.InitLocaleByFiles(i18n.LoadLocaleFiles(appFlags.I18nDir))
 	i18n.GLOBAL_LANG = appFlags.Lang
 
-	sayHi := i18n.GetMessage("HelloWorld")
-	fmt.Println(sayHi)
-
 	if appFlags.ShowVersion {
-		fmt.Println("webhook version " + version.Version)
+		i18n.Println(i18n.MSG_WEBHOOK_VERSION, version.Version)
 		os.Exit(0)
 	}
 
 	if (appFlags.SetUID != 0 || appFlags.SetGID != 0) && (appFlags.SetUID == 0 || appFlags.SetGID == 0) {
-		fmt.Println("error: setuid and setgid options must be used together")
+		i18n.Println(i18n.MSG_SETUID_OR_SETGID_ERROR)
 		os.Exit(1)
 	}
 
@@ -59,14 +56,14 @@ func main() {
 	// Open listener early so we can drop privileges.
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		logQueue = append(logQueue, fmt.Sprintf("error listening on port: %s", err))
+		logQueue = append(logQueue, i18n.Sprintf(i18n.ERR_SERVER_LISTENING_PORT, err))
 		// we'll bail out below
 	}
 
 	if appFlags.SetUID != 0 {
 		err := platform.DropPrivileges(appFlags.SetUID, appFlags.SetGID)
 		if err != nil {
-			logQueue = append(logQueue, fmt.Sprintf("error dropping privileges: %s", err))
+			logQueue = append(logQueue, i18n.Sprintf(i18n.ERR_SERVER_LISTENING_PRIVILEGES, err))
 			// we'll bail out below
 		}
 	}
@@ -74,7 +71,7 @@ func main() {
 	if appFlags.LogPath != "" {
 		file, err := os.OpenFile(appFlags.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
-			logQueue = append(logQueue, fmt.Sprintf("error opening log file %q: %v", appFlags.LogPath, err))
+			logQueue = append(logQueue, i18n.Sprintf(i18n.ERR_SERVER_OPENING_LOG_FILE, appFlags.LogPath, err))
 			// we'll bail out below
 		} else {
 			log.SetOutput(file)
@@ -102,7 +99,7 @@ func main() {
 
 		pidFile, err = pidfile.New(appFlags.PidPath)
 		if err != nil {
-			log.Fatalf("Error creating pidfile: %v", err)
+			log.Fatal(i18n.ERR_CREATING_PID_FILE, err)
 		}
 
 		defer func() {
@@ -114,7 +111,7 @@ func main() {
 		}()
 	}
 
-	log.Println("version " + version.Version + " starting")
+	log.Println(i18n.Sprintf(i18n.MSG_SERVER_IS_STARTING, version.Version))
 
 	// set os signal watcher
 	if appFlags.AsTemplate {
@@ -128,7 +125,7 @@ func main() {
 
 	if !appFlags.Verbose && !appFlags.NoPanic && rules.LenLoadedHooks() == 0 {
 		log.SetOutput(os.Stdout)
-		log.Fatalln("couldn't load any hooks from file!\naborting webhook execution since the -verbose flag is set to false.\nIf, for some reason, you want webhook to start without the hooks, either use -verbose flag, or -nopanic")
+		log.Fatalln(i18n.Sprintf(i18n.ERR_COULD_NOT_LOAD_ANY_HOOKS))
 	}
 
 	if appFlags.HotReload {
