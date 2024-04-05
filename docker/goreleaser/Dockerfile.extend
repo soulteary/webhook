@@ -6,5 +6,5 @@ LABEL maintainer "soulteary <soulteary@gmail.com>"
 RUN apk --update add bash curl wget jq yq
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY webhook /usr/bin/webhook
-EXPOSE 8345/tcp
+EXPOSE 9000/tcp
 CMD ["/usr/bin/webhook"]

@@ -13,5 +13,5 @@ FROM alpine:3.19
 LABEL maintainer "soulteary <soulteary@gmail.com>"
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY webhook.minify /usr/bin/webhook
-EXPOSE 8345/tcp
+EXPOSE 9000/tcp
 CMD webhook
