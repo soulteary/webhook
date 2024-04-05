@@ -1,5 +1,6 @@
 package version
 
+// auto set by build system
 var (
-	Version = "3.1.1"
+	Version = "dev"
 )
