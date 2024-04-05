@@ -15,6 +15,7 @@ import (
 
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/i18n"
 	"github.com/soulteary/webhook/internal/link"
 	"github.com/soulteary/webhook/internal/middleware"
 	"github.com/soulteary/webhook/internal/monitor"
@@ -48,6 +49,10 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 }
 
 func main() {
+	i18n.GLOBAL_LOCALES = i18n.InitLocaleByFiles(i18n.LoadLocaleFiles())
+	sayHi := i18n.GetMessage("HelloWorld")
+	fmt.Println(sayHi)
+
 	appFlags := flags.Parse()
 
 	if appFlags.ShowVersion {

@@ -22,6 +22,9 @@ const (
 	DEFAULT_MAX_MPART_MEM      = 1 << 20
 	DEFAULT_GID                = 0
 	DEFAULT_UID                = 0
+
+	DEFAULT_LOCALES     = "en-US"
+	DEFAULT_LOCALES_DIR = "./locales"
 )
 
 const (
