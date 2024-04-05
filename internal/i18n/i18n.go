@@ -12,25 +12,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// get verified local code
-func getVerifiedLocalCode(targetCode string) string {
-	var tag language.Tag
-	err := tag.UnmarshalText([]byte(targetCode))
-	if err != nil {
-		return ""
-	}
-	b, err := tag.MarshalText()
-	if err != nil {
-		return ""
-	}
-
-	verified := string(b)
-	if verified != targetCode {
-		return ""
-	}
-	return verified
-}
-
 type WebHookLocals struct {
 	FileName string
 	Name     string
@@ -53,7 +34,7 @@ func LoadLocaleFiles(localesDir string) (aliveLocales []WebHookLocals) {
 		}
 
 		localeNameFromFile := strings.Replace(filepath.Base(file), ".toml", "", -1)
-		verified := getVerifiedLocalCode(localeNameFromFile)
+		verified := fn.GetVerifiedLocalCode(localeNameFromFile)
 		if verified != "" {
 			aliveLocales = append(aliveLocales, WebHookLocals{
 				FileName: file,
