@@ -20,7 +20,6 @@ type WebHookLocals struct {
 
 // get alive locales
 func LoadLocaleFiles(localesDir string) (aliveLocales []WebHookLocals) {
-	// TODO custom locales directory
 	localesFiles := fn.ScanDirByExt(localesDir, ".toml")
 	if len(localesFiles) == 0 {
 		return
