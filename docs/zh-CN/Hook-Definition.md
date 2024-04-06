@@ -18,7 +18,7 @@
 * `parse-parameters-as-json` - 将指定参数设置在 JSON 字符串中，使用规则和`pass-arguments-to-command` 一致。
 * `pass-environment-to-command` - 将指定的参数设置为环境变量，并传递给调用程序的参数中。如果没有指定 `"envname"`字段，那么程序将采用 "HOOK_argumentname" （`argumentname` 具体请求参数名）变量名称，否则将使用 `"envname"` 字段作为名称。在[请求值设置][Request-Values]文档中可以了解更多细节。例如，如果要将静态字符串值传递给命令,可以将其指定为 `{"source":"string","envname":"SOMETHING","name":"value"}`。
 * `pass-file-to-command` - 指定要传递给命令的文件列表。传递给命令的内容将在序列化处理并存储在临时文件中（并行调用程序，将发生文件的覆盖）。如果你想在脚本中使用环境变量的方法访问文件名称，可以参考 `pass-environment-to-command`。如果你定义了 `command-working-directory`，将会作为文件的保存目录。如果额外设置了 `base64decode` 为 true，那么程序将会对接收到的二进制数据先进行 Base64 解码，再进行文件保存。默认情况下，这些文件将会在 WebHook 程序退出后被删除。更多信息可以查阅[请求值设置][Request-Values]文档。
-* `trigger-rule` - 配置钩子的具体触发规则，访问[钩子规则](Hook-Rules.md)文档，来查看详细内容。
+* `trigger-rule` - 配置钩子的具体触发规则，访问[钩子规则][Hook-Rules]文档，来查看详细内容。
 * `trigger-rule-mismatch-http-response-code` - 设置在不满足触发规则时返回给调用方的 HTTP 状态码。
 * `trigger-signature-soft-failures` - 设置是否允许忽略钩子触发过程中的签名验证处理结果，默认情况下，如果签名校验失败，那么会被视为程序执行出错。
 
@@ -28,3 +28,4 @@
 
 
 [Request-Values]: ./Referencing-Request-Values.md
+[Hook-Rules]: ./Hook-Rules.md
