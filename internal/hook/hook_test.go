@@ -484,10 +484,10 @@ var hooksLoadFromFileTests = []struct {
 	asTemplate bool
 	ok         bool
 }{
-	{"../../example/hooks.json", false, true},
-	{"../../example/hooks.yaml", false, true},
-	{"../../example/hooks.json.tmpl", true, true},
-	{"../../example/hooks.yaml.tmpl", true, true},
+	{"../../example/configs/hooks.json", false, true},
+	{"../../example/configs/hooks.yaml", false, true},
+	{"../../example/configs/hooks.json.tmpl", true, true},
+	{"../../example/configs/hooks.yaml.tmpl", true, true},
 	{"", false, true},
 	// failures
 	{"missing.json", false, false},
