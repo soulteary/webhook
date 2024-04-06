@@ -19,11 +19,17 @@
 
 至于具体的命令，从处理数据、存储数据到用远程命令打开空调、关闭电脑，一些都由你做主，你可以实现任何你想要的事情，它只负责在合适的时间点，接受执行指令。
 
-# 入门
+# 快速上手
 
-## 软件安装
+如何下载和获得执行程序、如何快速启动程序，开始连接各种应用。
 
-### Docker
+### 软件安装：下载预构建程序
+
+[![](.github/release.png)](https://github.com/soulteary/webhook/releases)
+
+不同架构的预编译二进制文件可在 [GitHub 发布](https://github.com/soulteary/webhook/releases) 页面获取。
+
+### 软件安装：Docker
 
 ![](.github/dockerhub.png)
 
@@ -41,14 +47,6 @@ docker pull soulteary/webhook:extend-3.4.5
 ```
 
 然后我们可以基于这个镜像来构建和完善我们命令所需要的运行环境。
-
-**参考教程【TBD】**
-
-### 下载预构建程序
-
-[![](.github/release.png)](https://github.com/soulteary/webhook/releases)
-
-不同架构的预编译二进制文件可在 [GitHub 发布](https://github.com/soulteary/webhook/releases) 页面获取。
 
 ## 程序配置
 
