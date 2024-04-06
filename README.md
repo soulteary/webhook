@@ -50,7 +50,11 @@ docker pull soulteary/webhook:extend-3.4.5
 
 不同架构的预编译二进制文件可在 [GitHub 发布](https://github.com/soulteary/webhook/releases) 页面获取。
 
-## 配置
+## 程序配置
+
+**建议阅读完整文档，来了解程序的具体能力，[中文文档](./docs/zh-CN/)，[英文文档](./docs/en-US/)。**
+
+---
 
 我们可以来定义一些你希望 [webhook][w] 提供 HTTP 服务使用的钩子。
 
