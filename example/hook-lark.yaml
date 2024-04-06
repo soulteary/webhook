@@ -1,0 +1,9 @@
+- id: lark
+  execute-command: ./send-lark-message.sh
+  command-working-directory: /app
+  include-command-output-in-response: true
+  include-command-out-in-response-on-error: true
+  pass-environment-to-command:
+    - source: url
+      name: text
+      envname: TEXT

@@ -1,0 +1,33 @@
+# set version 2 to compatible and adaptable to more environments
+version: '2'
+
+services:
+
+  webhook:
+    image: soulteary/webhook:extend-3.4.5
+    ports:
+      - 9000:9000
+    environment:
+      # The docker environment must be 
+      # set to 0.0.0.0 to allow external access
+      HOST: "0.0.0.0"
+      PORT: 9000
+      # Hot reload mode can be enabled to 
+      # start the service when there is no configuration
+      VERBOSE: true
+      # set the hook configuration file to use
+      HOOKS: "/app/hook-lark.yaml"
+      # Other configurable parameters...
+      DEBUG: true
+      # NO_PANIC: false
+      # LOG_PATH: ""
+      # HOT_RELOAD: false
+      # URL_PREFIX: ""
+      # TEMPLATE: false
+      # HTTP_METHODS: ""
+      # X_REQUEST_ID: false
+      # set i18N (WIP)
+      # LANGUAGE: zh-CN
+    volumes:
+      - ./hook-lark.yaml:/app/hook-lark.yaml
+      - ./send-lark-message.sh:/app/send-lark-message.sh
