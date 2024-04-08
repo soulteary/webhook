@@ -314,6 +314,14 @@ func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, e
 		return "", err
 	}
 
+	// try to make the command executable
+	err = os.Chmod(cmdPath, 0755)
+	if err != nil {
+		log.Printf("[%s] make command script executable error in %s", r.ID, err)
+
+		return "", err
+	}
+
 	cmd := exec.Command(cmdPath)
 	cmd.Dir = h.CommandWorkingDirectory
 
