@@ -315,6 +315,7 @@ func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, e
 	}
 
 	// try to make the command executable
+	// #nosec
 	err = os.Chmod(cmdPath, 0755)
 	if err != nil {
 		log.Printf("[%s] make command script executable error in %s", r.ID, err)
