@@ -1,0 +1,9 @@
+- id: hook-1
+  execute-command: ./trigger.sh
+  command-working-directory: /app
+  include-command-output-in-response: true
+  include-command-out-in-response-on-error: true
+  pass-environment-to-command:
+    - source: url
+      name: text
+      envname: TEXT
