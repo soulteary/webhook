@@ -290,7 +290,15 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 	}
 }
 
-func makeSureCallable(h *hook.Hook, r *hook.Request, lookpath string) (string, error) {
+func makeSureCallable(h *hook.Hook, r *hook.Request) (string, error) {
+	// check the command exists
+	var lookpath string
+	if filepath.IsAbs(h.ExecuteCommand) || h.CommandWorkingDirectory == "" {
+		lookpath = h.ExecuteCommand
+	} else {
+		lookpath = filepath.Join(h.CommandWorkingDirectory, h.ExecuteCommand)
+	}
+
 	cmdPath, err := exec.LookPath(lookpath)
 	if err != nil {
 		log.Printf("[%s] error in %s", r.ID, err)
@@ -298,7 +306,7 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, lookpath string) (string, e
 		if strings.Contains(err.Error(), "permission denied") {
 			// try to make the command executable
 			// #nosec
-			err2 := os.Chmod(cmdPath, 0o755)
+			err2 := os.Chmod(lookpath, 0o755)
 			if err2 != nil {
 				log.Printf("[%s] make command script executable error in %s", r.ID, err2)
 
@@ -307,7 +315,7 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, lookpath string) (string, e
 
 			log.Printf("[%s] make command script executable success", r.ID)
 			// retry
-			return makeSureCallable(h, r, lookpath)
+			return makeSureCallable(h, r)
 		}
 
 		// check if parameters specified in execute-command by mistake
@@ -325,15 +333,7 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, lookpath string) (string, e
 func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
 	var errors []error
 
-	// check the command exists
-	var lookpath string
-	if filepath.IsAbs(h.ExecuteCommand) || h.CommandWorkingDirectory == "" {
-		lookpath = h.ExecuteCommand
-	} else {
-		lookpath = filepath.Join(h.CommandWorkingDirectory, h.ExecuteCommand)
-	}
-
-	cmdPath, err := makeSureCallable(h, r, lookpath)
+	cmdPath, err := makeSureCallable(h, r)
 	if err != nil {
 		return "", err
 	}
