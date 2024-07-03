@@ -23,7 +23,6 @@ func ScanDirByExt(filePath string, fileExt string) []string {
 		}
 		return nil
 	})
-
 	if err != nil {
 		panic(err)
 	}

@@ -24,7 +24,7 @@ func TestStaticParams(t *testing.T) {
 
 	// case 2: binary with spaces in its name
 	d1 := []byte("#!/bin/sh\n/bin/echo\n")
-	err := os.WriteFile("/tmp/with space", d1, 0755)
+	err := os.WriteFile("/tmp/with space", d1, 0o755)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

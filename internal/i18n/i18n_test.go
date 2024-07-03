@@ -41,7 +41,7 @@ func TestLoadLocaleFiles(t *testing.T) {
 func createTOMLFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	path := filepath.Join(dir, name)
-	err := os.WriteFile(path, []byte(content), 0644)
+	err := os.WriteFile(path, []byte(content), 0o644)
 	assert.NoError(t, err)
 }
 

@@ -266,7 +266,6 @@ func CheckMSTeamsSignature(r *Request, signingKey string) (bool, error) {
 		return false, &SignatureError{Signature: providedSignature}
 	}
 	return true, nil
-
 }
 
 func CheckScalrSignature(r *Request, signingKey string, checkDate bool) (bool, error) {

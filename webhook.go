@@ -61,7 +61,7 @@ func DropPrivileges(appFlags flags.AppFlags, logQueue *[]string) {
 
 func SetupLogger(appFlags flags.AppFlags, logQueue *[]string) (logFile *os.File, err error) {
 	if appFlags.LogPath != "" {
-		logFile, err = os.OpenFile(appFlags.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+		logFile, err = os.OpenFile(appFlags.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 		if err != nil {
 			*logQueue = append(*logQueue, i18n.Sprintf(i18n.ERR_SERVER_OPENING_LOG_FILE, appFlags.LogPath, err))
 		}

@@ -85,8 +85,10 @@ type WebHookLocalizer struct {
 	Localizer *i18n.Localizer
 }
 
-var GLOBAL_LOCALES map[string]WebHookLocalizer
-var GLOBAL_LANG string
+var (
+	GLOBAL_LOCALES map[string]WebHookLocalizer
+	GLOBAL_LANG    string
+)
 
 func SetGlobalLocale(lang string) {
 	GLOBAL_LANG = lang
