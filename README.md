@@ -37,13 +37,13 @@ You can use any of the following commands to download the automatically built ex
 
 ```bash
 docker pull soulteary/webhook:latest
-docker pull soulteary/webhook:3.5.0
+docker pull soulteary/webhook:3.6.0
 ```
 
 If you wish to have some debugging tools included in the image for your convenience, you can use the following command to obtain the extended version of the image:
 
 ```bash
-docker pull soulteary/webhook:extend-3.5.0
+docker pull soulteary/webhook:extend-3.6.0
 ```
 
 We can then build and refine the runtime environment required for our commands based on this image.
