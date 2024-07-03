@@ -290,6 +290,38 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 	}
 }
 
+func makeSureCallable(h *hook.Hook, r *hook.Request, lookpath string) (string, error) {
+	cmdPath, err := exec.LookPath(lookpath)
+	if err != nil {
+		log.Printf("[%s] error in %s", r.ID, err)
+
+		if strings.Contains(err.Error(), "permission denied") {
+			// try to make the command executable
+			// #nosec
+			err2 := os.Chmod(cmdPath, 0o755)
+			if err2 != nil {
+				log.Printf("[%s] make command script executable error in %s", r.ID, err2)
+
+				return "", err
+			}
+
+			log.Printf("[%s] make command script executable success", r.ID)
+			// retry
+			return makeSureCallable(h, r, lookpath)
+		}
+
+		// check if parameters specified in execute-command by mistake
+		if strings.IndexByte(h.ExecuteCommand, ' ') != -1 {
+			s := strings.Fields(h.ExecuteCommand)[0]
+			log.Printf("[%s] use 'pass-arguments-to-command' to specify args for '%s'", r.ID, s)
+		}
+
+		return "", err
+	}
+
+	return cmdPath, nil
+}
+
 func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
 	var errors []error
 
@@ -301,25 +333,8 @@ func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, e
 		lookpath = filepath.Join(h.CommandWorkingDirectory, h.ExecuteCommand)
 	}
 
-	cmdPath, err := exec.LookPath(lookpath)
+	cmdPath, err := makeSureCallable(h, r, lookpath)
 	if err != nil {
-		log.Printf("[%s] error in %s", r.ID, err)
-
-		// check if parameters specified in execute-command by mistake
-		if strings.IndexByte(h.ExecuteCommand, ' ') != -1 {
-			s := strings.Fields(h.ExecuteCommand)[0]
-			log.Printf("[%s] use 'pass-arguments-to-command' to specify args for '%s'", r.ID, s)
-		}
-
-		return "", err
-	}
-
-	// try to make the command executable
-	// #nosec
-	err = os.Chmod(cmdPath, 0755)
-	if err != nil {
-		log.Printf("[%s] make command script executable error in %s", r.ID, err)
-
 		return "", err
 	}
 
