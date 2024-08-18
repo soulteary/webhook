@@ -9,7 +9,7 @@ on:
       - "*.*.*"
 
 env:
-  GO_VERSION: "1.22.5"
+  GO_VERSION: "1.23.0"
   GO111MODULE: on
   DOCKER_CLI_EXPERIMENTAL: "enabled"
 
