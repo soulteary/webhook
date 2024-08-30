@@ -7,9 +7,13 @@ import (
 )
 
 func GetEnvStr(key, defaultValue string) string {
-	value := strings.TrimSpace(os.Getenv(key))
-	if value == "" {
+	v, ok := os.LookupEnv(key)
+	if !ok {
 		return defaultValue
+	}
+	value := strings.TrimSpace(v)
+	if value == "" {
+		return ""
 	}
 	return value
 }
