@@ -37,13 +37,13 @@
 
 ```bash
 docker pull soulteary/webhook:latest
-docker pull soulteary/webhook:3.6.0
+docker pull soulteary/webhook:3.6.2
 ```
 
 如果你希望镜像中有一些方便调试的工具，可以使用下面的命令，获取扩展版的镜像：
 
 ```bash
-docker pull soulteary/webhook:extend-3.6.0
+docker pull soulteary/webhook:extend-3.6.2
 ```
 
 然后我们可以基于这个镜像来构建和完善我们命令所需要的运行环境。
