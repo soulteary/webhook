@@ -14,7 +14,7 @@ require (
 	github.com/nicksnyder/go-i18n/v2 v2.4.0
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/sys v0.24.0
-	golang.org/x/text v0.17.0
+	golang.org/x/text v0.18.0
 )
 
 require (
