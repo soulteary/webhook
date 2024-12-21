@@ -4,7 +4,7 @@ version: '2'
 services:
 
   webhook:
-    image: soulteary/webhook:extend-3.6.2
+    image: soulteary/webhook:extend-3.6.3
     ports:
       - 9000:9000
     environment:
