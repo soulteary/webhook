@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/invopop/yaml v0.3.1
-	github.com/nicksnyder/go-i18n/v2 v2.4.1
+	github.com/nicksnyder/go-i18n/v2 v2.5.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/sys v0.28.0
 	golang.org/x/text v0.21.0
