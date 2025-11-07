@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"reflect"
@@ -9,34 +10,39 @@ import (
 )
 
 func TestGetParameter(t *testing.T) {
-	for _, test := range []struct {
+	tests := []struct {
+		name   string
 		key    string
 		val    interface{}
 		expect interface{}
 		ok     bool
 	}{
-		// True
-		{"a", map[string]interface{}{"a": "1"}, "1", true},
-		{"a.b", map[string]interface{}{"a.b": "1"}, "1", true},
-		{"a.c", map[string]interface{}{"a": map[string]interface{}{"c": 2}}, 2, true},
-		{"a.1", map[string]interface{}{"a": map[string]interface{}{"1": 3}}, 3, true},
-		{"a.1", map[string]interface{}{"a": []interface{}{"a", "b"}}, "b", true},
-		{"0", []interface{}{"a", "b"}, "a", true},
+		// Success cases
+		{"simple map key", "a", map[string]interface{}{"a": "1"}, "1", true},
+		{"dotted key in map", "a.b", map[string]interface{}{"a.b": "1"}, "1", true},
+		{"nested map", "a.c", map[string]interface{}{"a": map[string]interface{}{"c": 2}}, 2, true},
+		{"numeric key in map", "a.1", map[string]interface{}{"a": map[string]interface{}{"1": 3}}, 3, true},
+		{"slice index", "a.1", map[string]interface{}{"a": []interface{}{"a", "b"}}, "b", true},
+		{"direct slice index", "0", []interface{}{"a", "b"}, "a", true},
 
-		// False
-		{"z", map[string]interface{}{"a": "1"}, nil, false},
-		{"a.z", map[string]interface{}{"a": map[string]interface{}{"b": 2}}, nil, false},
-		{"z.b", map[string]interface{}{"a": map[string]interface{}{"z": 2}}, nil, false},
-		{"a.2", map[string]interface{}{"a": []interface{}{"a", "b"}}, nil, false},
-	} {
-		res, err := GetParameter(test.key, test.val)
-		if (err == nil) != test.ok {
-			t.Errorf("unexpected result given {%q, %q}: %s\n", test.key, test.val, err)
-		}
+		// Failure cases
+		{"missing key", "z", map[string]interface{}{"a": "1"}, nil, false},
+		{"missing nested key", "a.z", map[string]interface{}{"a": map[string]interface{}{"b": 2}}, nil, false},
+		{"missing parent key", "z.b", map[string]interface{}{"a": map[string]interface{}{"z": 2}}, nil, false},
+		{"out of range slice index", "a.2", map[string]interface{}{"a": []interface{}{"a", "b"}}, nil, false},
+	}
 
-		if !reflect.DeepEqual(res, test.expect) {
-			t.Errorf("failed given {%q, %q}:\nexpected {%#v}\ngot {%#v}\n", test.key, test.val, test.expect, res)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := GetParameter(tt.key, tt.val)
+			if (err == nil) != tt.ok {
+				t.Errorf("unexpected result: got error=%v, want ok=%v", err, tt.ok)
+			}
+
+			if !reflect.DeepEqual(res, tt.expect) {
+				t.Errorf("unexpected value: got %#v, want %#v", res, tt.expect)
+			}
+		})
 	}
 }
 
@@ -61,15 +67,17 @@ var checkPayloadSignatureTests = []struct {
 }
 
 func TestCheckPayloadSignature(t *testing.T) {
-	for _, tt := range checkPayloadSignatureTests {
-		mac, err := CheckPayloadSignature(tt.payload, tt.secret, tt.signature)
-		if (err == nil) != tt.ok || mac != tt.mac {
-			t.Errorf("failed to check payload signature {%q, %q, %q}:\nexpected {mac:%#v, ok:%#v},\ngot {mac:%#v, ok:%#v}", tt.payload, tt.secret, tt.signature, tt.mac, tt.ok, mac, (err == nil))
-		}
+	for i, tt := range checkPayloadSignatureTests {
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			mac, err := CheckPayloadSignature(tt.payload, tt.secret, tt.signature)
+			if (err == nil) != tt.ok || mac != tt.mac {
+				t.Errorf("failed to check payload signature:\nexpected {mac:%#v, ok:%#v},\ngot {mac:%#v, ok:%#v}", tt.mac, tt.ok, mac, (err == nil))
+			}
 
-		if err != nil && tt.mac != "" && strings.Contains(err.Error(), tt.mac) {
-			t.Errorf("error message should not disclose expected mac: %s", err)
-		}
+			if err != nil && tt.mac != "" && strings.Contains(err.Error(), tt.mac) {
+				t.Errorf("error message should not disclose expected mac: %s", err)
+			}
+		})
 	}
 }
 
@@ -93,15 +101,17 @@ var checkPayloadSignature256Tests = []struct {
 }
 
 func TestCheckPayloadSignature256(t *testing.T) {
-	for _, tt := range checkPayloadSignature256Tests {
-		mac, err := CheckPayloadSignature256(tt.payload, tt.secret, tt.signature)
-		if (err == nil) != tt.ok || mac != tt.mac {
-			t.Errorf("failed to check payload signature {%q, %q, %q}:\nexpected {mac:%#v, ok:%#v},\ngot {mac:%#v, ok:%#v}", tt.payload, tt.secret, tt.signature, tt.mac, tt.ok, mac, (err == nil))
-		}
+	for i, tt := range checkPayloadSignature256Tests {
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			mac, err := CheckPayloadSignature256(tt.payload, tt.secret, tt.signature)
+			if (err == nil) != tt.ok || mac != tt.mac {
+				t.Errorf("failed to check payload signature:\nexpected {mac:%#v, ok:%#v},\ngot {mac:%#v, ok:%#v}", tt.mac, tt.ok, mac, (err == nil))
+			}
 
-		if err != nil && tt.mac != "" && strings.Contains(err.Error(), tt.mac) {
-			t.Errorf("error message should not disclose expected mac: %s", err)
-		}
+			if err != nil && tt.mac != "" && strings.Contains(err.Error(), tt.mac) {
+				t.Errorf("error message should not disclose expected mac: %s", err)
+			}
+		})
 	}
 }
 
@@ -122,15 +132,17 @@ var checkPayloadSignature512Tests = []struct {
 }
 
 func TestCheckPayloadSignature512(t *testing.T) {
-	for _, tt := range checkPayloadSignature512Tests {
-		mac, err := CheckPayloadSignature512(tt.payload, tt.secret, tt.signature)
-		if (err == nil) != tt.ok || mac != tt.mac {
-			t.Errorf("failed to check payload signature {%q, %q, %q}:\nexpected {mac:%#v, ok:%#v},\ngot {mac:%#v, ok:%#v}", tt.payload, tt.secret, tt.signature, tt.mac, tt.ok, mac, (err == nil))
-		}
+	for i, tt := range checkPayloadSignature512Tests {
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			mac, err := CheckPayloadSignature512(tt.payload, tt.secret, tt.signature)
+			if (err == nil) != tt.ok || mac != tt.mac {
+				t.Errorf("failed to check payload signature:\nexpected {mac:%#v, ok:%#v},\ngot {mac:%#v, ok:%#v}", tt.mac, tt.ok, mac, (err == nil))
+			}
 
-		if err != nil && tt.mac != "" && strings.Contains(err.Error(), tt.mac) {
-			t.Errorf("error message should not disclose expected mac: %s", err)
-		}
+			if err != nil && tt.mac != "" && strings.Contains(err.Error(), tt.mac) {
+				t.Errorf("error message should not disclose expected mac: %s", err)
+			}
+		})
 	}
 }
 
@@ -176,19 +188,20 @@ var checkScalrSignatureTests = []struct {
 
 func TestCheckScalrSignature(t *testing.T) {
 	for _, testCase := range checkScalrSignatureTests {
-		r := &Request{
-			Headers: testCase.headers,
-			Body:    testCase.body,
-		}
-		valid, err := CheckScalrSignature(r, testCase.secret, false)
-		if valid != testCase.ok {
-			t.Errorf("failed to check scalr signature fot test case: %s\nexpected ok:%#v, got ok:%#v}",
-				testCase.description, testCase.ok, valid)
-		}
+		t.Run(testCase.description, func(t *testing.T) {
+			r := &Request{
+				Headers: testCase.headers,
+				Body:    testCase.body,
+			}
+			valid, err := CheckScalrSignature(r, testCase.secret, false)
+			if valid != testCase.ok {
+				t.Errorf("unexpected result: got ok=%v, want ok=%v", valid, testCase.ok)
+			}
 
-		if err != nil && testCase.secret != "" && strings.Contains(err.Error(), testCase.expectedSignature) {
-			t.Errorf("error message should not disclose expected mac: %s on test case %s", err, testCase.description)
-		}
+			if err != nil && testCase.secret != "" && strings.Contains(err.Error(), testCase.expectedSignature) {
+				t.Errorf("error message should not disclose expected mac: %s", err)
+			}
+		})
 	}
 }
 
@@ -240,19 +253,20 @@ var checkMSTeamsSignatureTests = []struct {
 
 func TestCheckMSTeamsSignature(t *testing.T) {
 	for _, testCase := range checkMSTeamsSignatureTests {
-		r := &Request{
-			Headers: testCase.headers,
-			Body:    testCase.body,
-		}
-		valid, err := CheckMSTeamsSignature(r, testCase.secret)
-		if valid != testCase.ok {
-			t.Errorf("failed to check MS Teams signature fot test case: %s\nexpected ok:%#v, got ok:%#v}",
-				testCase.description, testCase.ok, valid)
-		}
+		t.Run(testCase.description, func(t *testing.T) {
+			r := &Request{
+				Headers: testCase.headers,
+				Body:    testCase.body,
+			}
+			valid, err := CheckMSTeamsSignature(r, testCase.secret)
+			if valid != testCase.ok {
+				t.Errorf("unexpected result: got ok=%v, want ok=%v", valid, testCase.ok)
+			}
 
-		if err != nil && testCase.secret != "" && strings.Contains(err.Error(), testCase.expectedSignature) {
-			t.Errorf("error message should not disclose expected mac: %s on test case %s", err, testCase.description)
-		}
+			if err != nil && testCase.secret != "" && strings.Contains(err.Error(), testCase.expectedSignature) {
+				t.Errorf("error message should not disclose expected mac: %s", err)
+			}
+		})
 	}
 }
 
@@ -272,11 +286,13 @@ var checkIPWhitelistTests = []struct {
 }
 
 func TestCheckIPWhitelist(t *testing.T) {
-	for _, tt := range checkIPWhitelistTests {
-		result, err := CheckIPWhitelist(tt.addr, tt.ipRange)
-		if (err == nil) != tt.ok || result != tt.expect {
-			t.Errorf("ip whitelist test failed {%q, %q}:\nwant {expect:%#v, ok:%#v},\ngot {result:%#v, ok:%#v}", tt.addr, tt.ipRange, tt.expect, tt.ok, result, err)
-		}
+	for i, tt := range checkIPWhitelistTests {
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			result, err := CheckIPWhitelist(tt.addr, tt.ipRange)
+			if (err == nil) != tt.ok || result != tt.expect {
+				t.Errorf("unexpected result:\nwant {expect:%#v, ok:%#v},\ngot {result:%#v, ok:%#v}", tt.expect, tt.ok, result, err == nil)
+			}
+		})
 	}
 }
 

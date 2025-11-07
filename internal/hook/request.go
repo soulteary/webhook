@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"unicode"
 
 	"github.com/clbanning/mxj/v2"
 )
@@ -42,27 +41,23 @@ func (r *Request) ParseJSONPayload() error {
 	decoder := json.NewDecoder(bytes.NewReader(r.Body))
 	decoder.UseNumber()
 
-	var firstChar byte
-	for i := 0; i < len(r.Body); i++ {
-		if unicode.IsSpace(rune(r.Body[i])) {
-			continue
-		}
-		firstChar = r.Body[i]
-		break
+	// Find first non-whitespace character
+	body := bytes.TrimSpace(r.Body)
+	if len(body) == 0 {
+		return fmt.Errorf("empty JSON payload")
 	}
 
-	if firstChar == byte('[') {
+	firstChar := body[0]
+	if firstChar == '[' {
 		var arrayPayload interface{}
-		err := decoder.Decode(&arrayPayload)
-		if err != nil {
+		if err := decoder.Decode(&arrayPayload); err != nil {
 			return fmt.Errorf("error parsing JSON array payload %+v", err)
 		}
 
 		r.Payload = make(map[string]interface{}, 1)
 		r.Payload["root"] = arrayPayload
 	} else {
-		err := decoder.Decode(&r.Payload)
-		if err != nil {
+		if err := decoder.Decode(&r.Payload); err != nil {
 			return fmt.Errorf("error parsing JSON payload %+v", err)
 		}
 	}

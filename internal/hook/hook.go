@@ -147,8 +147,9 @@ func (e *ParseError) Error() string {
 // ExtractCommaSeparatedValues will extract the values matching the key.
 func ExtractCommaSeparatedValues(source, prefix string) []string {
 	parts := strings.Split(source, ",")
-	values := make([]string, 0)
+	values := make([]string, 0, len(parts))
 	for _, part := range parts {
+		part = strings.TrimSpace(part)
 		if strings.HasPrefix(part, prefix) {
 			values = append(values, strings.TrimPrefix(part, prefix))
 		}
@@ -176,16 +177,17 @@ func ExtractSignatures(source, prefix string) []string {
 // the one provided.
 func ValidateMAC(payload []byte, mac hash.Hash, signatures []string) (string, error) {
 	// Write the payload to the provided hash.
-	_, err := mac.Write(payload)
-	if err != nil {
+	if _, err := mac.Write(payload); err != nil {
 		return "", err
 	}
 
 	actualMAC := hex.EncodeToString(mac.Sum(nil))
 
+	// Use constant-time comparison for security
+	actualMACBytes := []byte(actualMAC)
 	for _, signature := range signatures {
-		if hmac.Equal([]byte(signature), []byte(actualMAC)) {
-			return actualMAC, err
+		if hmac.Equal(actualMACBytes, []byte(signature)) {
+			return actualMAC, nil
 		}
 	}
 
@@ -331,10 +333,14 @@ func CheckIPWhitelist(remoteAddr, ipRange string) (bool, error) {
 	}
 
 	for _, r := range strings.Fields(ipRange) {
-		// Extract IP range in CIDR form.  If a single IP address is provided, turn it into CIDR form.
-
+		// Extract IP range in CIDR form. If a single IP address is provided, turn it into CIDR form.
 		if !strings.Contains(r, "/") {
-			r = r + "/32"
+			// Determine prefix length based on IP version
+			if parsedIP.To4() != nil {
+				r += "/32" // IPv4
+			} else {
+				r += "/128" // IPv6
+			}
 		}
 
 		_, cidr, err := net.ParseCIDR(r)
@@ -399,28 +405,25 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 	switch paramsValue.Kind() {
 	case reflect.Slice:
 		paramsValueSliceLength := paramsValue.Len()
-		if paramsValueSliceLength > 0 {
+		if paramsValueSliceLength == 0 {
+			return nil, &ParameterNodeError{s}
+		}
 
-			if p := strings.SplitN(s, ".", 2); len(p) > 1 {
-				index, err := strconv.ParseUint(p[0], 10, 64)
-
-				if err != nil || uint64(paramsValueSliceLength) <= index {
-					return nil, &ParameterNodeError{s}
-				}
-
-				return GetParameter(p[1], params.([]interface{})[index])
-			}
-
-			index, err := strconv.ParseUint(s, 10, 64)
-
+		// Check if we need to traverse deeper
+		if p := strings.SplitN(s, ".", 2); len(p) > 1 {
+			index, err := strconv.ParseUint(p[0], 10, 64)
 			if err != nil || uint64(paramsValueSliceLength) <= index {
 				return nil, &ParameterNodeError{s}
 			}
-
-			return params.([]interface{})[index], nil
+			return GetParameter(p[1], params.([]interface{})[index])
 		}
 
-		return nil, &ParameterNodeError{s}
+		// Direct index access
+		index, err := strconv.ParseUint(s, 10, 64)
+		if err != nil || uint64(paramsValueSliceLength) <= index {
+			return nil, &ParameterNodeError{s}
+		}
+		return params.([]interface{})[index], nil
 
 	case reflect.Map:
 		// Check for raw key
@@ -430,19 +433,13 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 
 		// Check for dotted references
 		p := strings.Split(s, ".")
-		ref := ""
 		for i := range p {
-			if i == 0 {
-				ref = p[i]
-			} else {
-				ref += "." + p[i]
-			}
+			ref := strings.Join(p[:i+1], ".")
 			if pValue, ok := params.(map[string]interface{})[ref]; ok {
 				if i == len(p)-1 {
 					return pValue, nil
-				} else {
-					return GetParameter(strings.Join(p[i+1:], "."), pValue)
 				}
+				return GetParameter(strings.Join(p[i+1:], "."), pValue)
 			}
 		}
 	}
@@ -629,109 +626,93 @@ type Hook struct {
 // ParseJSONParameters decodes specified arguments to JSON objects and replaces the
 // string with the newly created object
 func (h *Hook) ParseJSONParameters(r *Request) []error {
-	errors := make([]error, 0)
+	if len(h.JSONStringParameters) == 0 {
+		return nil
+	}
 
+	var errs []error
 	for i := range h.JSONStringParameters {
 		arg, err := h.JSONStringParameters[i].Get(r)
 		if err != nil {
-			errors = append(errors, &ArgumentError{h.JSONStringParameters[i]})
-		} else {
-			var newArg map[string]interface{}
+			errs = append(errs, &ArgumentError{h.JSONStringParameters[i]})
+			continue
+		}
 
-			decoder := json.NewDecoder(strings.NewReader(string(arg)))
-			decoder.UseNumber()
+		var newArg map[string]interface{}
+		decoder := json.NewDecoder(strings.NewReader(arg))
+		decoder.UseNumber()
 
-			err := decoder.Decode(&newArg)
-			if err != nil {
-				errors = append(errors, &ParseError{err})
-				continue
-			}
+		if err := decoder.Decode(&newArg); err != nil {
+			errs = append(errs, &ParseError{err})
+			continue
+		}
 
-			var source *map[string]interface{}
+		var source *map[string]interface{}
+		key := h.JSONStringParameters[i].Name
 
-			switch h.JSONStringParameters[i].Source {
-			case SourceHeader:
-				source = &r.Headers
-			case SourcePayload:
-				source = &r.Payload
-			case SourceQuery, SourceQueryAlias:
-				source = &r.Query
-			}
+		switch h.JSONStringParameters[i].Source {
+		case SourceHeader:
+			source = &r.Headers
+			key = textproto.CanonicalMIMEHeaderKey(key)
+		case SourcePayload:
+			source = &r.Payload
+		case SourceQuery, SourceQueryAlias:
+			source = &r.Query
+		default:
+			errs = append(errs, &SourceError{h.JSONStringParameters[i]})
+			continue
+		}
 
-			if source != nil {
-				key := h.JSONStringParameters[i].Name
-
-				if h.JSONStringParameters[i].Source == SourceHeader {
-					key = textproto.CanonicalMIMEHeaderKey(h.JSONStringParameters[i].Name)
-				}
-
-				ReplaceParameter(key, source, newArg)
-			} else {
-				errors = append(errors, &SourceError{h.JSONStringParameters[i]})
-			}
+		if source != nil {
+			ReplaceParameter(key, source, newArg)
 		}
 	}
 
-	if len(errors) > 0 {
-		return errors
-	}
-
-	return nil
+	return errs
 }
 
 // ExtractCommandArguments creates a list of arguments, based on the
 // PassArgumentsToCommand property that is ready to be used with exec.Command()
 func (h *Hook) ExtractCommandArguments(r *Request) ([]string, []error) {
-	args := make([]string, 0)
-	errors := make([]error, 0)
-
+	args := make([]string, 0, 1+len(h.PassArgumentsToCommand))
 	args = append(args, h.ExecuteCommand)
 
+	var errs []error
 	for i := range h.PassArgumentsToCommand {
 		arg, err := h.PassArgumentsToCommand[i].Get(r)
 		if err != nil {
 			args = append(args, "")
-			errors = append(errors, &ArgumentError{h.PassArgumentsToCommand[i]})
+			errs = append(errs, &ArgumentError{h.PassArgumentsToCommand[i]})
 			continue
 		}
-
 		args = append(args, arg)
 	}
 
-	if len(errors) > 0 {
-		return args, errors
-	}
-
-	return args, nil
+	return args, errs
 }
 
 // ExtractCommandArgumentsForEnv creates a list of arguments in key=value
 // format, based on the PassEnvironmentToCommand property that is ready to be used
 // with exec.Command().
 func (h *Hook) ExtractCommandArgumentsForEnv(r *Request) ([]string, []error) {
-	args := make([]string, 0)
-	errors := make([]error, 0)
+	args := make([]string, 0, len(h.PassEnvironmentToCommand))
+	var errs []error
+
 	for i := range h.PassEnvironmentToCommand {
 		arg, err := h.PassEnvironmentToCommand[i].Get(r)
 		if err != nil {
-			errors = append(errors, &ArgumentError{h.PassEnvironmentToCommand[i]})
+			errs = append(errs, &ArgumentError{h.PassEnvironmentToCommand[i]})
 			continue
 		}
 
-		if h.PassEnvironmentToCommand[i].EnvName != "" {
-			// first try to use the EnvName if specified
-			args = append(args, h.PassEnvironmentToCommand[i].EnvName+"="+arg)
-		} else {
-			// then fallback on the name
-			args = append(args, EnvNamespace+h.PassEnvironmentToCommand[i].Name+"="+arg)
+		envName := h.PassEnvironmentToCommand[i].EnvName
+		if envName == "" {
+			envName = EnvNamespace + h.PassEnvironmentToCommand[i].Name
 		}
+		args = append(args, envName+"="+arg)
 	}
 
-	if len(errors) > 0 {
-		return args, errors
-	}
-
-	return args, nil
+	return args, errs
 }
 
 // FileParameter describes a pass-file-to-command instance to be stored as file
@@ -745,19 +726,21 @@ type FileParameter struct {
 // format, based on the PassFileToCommand property that is ready to be used
 // with exec.Command().
 func (h *Hook) ExtractCommandArgumentsForFile(r *Request) ([]FileParameter, []error) {
-	args := make([]FileParameter, 0)
-	errors := make([]error, 0)
+	args := make([]FileParameter, 0, len(h.PassFileToCommand))
+	var errs []error
+
 	for i := range h.PassFileToCommand {
 		arg, err := h.PassFileToCommand[i].Get(r)
 		if err != nil {
-			errors = append(errors, &ArgumentError{h.PassFileToCommand[i]})
+			errs = append(errs, &ArgumentError{h.PassFileToCommand[i]})
 			continue
 		}
 
-		if h.PassFileToCommand[i].EnvName == "" {
-			// if no environment-variable name is set, fall-back on the name
-			log.Printf("no ENVVAR name specified, falling back to [%s]", EnvNamespace+strings.ToUpper(h.PassFileToCommand[i].Name))
-			h.PassFileToCommand[i].EnvName = EnvNamespace + strings.ToUpper(h.PassFileToCommand[i].Name)
+		envName := h.PassFileToCommand[i].EnvName
+		if envName == "" {
+			envName = EnvNamespace + strings.ToUpper(h.PassFileToCommand[i].Name)
+			log.Printf("no ENVVAR name specified, falling back to [%s]", envName)
+			h.PassFileToCommand[i].EnvName = envName
 		}
 
 		var fileContent []byte
@@ -765,20 +748,18 @@ func (h *Hook) ExtractCommandArgumentsForFile(r *Request) ([]FileParameter, []er
 			dec, err := base64.StdEncoding.DecodeString(arg)
 			if err != nil {
 				log.Printf("error decoding string [%s]", err)
+				errs = append(errs, fmt.Errorf("base64 decode error: %w", err))
+				continue
 			}
-			fileContent = []byte(dec)
+			fileContent = dec
 		} else {
 			fileContent = []byte(arg)
 		}
 
-		args = append(args, FileParameter{EnvName: h.PassFileToCommand[i].EnvName, Data: fileContent})
+		args = append(args, FileParameter{EnvName: envName, Data: fileContent})
 	}
 
-	if len(errors) > 0 {
-		return args, errors
-	}
-
-	return args, nil
+	return args, errs
 }
 
 // Hooks is an array of Hook objects

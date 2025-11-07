@@ -226,17 +226,31 @@ const pollInterval = 200 * time.Millisecond
 
 func waitForServer(t *testing.T, url string, status int, timeout time.Duration) {
 	deadline := time.Now().Add(timeout)
+	client := &http.Client{
+		Timeout: pollInterval * 2,
+	}
+
+	var lastErr error
 	for time.Now().Before(deadline) {
 		time.Sleep(pollInterval)
-		res, err := http.Get(url)
+		res, err := client.Get(url)
 		if err != nil {
+			lastErr = err
 			continue
 		}
-		if res.StatusCode == status {
+		// Always close the response body to prevent resource leaks
+		statusCode := res.StatusCode
+		res.Body.Close()
+
+		if statusCode == status {
 			return
 		}
 	}
-	t.Fatalf("Server failed to respond in %v", timeout)
+
+	if lastErr != nil {
+		t.Fatalf("Server failed to respond in %v, last error: %v", timeout, lastErr)
+	}
+	t.Fatalf("Server failed to respond in %v (expected status %d)", timeout, status)
 }
 
 func killAndWait(cmd *exec.Cmd) {

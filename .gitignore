@@ -1,6 +1,7 @@
 .idea
 .cover
 .DS_Store
+*.test
 coverage
 webhook
 /test/hookecho
