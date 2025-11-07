@@ -504,7 +504,7 @@ func TestHooksLoadFromFile(t *testing.T) {
 		h := &Hooks{}
 		err := h.LoadFromFile(tt.path, tt.asTemplate)
 		if (err == nil) != tt.ok {
-			t.Errorf(err.Error())
+			t.Errorf("%v", err)
 		}
 	}
 }
@@ -521,7 +521,7 @@ func TestHooksTemplateLoadFromFile(t *testing.T) {
 		h := &Hooks{}
 		err := h.LoadFromFile(tt.path, tt.asTemplate)
 		if (err == nil) != tt.ok {
-			t.Errorf(err.Error())
+			t.Errorf("%v", err)
 			continue
 		}
 
