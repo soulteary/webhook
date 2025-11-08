@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
@@ -818,5 +819,159 @@ func TestCompare(t *testing.T) {
 		if ok := compare(tt.a, tt.b); ok != tt.ok {
 			t.Errorf("compare failed for %q and %q: got %v\n", tt.a, tt.b, ok)
 		}
+	}
+}
+
+func TestResponseHeaders_String(t *testing.T) {
+	// Test with empty headers
+	var headers ResponseHeaders
+	result := headers.String()
+	if result != "name=value" {
+		t.Errorf("expected 'name=value', got %q", result)
+	}
+
+	// Test with headers
+	headers = ResponseHeaders{
+		{Name: "Content-Type", Value: "application/json"},
+		{Name: "X-Custom", Value: "test"},
+	}
+	result = headers.String()
+	expected := "Content-Type=application/json, X-Custom=test"
+	if result != expected {
+		t.Errorf("expected %q, got %q", expected, result)
+	}
+}
+
+func TestResponseHeaders_Set(t *testing.T) {
+	var headers ResponseHeaders
+
+	// Test valid format
+	err := headers.Set("Content-Type=application/json")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(headers) != 1 {
+		t.Errorf("expected 1 header, got %d", len(headers))
+	}
+	if headers[0].Name != "Content-Type" || headers[0].Value != "application/json" {
+		t.Errorf("unexpected header: %+v", headers[0])
+	}
+
+	// Test invalid format
+	err = headers.Set("invalid")
+	if err == nil {
+		t.Error("expected error for invalid format")
+	}
+}
+
+func TestHooksFiles_String(t *testing.T) {
+	// Test with empty files
+	var files HooksFiles
+	result := files.String()
+	if result != "hooks.json" {
+		t.Errorf("expected 'hooks.json', got %q", result)
+	}
+
+	// Test with files
+	files = HooksFiles{"hooks1.json", "hooks2.json"}
+	result = files.String()
+	expected := "hooks1.json, hooks2.json"
+	if result != expected {
+		t.Errorf("expected %q, got %q", expected, result)
+	}
+}
+
+func TestHooksFiles_Set(t *testing.T) {
+	var files HooksFiles
+
+	// Test setting a file
+	err := files.Set("hooks.json")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(files) != 1 {
+		t.Errorf("expected 1 file, got %d", len(files))
+	}
+	if files[0] != "hooks.json" {
+		t.Errorf("expected 'hooks.json', got %q", files[0])
+	}
+
+	// Test setting multiple files
+	err = files.Set("hooks2.json")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(files) != 2 {
+		t.Errorf("expected 2 files, got %d", len(files))
+	}
+}
+
+func TestHooks_Append(t *testing.T) {
+	hooks := Hooks{
+		{ID: "hook1"},
+		{ID: "hook2"},
+	}
+
+	// Test appending new hooks
+	other := &Hooks{
+		{ID: "hook3"},
+		{ID: "hook4"},
+	}
+
+	err := hooks.Append(other)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(hooks) != 4 {
+		t.Errorf("expected 4 hooks, got %d", len(hooks))
+	}
+
+	// Test appending duplicate ID
+	other = &Hooks{
+		{ID: "hook1"},
+	}
+	err = hooks.Append(other)
+	if err == nil {
+		t.Error("expected error for duplicate ID")
+	}
+}
+
+func TestHook_ExtractCommandArgumentsForFile(t *testing.T) {
+	hook := Hook{
+		PassFileToCommand: []Argument{
+			{
+				Name:   "file1",
+				Source: SourcePayload,
+			},
+			{
+				Name:         "file2",
+				Source:       SourcePayload,
+				Base64Decode: true,
+			},
+		},
+	}
+
+	// Create a request with payload
+	payload := map[string]interface{}{
+		"file1": "test content",
+		"file2": base64.StdEncoding.EncodeToString([]byte("base64 content")),
+	}
+	req := &Request{
+		Payload: payload,
+		Body:    []byte(`{"file1":"test content","file2":"YmFzZTY0IGNvbnRlbnQ="}`),
+	}
+
+	args, errs := hook.ExtractCommandArgumentsForFile(req)
+	if len(errs) > 0 {
+		t.Errorf("unexpected errors: %v", errs)
+	}
+	if len(args) != 2 {
+		t.Errorf("expected 2 args, got %d", len(args))
+	}
+	if string(args[0].Data) != "test content" {
+		t.Errorf("expected 'test content', got %q", string(args[0].Data))
+	}
+	if string(args[1].Data) != "base64 content" {
+		t.Errorf("expected 'base64 content', got %q", string(args[1].Data))
 	}
 }

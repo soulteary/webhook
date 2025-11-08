@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/soulteary/webhook/internal/rules"
 )
 
 func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool, noPanic bool, reloadHooks func(hooksFilePath string, asTemplate bool), removeHooks func(hooksFilePath string, verbose bool, noPanic bool)) {
@@ -15,7 +14,7 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 		case event := <-(*watcher).Events:
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				log.Printf("hooks file %s modified\n", event.Name)
-				rules.ReloadHooks(event.Name, asTemplate)
+				reloadHooks(event.Name, asTemplate)
 			} else if event.Op&fsnotify.Remove == fsnotify.Remove {
 				if _, err := os.Stat(event.Name); os.IsNotExist(err) {
 					log.Printf("hooks file %s removed, no longer watching this file for changes, removing hooks that were loaded from it\n", event.Name)
@@ -23,7 +22,7 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 					if err != nil {
 						log.Printf("error removing file %s from watcher: %s\n", event.Name, err)
 					}
-					rules.RemoveHooks(event.Name, verbose, noPanic)
+					removeHooks(event.Name, verbose, noPanic)
 				}
 			} else if event.Op&fsnotify.Rename == fsnotify.Rename {
 				time.Sleep(100 * time.Millisecond)
@@ -34,11 +33,11 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 					if err != nil {
 						log.Printf("error removing file %s from watcher: %s\n", event.Name, err)
 					}
-					rules.RemoveHooks(event.Name, verbose, noPanic)
+					removeHooks(event.Name, verbose, noPanic)
 				} else {
 					// file was overwritten
 					log.Printf("hooks file %s overwritten\n", event.Name)
-					rules.ReloadHooks(event.Name, asTemplate)
+					reloadHooks(event.Name, asTemplate)
 					err = (*watcher).Remove(event.Name)
 					if err != nil {
 						log.Printf("error removing file %s from watcher: %s\n", event.Name, err)

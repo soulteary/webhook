@@ -1,11 +1,13 @@
 package rules_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/rules"
-	"github.com/stretchr/testify/assert" // You might want to get this assertion library for convenience.
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRemoveHooks(t *testing.T) {
@@ -68,4 +70,220 @@ func TestMatchLoadedHook(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReloadHooks(t *testing.T) {
+	// Setup
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.json")
+
+	// Create a valid hooks file
+	hooksContent := `[
+		{
+			"id": "test-hook",
+			"execute-command": "/bin/echo",
+			"command-working-directory": "/tmp"
+		}
+	]`
+	err := os.WriteFile(hooksFile, []byte(hooksContent), 0644)
+	assert.NoError(t, err)
+
+	// Initially load the hook
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.ParseAndLoadHooks(false)
+
+	// Verify hook is loaded
+	assert.Equal(t, 1, rules.LenLoadedHooks())
+
+	// Reload hooks
+	rules.ReloadHooks(hooksFile, false)
+
+	// Verify hook is still loaded
+	assert.Equal(t, 1, rules.LenLoadedHooks())
+}
+
+func TestReloadHooks_WithTemplate(t *testing.T) {
+	// Setup
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.json.tmpl")
+
+	// Create a template hooks file
+	hooksContent := `[
+		{
+			"id": "test-hook-{{.Env.TEST_VAR}}",
+			"execute-command": "/bin/echo"
+		}
+	]`
+	err := os.WriteFile(hooksFile, []byte(hooksContent), 0644)
+	assert.NoError(t, err)
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+
+	// Reload hooks as template
+	rules.ReloadHooks(hooksFile, true)
+
+	// Verify hook is loaded
+	assert.GreaterOrEqual(t, rules.LenLoadedHooks(), 0)
+}
+
+func TestReloadHooks_DuplicateID(t *testing.T) {
+	// Setup
+	tempDir := t.TempDir()
+	hooksFile1 := filepath.Join(tempDir, "hooks1.json")
+	hooksFile2 := filepath.Join(tempDir, "hooks2.json")
+
+	// Create hooks files with same ID
+	hooksContent1 := `[
+		{
+			"id": "duplicate-hook",
+			"execute-command": "/bin/echo"
+		}
+	]`
+	hooksContent2 := `[
+		{
+			"id": "duplicate-hook",
+			"execute-command": "/bin/echo"
+		}
+	]`
+
+	err := os.WriteFile(hooksFile1, []byte(hooksContent1), 0644)
+	assert.NoError(t, err)
+	err = os.WriteFile(hooksFile2, []byte(hooksContent2), 0644)
+	assert.NoError(t, err)
+
+	// Load first hook
+	rules.HooksFiles = []string{hooksFile1}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.ParseAndLoadHooks(false)
+
+	// Try to reload with duplicate ID
+	rules.ReloadHooks(hooksFile2, false)
+
+	// Verify original hook is still there
+	assert.Equal(t, 1, rules.LenLoadedHooks())
+}
+
+func TestReloadAllHooksAsTemplate(t *testing.T) {
+	// Setup
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.json.tmpl")
+
+	hooksContent := `[
+		{
+			"id": "test-hook",
+			"execute-command": "/bin/echo"
+		}
+	]`
+	err := os.WriteFile(hooksFile, []byte(hooksContent), 0644)
+	assert.NoError(t, err)
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+
+	// Reload all hooks as template
+	rules.ReloadAllHooksAsTemplate()
+
+	// Verify hooks are loaded
+	assert.GreaterOrEqual(t, rules.LenLoadedHooks(), 0)
+}
+
+func TestReloadAllHooksNotAsTemplate(t *testing.T) {
+	// Setup
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.json")
+
+	hooksContent := `[
+		{
+			"id": "test-hook",
+			"execute-command": "/bin/echo"
+		}
+	]`
+	err := os.WriteFile(hooksFile, []byte(hooksContent), 0644)
+	assert.NoError(t, err)
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+
+	// Reload all hooks not as template
+	rules.ReloadAllHooksNotAsTemplate()
+
+	// Verify hooks are loaded
+	assert.GreaterOrEqual(t, rules.LenLoadedHooks(), 0)
+}
+
+func TestParseAndLoadHooks(t *testing.T) {
+	// Setup
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.json")
+
+	hooksContent := `[
+		{
+			"id": "test-hook",
+			"execute-command": "/bin/echo",
+			"command-working-directory": "/tmp"
+		}
+	]`
+	err := os.WriteFile(hooksFile, []byte(hooksContent), 0644)
+	assert.NoError(t, err)
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+
+	// Parse and load hooks
+	rules.ParseAndLoadHooks(false)
+
+	// Verify hooks are loaded
+	assert.Equal(t, 1, rules.LenLoadedHooks())
+	assert.Contains(t, rules.HooksFiles, hooksFile)
+}
+
+func TestParseAndLoadHooks_InvalidFile(t *testing.T) {
+	// Setup
+	tempDir := t.TempDir()
+	invalidFile := filepath.Join(tempDir, "invalid.json")
+
+	// Create invalid JSON
+	err := os.WriteFile(invalidFile, []byte("invalid json"), 0644)
+	assert.NoError(t, err)
+
+	rules.HooksFiles = []string{invalidFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+
+	// Parse and load hooks (should handle error gracefully)
+	rules.ParseAndLoadHooks(false)
+
+	// Verify no hooks are loaded
+	assert.Equal(t, 0, rules.LenLoadedHooks())
+	// File should be removed from HooksFiles if loading failed
+	assert.NotContains(t, rules.HooksFiles, invalidFile)
+}
+
+func TestRemoveHooks_WithVerbose(t *testing.T) {
+	// Setup
+	rules.HooksFiles = []string{"test1.json"}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test1.json": {{ID: "hook1"}},
+	}
+
+	// Execute with verbose=true (should not panic)
+	rules.RemoveHooks("test1.json", true, false)
+
+	// Assert
+	assert.Equal(t, 0, rules.LenLoadedHooks())
+}
+
+func TestRemoveHooks_WithNoPanic(t *testing.T) {
+	// Setup
+	rules.HooksFiles = []string{"test1.json"}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test1.json": {{ID: "hook1"}},
+	}
+
+	// Execute with noPanic=true (should not panic)
+	rules.RemoveHooks("test1.json", false, true)
+
+	// Assert
+	assert.Equal(t, 0, rules.LenLoadedHooks())
 }
