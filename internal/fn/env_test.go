@@ -16,6 +16,16 @@ func TestGetEnvStr(t *testing.T) {
 	// Test the GetEnvStr function
 	assert.Equal(t, "test value", fn.GetEnvStr("TEST_ENV_STR", "default"))
 	assert.Equal(t, "default", fn.GetEnvStr("MISSING_ENV_VAR", "default"))
+	
+	// Test with empty value after trim
+	os.Setenv("TEST_ENV_STR_EMPTY", "   ")
+	defer os.Unsetenv("TEST_ENV_STR_EMPTY")
+	assert.Equal(t, "", fn.GetEnvStr("TEST_ENV_STR_EMPTY", "default"))
+	
+	// Test with empty value
+	os.Setenv("TEST_ENV_STR_EMPTY2", "")
+	defer os.Unsetenv("TEST_ENV_STR_EMPTY2")
+	assert.Equal(t, "", fn.GetEnvStr("TEST_ENV_STR_EMPTY2", "default"))
 }
 
 func TestGetEnvBool(t *testing.T) {

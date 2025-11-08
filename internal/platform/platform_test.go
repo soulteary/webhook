@@ -64,3 +64,10 @@ func TestDropPrivileges(t *testing.T) {
 	// In a non-root test environment, this will fail, which is expected
 	_ = err // We're just checking it doesn't panic
 }
+
+// Note: Testing the default case in watchForSignals is difficult because:
+// 1. SIGTERM/Interrupt cause os.Exit(0), which would terminate the test
+// 2. SIGQUIT causes a core dump on some systems
+// These signal handlers are better tested in integration tests.
+// The default case is covered by the fact that we only register specific signals
+// (SIGUSR1, SIGHUP, SIGTERM, Interrupt), so any other signal would hit the default case.

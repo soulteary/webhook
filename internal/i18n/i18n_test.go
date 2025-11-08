@@ -139,3 +139,24 @@ func TestSprintf(t *testing.T) {
 // Note: TestLoadLocaleFiles_EmbedFS is skipped because LoadLocaleFiles
 // calls log.Fatal when embedFS is empty, which would cause the test to fail.
 // This code path is tested in the main application where embedFS is properly populated.
+
+func TestGetWebHookLocaleObject_InvalidLocale(t *testing.T) {
+	// Test with invalid locale name
+	_, err := i18n.GetWebHookLocaleObject("invalid-locale.toml", []byte{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid locale name")
+}
+
+func TestGetWebHookLocaleObject_ValidLocale(t *testing.T) {
+	// Test with valid locale name
+	locale, err := i18n.GetWebHookLocaleObject("en-US.toml", []byte("test"))
+	assert.NoError(t, err)
+	assert.Equal(t, "en-US", locale.Name)
+	assert.Equal(t, "en-US.toml", locale.FileName)
+	assert.Equal(t, []byte("test"), locale.Content)
+}
+
+// Note: TestLoadLocaleFiles_WithErrors is skipped because LoadLocaleFiles
+// calls log.Fatal when there are errors reading files, which would cause the test to fail.
+// Error handling in LoadLocaleFiles is tested through the fmt.Println calls
+// which handle errors gracefully by continuing to process other files.

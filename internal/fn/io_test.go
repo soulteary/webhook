@@ -32,4 +32,22 @@ func TestScanDirByExt(t *testing.T) {
 	nonExistentPath := filepath.Join(tempDir, "non-existent")
 	nonExistentFiles := fn.ScanDirByExt(nonExistentPath, ".txt")
 	assert.Nil(t, nonExistentFiles)
+	
+	// Test with extension without dot
+	txtFiles2 := fn.ScanDirByExt(tempDir, "txt")
+	assert.Equal(t, []string{testFile1, testFile3}, txtFiles2)
+	
+	// Test with extension with multiple dots
+	txtFiles3 := fn.ScanDirByExt(tempDir, "..txt")
+	assert.Equal(t, []string{testFile1, testFile3}, txtFiles3)
+	
+	// Test with nested directories
+	subDir := filepath.Join(tempDir, "subdir")
+	os.Mkdir(subDir, 0755)
+	testFile4 := filepath.Join(subDir, "test4.txt")
+	os.Create(testFile4)
+	defer os.Remove(testFile4)
+	
+	txtFiles4 := fn.ScanDirByExt(tempDir, ".txt")
+	assert.Contains(t, txtFiles4, testFile4)
 }

@@ -287,3 +287,59 @@ func TestRemoveHooks_WithNoPanic(t *testing.T) {
 	// Assert
 	assert.Equal(t, 0, rules.LenLoadedHooks())
 }
+
+func TestRemoveHooks_EmptyHooksFiles(t *testing.T) {
+	// Setup - empty hooks files
+	rules.HooksFiles = []string{}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test1.json": {{ID: "hook1"}},
+	}
+
+	// Execute
+	rules.RemoveHooks("test1.json", false, true)
+
+	// Assert - HooksFiles should be empty
+	assert.Equal(t, 0, len(rules.HooksFiles))
+}
+
+func TestReloadHooks_ErrorLoading(t *testing.T) {
+	// Setup with non-existent file
+	nonExistentFile := "/nonexistent/file.json"
+	rules.HooksFiles = []string{nonExistentFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+
+	// Reload hooks (should handle error gracefully)
+	rules.ReloadHooks(nonExistentFile, false)
+
+	// Verify no hooks are loaded
+	assert.Equal(t, 0, rules.LenLoadedHooks())
+}
+
+func TestReloadHooks_WithSeenHooksIds(t *testing.T) {
+	// Setup
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.json")
+
+	// Create hooks file with duplicate IDs in the same file
+	hooksContent := `[
+		{
+			"id": "duplicate-hook",
+			"execute-command": "/bin/echo"
+		},
+		{
+			"id": "duplicate-hook",
+			"execute-command": "/bin/echo"
+		}
+	]`
+	err := os.WriteFile(hooksFile, []byte(hooksContent), 0644)
+	assert.NoError(t, err)
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+
+	// Reload hooks (should detect duplicate and revert)
+	rules.ReloadHooks(hooksFile, false)
+
+	// Verify hooks are not loaded due to duplicate
+	assert.Equal(t, 0, rules.LenLoadedHooks())
+}
