@@ -39,6 +39,10 @@ Usage of webhook:
     	use X-Request-Id header, if present, as request ID
   -x-request-id-limit int
     	truncate X-Request-Id header to limit; default no limit
+  -lang string
+    	set the language code for the webhook (default "en-US")
+  -lang-dir string
+    	set the directory for the i18n files (default "./locales")
 ```
 
 Use any of the above specified flags to override their default behavior.

@@ -73,4 +73,4 @@
 ```
 
 [CLI-ENV]: ./CLI-ENV.md
-[Go-Template]: [./Request-Values.md](https://golang.org/pkg/text/template/)
+[Go-Template]: https://golang.org/pkg/text/template/

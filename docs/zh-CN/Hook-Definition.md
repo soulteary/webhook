@@ -13,7 +13,8 @@
 * `incoming-payload-content-type` - 设置传入HTTP请求的 `Content-Type`，例如：`application/json`。
 * `http-methods` - 允许的 HTTP 请求方法，可以设置为 `POST` 或 `GET` 等。
 * `include-command-output-in-response` - 布尔值（`true`/`false`），是否应该等待脚本程序执行完毕，并将原始程序输出返回给调用方。如果程序执行失败，将会返回 `HTTP 500 程序内部错误` 的状态信息，通常会返回 `HTTP 200 OK`。
-* `include-command-out-in-response-on-error` - 布尔值（`true`/`false`），当命令执行失败时，是否将命令中的 `stdout` 和 `stderror` 返回给调用方。
+* `stream-command-output` - 布尔值（`true`/`false`），是否应该将命令的输出流式传输到 HTTP 响应中。启用此选项后，命令的 `stdout` 和 `stderr` 会实时流式传输到客户端，而不是等待命令执行完毕后再返回。这对于长时间运行的命令非常有用。
+* `include-command-out-in-response-on-error` - 布尔值（`true`/`false`），当命令执行失败时，是否将命令中的 `stdout` 和 `stderror` 返回给调用方。此选项仅在 `include-command-output-in-response` 设置为 `true` 时生效。
 * `pass-arguments-to-command` - 将指定参数设置在 JSON 字符串中，并传递给要调用程序的参数中，你可以访问[请求值设置][Request-Values]文档，来了解详细的内容。例如，我们可以传递一个字符串内容，格式为：`{"source":"string","name":"value"}`
 * `parse-parameters-as-json` - 将指定参数设置在 JSON 字符串中，使用规则和`pass-arguments-to-command` 一致。
 * `pass-environment-to-command` - 将指定的参数设置为环境变量，并传递给调用程序的参数中。如果没有指定 `"envname"`字段，那么程序将采用 "HOOK_argumentname" （`argumentname` 具体请求参数名）变量名称，否则将使用 `"envname"` 字段作为名称。在[请求值设置][Request-Values]文档中可以了解更多细节。例如，如果要将静态字符串值传递给命令,可以将其指定为 `{"source":"string","envname":"SOMETHING","name":"value"}`。
