@@ -202,6 +202,119 @@ func TestDropPrivileges(t *testing.T) {
 	_ = err // We're just checking it doesn't panic
 }
 
+func TestDropPrivileges_ErrorPaths(t *testing.T) {
+	// Test with invalid UID/GID to trigger error paths
+	// In non-root environment, Setgid will fail first, covering that error path
+	err := DropPrivileges(-1, -1)
+	if err == nil {
+		t.Skip("Running as root, cannot test error paths")
+	}
+	// Verify that error is returned (Setgid or Setuid failed)
+	assert.Error(t, err)
+
+	// Test with zero values (might also fail in non-root)
+	err2 := DropPrivileges(0, 0)
+	if err2 == nil {
+		t.Skip("Running as root, cannot test error paths")
+	}
+	// Verify that error is returned
+	assert.Error(t, err2)
+
+	// Test with very large values (will likely fail)
+	err3 := DropPrivileges(999999, 999999)
+	if err3 == nil {
+		t.Skip("Running as root, cannot test error paths")
+	}
+	// Verify that error is returned
+	assert.Error(t, err3)
+
+	// Test with current GID but invalid UID to try to cover Setuid error path
+	// This might succeed Setgid but fail Setuid, covering more code paths
+	currentGid := os.Getgid()
+	err4 := DropPrivileges(-1, currentGid)
+	if err4 == nil {
+		t.Skip("Running as root, cannot test error paths")
+	}
+	// This should cover Setuid error path if Setgid succeeds
+	assert.Error(t, err4)
+}
+
+func TestNewSignalHandler_WithNil(t *testing.T) {
+	// Test that NewSignalHandler handles nil exitFunc correctly
+	handler := NewSignalHandler(nil)
+	assert.NotNil(t, handler)
+	assert.NotNil(t, handler.exitFunc)
+	// The exitFunc should be set to os.Exit when nil is passed
+}
+
+func TestSetupSignalsWithHandler_WithNilSignals(t *testing.T) {
+	reloadCalled := false
+	var reloadMutex sync.Mutex
+	reloadFn := func() {
+		reloadMutex.Lock()
+		defer reloadMutex.Unlock()
+		reloadCalled = true
+	}
+
+	mockExit := func(code int) {
+		_ = code
+	}
+
+	var testPidFile *pidfile.PIDFile
+	var signals chan os.Signal // nil
+
+	// Setup signals with nil channel - should create a new channel
+	signals = SetupSignalsWithHandler(signals, reloadFn, testPidFile, mockExit)
+	assert.NotNil(t, signals, "SetupSignalsWithHandler should create a new channel when signals is nil")
+
+	// Wait a bit for the goroutine to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test SIGUSR1 (should trigger reload)
+	reloadMutex.Lock()
+	reloadCalled = false
+	reloadMutex.Unlock()
+
+	signals <- syscall.SIGUSR1
+	time.Sleep(100 * time.Millisecond)
+
+	reloadMutex.Lock()
+	assert.True(t, reloadCalled, "SIGUSR1 should trigger reload")
+	reloadMutex.Unlock()
+}
+
+func TestSetupSignalsWithHandler_WithNilExitFunc(t *testing.T) {
+	reloadCalled := false
+	var reloadMutex sync.Mutex
+	reloadFn := func() {
+		reloadMutex.Lock()
+		defer reloadMutex.Unlock()
+		reloadCalled = true
+	}
+
+	var testPidFile *pidfile.PIDFile
+	signals := make(chan os.Signal, 1)
+
+	// Setup signals with nil exitFunc - should use os.Exit
+	signals = SetupSignalsWithHandler(signals, reloadFn, testPidFile, nil)
+	assert.NotNil(t, signals, "SetupSignalsWithHandler should return a valid channel")
+
+	// Wait a bit for the goroutine to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test SIGUSR1 (should trigger reload)
+	reloadMutex.Lock()
+	reloadCalled = false
+	reloadMutex.Unlock()
+
+	signals <- syscall.SIGUSR1
+	time.Sleep(100 * time.Millisecond)
+
+	reloadMutex.Lock()
+	assert.True(t, reloadCalled, "SIGUSR1 should trigger reload")
+	reloadMutex.Unlock()
+}
+
 func TestWatchForSignals_WithPidFile_RemoveError(t *testing.T) {
 	reloadFn := func() {
 		// Not used in this test, but required by watchForSignals
@@ -244,5 +357,84 @@ func TestWatchForSignals_WithPidFile_RemoveError(t *testing.T) {
 	// Exit should still be called even if pidFile.Remove() returns an error
 	exitMutex.Lock()
 	assert.True(t, exitCalled, "SIGTERM should trigger exit even if pidFile.Remove() fails")
+	exitMutex.Unlock()
+}
+
+func TestWatchForSignals_WithPidFile_Success(t *testing.T) {
+	reloadFn := func() {
+		// Not used in this test, but required by watchForSignals
+	}
+
+	exitCalled := false
+	var exitMutex sync.Mutex
+	mockExit := func(code int) {
+		exitMutex.Lock()
+		defer exitMutex.Unlock()
+		exitCalled = true
+		_ = code
+	}
+
+	// Create a valid PIDFile
+	tmpDir := t.TempDir()
+	pidFilePath := tmpDir + "/test.pid"
+	testPidFile, err := pidfile.New(pidFilePath)
+	if err != nil {
+		t.Fatalf("Failed to create PID file: %v", err)
+	}
+
+	handler := NewSignalHandler(mockExit)
+	signals := make(chan os.Signal, 1)
+
+	// Start the signal handler in a goroutine
+	go handler.watchForSignals(signals, reloadFn, testPidFile)
+	time.Sleep(50 * time.Millisecond)
+
+	// Test SIGTERM (should trigger exit and successfully remove pidFile)
+	exitMutex.Lock()
+	exitCalled = false
+	exitMutex.Unlock()
+
+	signals <- syscall.SIGTERM
+	time.Sleep(100 * time.Millisecond)
+
+	// Exit should be called and pidFile should be removed successfully
+	exitMutex.Lock()
+	assert.True(t, exitCalled, "SIGTERM should trigger exit")
+	exitMutex.Unlock()
+}
+
+func TestWatchForSignals_WithNilPidFile(t *testing.T) {
+	reloadFn := func() {
+		// Not used in this test, but required by watchForSignals
+	}
+
+	exitCalled := false
+	var exitMutex sync.Mutex
+	mockExit := func(code int) {
+		exitMutex.Lock()
+		defer exitMutex.Unlock()
+		exitCalled = true
+		_ = code
+	}
+
+	handler := NewSignalHandler(mockExit)
+	signals := make(chan os.Signal, 1)
+	var testPidFile *pidfile.PIDFile // nil
+
+	// Start the signal handler in a goroutine
+	go handler.watchForSignals(signals, reloadFn, testPidFile)
+	time.Sleep(50 * time.Millisecond)
+
+	// Test SIGTERM (should trigger exit even if pidFile is nil)
+	exitMutex.Lock()
+	exitCalled = false
+	exitMutex.Unlock()
+
+	signals <- syscall.SIGTERM
+	time.Sleep(100 * time.Millisecond)
+
+	// Exit should be called even if pidFile is nil
+	exitMutex.Lock()
+	assert.True(t, exitCalled, "SIGTERM should trigger exit even if pidFile is nil")
 	exitMutex.Unlock()
 }
