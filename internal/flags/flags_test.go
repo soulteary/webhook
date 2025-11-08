@@ -138,9 +138,8 @@ func TestParse(t *testing.T) {
 	// This test is tricky because Parse() calls flag.Parse() which expects command line args
 	// We'll test it with minimal setup
 	flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
-	
+
 	// Test that Parse doesn't panic
 	flags := Parse()
 	assert.NotNil(t, flags)
 }
-

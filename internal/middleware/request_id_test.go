@@ -121,4 +121,3 @@ func TestNewRequestIDOptions(t *testing.T) {
 	assert.True(t, options.UseRequestID())
 	assert.Equal(t, 20, options.requestIDLimit)
 }
-

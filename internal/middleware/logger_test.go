@@ -66,8 +66,7 @@ func TestLogEntry_Panic(t *testing.T) {
 
 	entry := logger.NewLogEntry(req).(*LogEntry)
 	stack := []byte("test stack trace")
-	
+
 	// Test Panic method
 	entry.Panic("test panic", stack)
 }
-

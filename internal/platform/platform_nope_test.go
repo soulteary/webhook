@@ -16,4 +16,3 @@ func TestDropPrivileges_NotSupported(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), runtime.GOOS)
 }
-

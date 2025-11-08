@@ -10,4 +10,3 @@ func TestVersion(t *testing.T) {
 	// Version should be set (either "dev" or a build version)
 	assert.NotEmpty(t, Version)
 }
-

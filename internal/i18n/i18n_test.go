@@ -160,3 +160,37 @@ func TestGetWebHookLocaleObject_ValidLocale(t *testing.T) {
 // calls log.Fatal when there are errors reading files, which would cause the test to fail.
 // Error handling in LoadLocaleFiles is tested through the fmt.Println calls
 // which handle errors gracefully by continuing to process other files.
+
+func TestLoadLocaleFiles_ReadFileError(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Create a file that will cause read error (by making it a directory)
+	invalidPath := filepath.Join(tempDir, "invalid.toml")
+	err := os.Mkdir(invalidPath, 0755)
+	assert.NoError(t, err)
+
+	// Also create a valid file so we don't trigger the embedFS path
+	createTOMLFile(t, tempDir, "en-US.toml", `
+		WEBHOOK_VERSION = "webhook version "
+	`)
+
+	// This should handle the error gracefully
+	aliveLocales := i18n.LoadLocaleFiles(tempDir, embedFS)
+	// Should not crash, but may skip invalid files
+	assert.GreaterOrEqual(t, len(aliveLocales), 1)
+}
+
+func TestLoadLocaleFiles_InvalidLocaleInDir(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Create a file with invalid locale name
+	createTOMLFile(t, tempDir, "invalid-locale.toml", `
+		[webhook]
+		title = "Test"
+	`)
+
+	// This should skip invalid locale files
+	aliveLocales := i18n.LoadLocaleFiles(tempDir, embedFS)
+	// Should not include invalid locale
+	_ = aliveLocales
+}

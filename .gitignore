@@ -6,10 +6,7 @@ coverage
 webhook
 /test/hookecho
 build
-coverage.out
 coverage.html
 config.json
 redeploy.sh
-coverage_monitor.out
-coverage_platform.out
-coverage_server.out
+*.out

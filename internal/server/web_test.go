@@ -13,9 +13,9 @@ import (
 func TestLaunch(t *testing.T) {
 	// Create app flags
 	appFlags := flags.AppFlags{
-		Debug:         false,
-		HttpMethods:   "",
-		HooksURLPrefix: "/hooks",
+		Debug:           false,
+		HttpMethods:     "",
+		HooksURLPrefix:  "/hooks",
 		ResponseHeaders: hook.ResponseHeaders{},
 	}
 
@@ -37,9 +37,9 @@ func TestLaunch(t *testing.T) {
 func TestLaunch_WithDebug(t *testing.T) {
 	// Create app flags with debug enabled
 	appFlags := flags.AppFlags{
-		Debug:         true,
-		HttpMethods:   "",
-		HooksURLPrefix: "/hooks",
+		Debug:           true,
+		HttpMethods:     "",
+		HooksURLPrefix:  "/hooks",
 		ResponseHeaders: hook.ResponseHeaders{},
 	}
 
@@ -60,8 +60,8 @@ func TestLaunch_WithDebug(t *testing.T) {
 func TestLaunch_RootHandler(t *testing.T) {
 	// Create app flags
 	appFlags := flags.AppFlags{
-		Debug:         false,
-		HttpMethods:   "",
+		Debug:          false,
+		HttpMethods:    "",
 		HooksURLPrefix: "/hooks",
 		ResponseHeaders: hook.ResponseHeaders{
 			{Name: "X-Test", Value: "test-value"},
@@ -90,4 +90,3 @@ func TestLaunch_RootHandler(t *testing.T) {
 		assert.Equal(t, "test-value", resp.Header.Get("X-Test"))
 	}
 }
-

@@ -55,4 +55,3 @@ func TestApplyWatcher_ErrorAddingFile(t *testing.T) {
 	// This should not panic, but will log an error
 	ApplyWatcher(appFlags)
 }
-

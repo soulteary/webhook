@@ -77,4 +77,3 @@ func TestResponseDupper_Hijack(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot be hijacked")
 }
-

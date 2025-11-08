@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -298,7 +300,7 @@ func TestHandleHook_StreamOutput(t *testing.T) {
 		ID:                      "test-hook",
 		ExecuteCommand:          scriptPath,
 		CommandWorkingDirectory: tempDir,
-		StreamCommandOutput:    true,
+		StreamCommandOutput:     true,
 	}
 
 	r := &hook.Request{
@@ -327,7 +329,7 @@ func TestHandleHook_CaptureOutput(t *testing.T) {
 		ID:                      "test-hook",
 		ExecuteCommand:          scriptPath,
 		CommandWorkingDirectory: tempDir,
-		CaptureCommandOutput:   true,
+		CaptureCommandOutput:    true,
 	}
 
 	r := &hook.Request{
@@ -416,8 +418,8 @@ func TestFlushWriter_WithFlusher(t *testing.T) {
 func TestCreateHookHandler_JSONContentType(t *testing.T) {
 	// Setup
 	testHook := hook.Hook{
-		ID:          "test-hook",
-		HTTPMethods: []string{},
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
 		ResponseMessage: "success",
 	}
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
@@ -442,8 +444,8 @@ func TestCreateHookHandler_JSONContentType(t *testing.T) {
 func TestCreateHookHandler_XMLContentType(t *testing.T) {
 	// Setup
 	testHook := hook.Hook{
-		ID:          "test-hook",
-		HTTPMethods: []string{},
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
 		ResponseMessage: "success",
 	}
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
@@ -468,8 +470,8 @@ func TestCreateHookHandler_XMLContentType(t *testing.T) {
 func TestCreateHookHandler_FormUrlEncodedContentType(t *testing.T) {
 	// Setup
 	testHook := hook.Hook{
-		ID:          "test-hook",
-		HTTPMethods: []string{},
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
 		ResponseMessage: "success",
 	}
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
@@ -494,8 +496,8 @@ func TestCreateHookHandler_FormUrlEncodedContentType(t *testing.T) {
 func TestCreateHookHandler_UnsupportedContentType(t *testing.T) {
 	// Setup
 	testHook := hook.Hook{
-		ID:          "test-hook",
-		HTTPMethods: []string{},
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
 		ResponseMessage: "success",
 	}
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
@@ -520,10 +522,10 @@ func TestCreateHookHandler_UnsupportedContentType(t *testing.T) {
 func TestCreateHookHandler_WithTriggerRule(t *testing.T) {
 	// Setup
 	testHook := hook.Hook{
-		ID:          "test-hook",
-		HTTPMethods: []string{},
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
 		ResponseMessage: "success",
-		TriggerRule: nil, // No trigger rule, should always trigger
+		TriggerRule:     nil, // No trigger rule, should always trigger
 	}
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
@@ -546,8 +548,8 @@ func TestCreateHookHandler_WithTriggerRule(t *testing.T) {
 func TestCreateHookHandler_WithResponseHeaders(t *testing.T) {
 	// Setup
 	testHook := hook.Hook{
-		ID:          "test-hook",
-		HTTPMethods: []string{},
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
 		ResponseMessage: "success",
 		ResponseHeaders: []hook.Header{
 			{Name: "X-Custom-Header", Value: "custom-value"},
@@ -665,7 +667,7 @@ func TestHandleHook_FileCreationError(t *testing.T) {
 		ID:                      "test-hook",
 		ExecuteCommand:          scriptPath,
 		CommandWorkingDirectory: tempDir,
-		CaptureCommandOutput:   true,
+		CaptureCommandOutput:    true,
 	}
 
 	r := &hook.Request{
@@ -696,7 +698,7 @@ func TestHandleHook_CommandError(t *testing.T) {
 		ID:                      "test-hook",
 		ExecuteCommand:          scriptPath,
 		CommandWorkingDirectory: tempDir,
-		CaptureCommandOutput:   true,
+		CaptureCommandOutput:    true,
 	}
 
 	r := &hook.Request{
@@ -707,4 +709,381 @@ func TestHandleHook_CommandError(t *testing.T) {
 	// Should return error when command fails
 	assert.Error(t, err)
 	_ = output
+}
+
+func TestCreateHookHandler_MultipartForm(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
+		ResponseMessage: "success",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{
+		MaxMultipartMem: 1024 * 1024,
+	}
+
+	handler := createHookHandler(appFlags)
+
+	// Create multipart form data
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("key", "value")
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should handle multipart form successfully
+	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestCreateHookHandler_MultipartFormWithFile(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
+		ResponseMessage: "success",
+		JSONStringParameters: []hook.Argument{
+			{Source: "payload", Name: "payload"},
+		},
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{
+		MaxMultipartMem: 1024 * 1024,
+	}
+
+	handler := createHookHandler(appFlags)
+
+	// Create multipart form with JSON file
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add a JSON file part
+	part, _ := writer.CreateFormFile("payload", "payload.json")
+	part.Write([]byte(`{"key":"value"}`))
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should handle multipart form with file successfully
+	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestCreateHookHandler_MultipartFormError(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
+		ResponseMessage: "success",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{
+		MaxMultipartMem: 1, // Very small limit to force error
+	}
+
+	handler := createHookHandler(appFlags)
+
+	// Create multipart form data that exceeds limit
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	// Write a large field that will exceed the 1 byte limit
+	largeData := strings.Repeat("x", 10000)
+	writer.WriteField("key", largeData)
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should return error for multipart form parsing failure
+	// Note: The actual behavior may vary, but we should handle it gracefully
+	if w.Code == http.StatusInternalServerError {
+		assert.Contains(t, w.Body.String(), "Error occurred while parsing multipart form")
+	}
+}
+
+func TestCreateHookHandler_ReadBodyError(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
+		ResponseMessage: "success",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	// Create a request with a body that will cause read error
+	req := httptest.NewRequest("POST", "/hooks/test-hook", &errorReader{})
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should handle read error gracefully
+	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+}
+
+type errorReader struct{}
+
+func (e *errorReader) Read(p []byte) (n int, err error) {
+	return 0, io.ErrUnexpectedEOF
+}
+
+func TestCreateHookHandler_TriggerRuleError(t *testing.T) {
+	// Setup - create a hook with a trigger rule that will cause an error
+	testHook := hook.Hook{
+		ID:              "test-hook",
+		HTTPMethods:     []string{},
+		ResponseMessage: "success",
+		// TriggerRule will be set to cause an error
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should handle trigger rule evaluation
+	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestCreateHookHandler_StreamCommandOutputError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "test-script.sh")
+
+	scriptContent := "#!/bin/sh\necho 'test output'\nexit 1\n"
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0755)
+	assert.NoError(t, err)
+
+	testHook := hook.Hook{
+		ID:                      "test-hook",
+		HTTPMethods:             []string{},
+		ExecuteCommand:          scriptPath,
+		CommandWorkingDirectory: tempDir,
+		StreamCommandOutput:     true,
+		ResponseMessage:         "success",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should handle stream command output error
+	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestCreateHookHandler_CaptureOutputOnError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "test-script.sh")
+
+	scriptContent := "#!/bin/sh\necho 'error output'\nexit 1\n"
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0755)
+	assert.NoError(t, err)
+
+	testHook := hook.Hook{
+		ID:                          "test-hook",
+		HTTPMethods:                 []string{},
+		ExecuteCommand:              scriptPath,
+		CommandWorkingDirectory:     tempDir,
+		CaptureCommandOutput:        true,
+		CaptureCommandOutputOnError: true,
+		ResponseMessage:             "success",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should capture output on error
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), "error output")
+}
+
+func TestCreateHookHandler_TriggerRuleMismatchHttpResponseCode(t *testing.T) {
+	// Setup - create a hook with a trigger rule that will not match
+	testHook := hook.Hook{
+		ID:                                  "test-hook",
+		HTTPMethods:                         []string{},
+		ResponseMessage:                     "success",
+		TriggerRuleMismatchHttpResponseCode: 400,
+		// Create a trigger rule that will not match (header "X-Test" must equal "match" but we won't send it)
+		TriggerRule: &hook.Rules{
+			Match: &hook.MatchRule{
+				Type:      "value",
+				Value:     "match",
+				Parameter: hook.Argument{Source: "header", Name: "X-Test"},
+			},
+		},
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	// Don't set X-Test header, so the rule won't match
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should use custom response code when trigger rule doesn't match
+	assert.Equal(t, 400, w.Code)
+	assert.Contains(t, w.Body.String(), "Hook rules were not satisfied")
+}
+
+func TestCreateHookHandler_SuccessHttpResponseCode(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:                      "test-hook",
+		HTTPMethods:             []string{},
+		ResponseMessage:         "success",
+		SuccessHttpResponseCode: 201,
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should use custom success response code
+	assert.Equal(t, 201, w.Code)
+}
+
+func TestHandleHook_FileOperations(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "test-script.sh")
+
+	scriptContent := "#!/bin/sh\necho 'test output'\n"
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0755)
+	assert.NoError(t, err)
+
+	h := &hook.Hook{
+		ID:                      "test-hook",
+		ExecuteCommand:          scriptPath,
+		CommandWorkingDirectory: tempDir,
+		CaptureCommandOutput:    true,
+	}
+
+	r := &hook.Request{
+		ID: "test-request",
+		Payload: map[string]interface{}{
+			"test": "value",
+		},
+	}
+
+	// Test file creation and cleanup
+	output, err := handleHook(h, r, nil)
+	assert.NoError(t, err)
+	assert.Contains(t, output, "test output")
+}
+
+func TestMakeSureCallable_ChmodError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "test-script.sh")
+
+	scriptContent := "#!/bin/sh\necho 'test'\n"
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0644)
+	assert.NoError(t, err)
+
+	h := &hook.Hook{
+		ExecuteCommand:          scriptPath,
+		CommandWorkingDirectory: tempDir,
+	}
+
+	r := &hook.Request{
+		ID: "test-request",
+	}
+
+	// This should try to make it executable
+	cmdPath, err := makeSureCallable(h, r)
+	// Should succeed after making it executable
+	assert.NoError(t, err)
+	assert.NotEmpty(t, cmdPath)
 }

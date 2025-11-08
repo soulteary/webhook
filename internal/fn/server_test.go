@@ -44,4 +44,3 @@ func TestRemoveNewlinesAndTabs(t *testing.T) {
 	result = fn.RemoveNewlinesAndTabs(input)
 	assert.Equal(t, expected, result)
 }
-

@@ -294,3 +294,107 @@ func TestWatchForFileChange_Remove_FileStillExists(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, removeCalled, "removeHooks should not be called if file still exists")
 }
+
+func TestWatchForFileChange_RemoveError(t *testing.T) {
+	// Create a temporary file for testing
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test-hooks.json")
+
+	// Create the file
+	err := os.WriteFile(testFile, []byte(`[]`), 0644)
+	assert.NoError(t, err)
+
+	// Create a watcher
+	watcher, err := fsnotify.NewWatcher()
+	assert.NoError(t, err)
+	defer func() {
+		watcher.Close()
+		time.Sleep(100 * time.Millisecond)
+	}()
+
+	// Add the file to the watcher
+	err = watcher.Add(testFile)
+	assert.NoError(t, err)
+
+	// Track function calls
+	removeCalled := false
+	var removeMutex sync.Mutex
+
+	reloadHooks := func(hooksFilePath string, asTemplate bool) {
+		// Not used in this test
+	}
+
+	removeHooks := func(hooksFilePath string, verbose bool, noPanic bool) {
+		removeMutex.Lock()
+		defer removeMutex.Unlock()
+		removeCalled = true
+		assert.Equal(t, testFile, hooksFilePath)
+	}
+
+	// Start watching in a goroutine
+	go WatchForFileChange(watcher, false, false, false, reloadHooks, removeHooks)
+	time.Sleep(100 * time.Millisecond)
+
+	// Remove the file
+	err = os.Remove(testFile)
+	assert.NoError(t, err)
+
+	// Wait for the event to be processed
+	time.Sleep(300 * time.Millisecond)
+
+	removeMutex.Lock()
+	assert.True(t, removeCalled, "removeHooks should have been called")
+	removeMutex.Unlock()
+}
+
+func TestWatchForFileChange_RenameAddError(t *testing.T) {
+	// Create a temporary file for testing
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test-hooks.json")
+
+	// Create the file
+	err := os.WriteFile(testFile, []byte(`[]`), 0644)
+	assert.NoError(t, err)
+
+	// Create a watcher
+	watcher, err := fsnotify.NewWatcher()
+	assert.NoError(t, err)
+	defer func() {
+		watcher.Close()
+		time.Sleep(100 * time.Millisecond)
+	}()
+
+	// Add the file to the watcher
+	err = watcher.Add(testFile)
+	assert.NoError(t, err)
+
+	// Track function calls
+	reloadCalled := false
+	var reloadMutex sync.Mutex
+
+	reloadHooks := func(hooksFilePath string, asTemplate bool) {
+		reloadMutex.Lock()
+		defer reloadMutex.Unlock()
+		reloadCalled = true
+		assert.Equal(t, testFile, hooksFilePath)
+	}
+
+	removeHooks := func(hooksFilePath string, verbose bool, noPanic bool) {
+		// Not used in this test
+	}
+
+	// Start watching in a goroutine
+	go WatchForFileChange(watcher, false, false, false, reloadHooks, removeHooks)
+	time.Sleep(100 * time.Millisecond)
+
+	// Overwrite the file (simulates Rename event where file still exists)
+	err = os.WriteFile(testFile, []byte(`[{"id":"test2"}]`), 0644)
+	assert.NoError(t, err)
+
+	// Wait for the event to be processed
+	time.Sleep(300 * time.Millisecond)
+
+	reloadMutex.Lock()
+	assert.True(t, reloadCalled, "reloadHooks should have been called for overwritten file")
+	reloadMutex.Unlock()
+}
