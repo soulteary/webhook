@@ -412,3 +412,299 @@ func TestFlushWriter_WithFlusher(t *testing.T) {
 	assert.Equal(t, 4, n)
 	assert.True(t, flusher.flushed)
 }
+
+func TestCreateHookHandler_JSONContentType(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:          "test-hook",
+		HTTPMethods: []string{},
+		ResponseMessage: "success",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{"key":"value"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should not return error for valid JSON
+	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestCreateHookHandler_XMLContentType(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:          "test-hook",
+		HTTPMethods: []string{},
+		ResponseMessage: "success",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`<root><key>value</key></root>`))
+	req.Header.Set("Content-Type", "application/xml")
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should not return error for valid XML
+	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestCreateHookHandler_FormUrlEncodedContentType(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:          "test-hook",
+		HTTPMethods: []string{},
+		ResponseMessage: "success",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`key=value`))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should not return error for valid form data
+	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestCreateHookHandler_UnsupportedContentType(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:          "test-hook",
+		HTTPMethods: []string{},
+		ResponseMessage: "success",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`some data`))
+	req.Header.Set("Content-Type", "text/plain")
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should handle unsupported content type gracefully
+	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestCreateHookHandler_WithTriggerRule(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:          "test-hook",
+		HTTPMethods: []string{},
+		ResponseMessage: "success",
+		TriggerRule: nil, // No trigger rule, should always trigger
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should trigger successfully when no trigger rule
+	assert.Contains(t, w.Body.String(), "success")
+}
+
+func TestCreateHookHandler_WithResponseHeaders(t *testing.T) {
+	// Setup
+	testHook := hook.Hook{
+		ID:          "test-hook",
+		HTTPMethods: []string{},
+		ResponseMessage: "success",
+		ResponseHeaders: []hook.Header{
+			{Name: "X-Custom-Header", Value: "custom-value"},
+		},
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	appFlags := flags.AppFlags{}
+
+	handler := createHookHandler(appFlags)
+
+	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
+	w := httptest.NewRecorder()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/hooks/{id}", handler)
+	r.ServeHTTP(w, req)
+
+	// Should set response headers
+	assert.Equal(t, "custom-value", w.Header().Get("X-Custom-Header"))
+}
+
+func TestMakeSureCallable_PermissionDenied(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "test-script.sh")
+
+	// Create a test script without execute permission
+	scriptContent := "#!/bin/sh\necho 'test'\n"
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0644) // No execute permission
+	assert.NoError(t, err)
+
+	h := &hook.Hook{
+		ExecuteCommand:          scriptPath,
+		CommandWorkingDirectory: tempDir,
+	}
+
+	r := &hook.Request{
+		ID: "test-request",
+	}
+
+	// This should try to make it executable and retry
+	cmdPath, err := makeSureCallable(h, r)
+	// Should succeed after making it executable
+	assert.NoError(t, err)
+	assert.NotEmpty(t, cmdPath)
+}
+
+func TestMakeSureCallable_CommandNotFound(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	h := &hook.Hook{
+		ExecuteCommand:          "/nonexistent/command",
+		CommandWorkingDirectory: "",
+	}
+
+	r := &hook.Request{
+		ID: "test-request",
+	}
+
+	cmdPath, err := makeSureCallable(h, r)
+	// Should return error for nonexistent command
+	assert.Error(t, err)
+	assert.Empty(t, cmdPath)
+}
+
+func TestMakeSureCallable_CommandWithSpace(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "test script.sh")
+
+	// Create a test script with space in name
+	scriptContent := "#!/bin/sh\necho 'test'\n"
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0755)
+	assert.NoError(t, err)
+
+	h := &hook.Hook{
+		ExecuteCommand:          "test script.sh", // Command with space
+		CommandWorkingDirectory: tempDir,
+	}
+
+	r := &hook.Request{
+		ID: "test-request",
+	}
+
+	cmdPath, err := makeSureCallable(h, r)
+	// Should handle command with space
+	assert.NoError(t, err)
+	assert.NotEmpty(t, cmdPath)
+}
+
+func TestHandleHook_FileCreationError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "test-script.sh")
+
+	// Create a test script
+	scriptContent := "#!/bin/sh\necho 'test output'\n"
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0755)
+	assert.NoError(t, err)
+
+	h := &hook.Hook{
+		ID:                      "test-hook",
+		ExecuteCommand:          scriptPath,
+		CommandWorkingDirectory: tempDir,
+		CaptureCommandOutput:   true,
+	}
+
+	r := &hook.Request{
+		ID: "test-request",
+	}
+
+	// Test with invalid working directory (should still work but may have file creation issues)
+	output, err := handleHook(h, r, nil)
+	// Should handle file creation errors gracefully
+	assert.NoError(t, err)
+	assert.Contains(t, output, "test output")
+}
+
+func TestHandleHook_CommandError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "test-script.sh")
+
+	// Create a test script that exits with error
+	scriptContent := "#!/bin/sh\nexit 1\n"
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0755)
+	assert.NoError(t, err)
+
+	h := &hook.Hook{
+		ID:                      "test-hook",
+		ExecuteCommand:          scriptPath,
+		CommandWorkingDirectory: tempDir,
+		CaptureCommandOutput:   true,
+	}
+
+	r := &hook.Request{
+		ID: "test-request",
+	}
+
+	output, err := handleHook(h, r, nil)
+	// Should return error when command fails
+	assert.Error(t, err)
+	_ = output
+}

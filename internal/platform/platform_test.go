@@ -201,3 +201,48 @@ func TestDropPrivileges(t *testing.T) {
 	// In a non-root test environment, this will fail, which is expected
 	_ = err // We're just checking it doesn't panic
 }
+
+func TestWatchForSignals_WithPidFile_RemoveError(t *testing.T) {
+	reloadFn := func() {
+		// Not used in this test, but required by watchForSignals
+	}
+
+	exitCalled := false
+	var exitMutex sync.Mutex
+	mockExit := func(code int) {
+		exitMutex.Lock()
+		defer exitMutex.Unlock()
+		exitCalled = true
+		_ = code
+	}
+
+	// Create a PIDFile and then remove the file, so Remove() will return an error
+	tmpDir := t.TempDir()
+	pidFilePath := tmpDir + "/test.pid"
+	testPidFile, err := pidfile.New(pidFilePath)
+	if err != nil {
+		t.Fatalf("Failed to create PID file: %v", err)
+	}
+	// Remove the file so Remove() will return an error
+	os.Remove(pidFilePath)
+
+	handler := NewSignalHandler(mockExit)
+	signals := make(chan os.Signal, 1)
+
+	// Start the signal handler in a goroutine
+	go handler.watchForSignals(signals, reloadFn, testPidFile)
+	time.Sleep(50 * time.Millisecond)
+
+	// Test SIGTERM (should trigger exit even if pidFile.Remove() fails)
+	exitMutex.Lock()
+	exitCalled = false
+	exitMutex.Unlock()
+
+	signals <- syscall.SIGTERM
+	time.Sleep(100 * time.Millisecond)
+
+	// Exit should still be called even if pidFile.Remove() returns an error
+	exitMutex.Lock()
+	assert.True(t, exitCalled, "SIGTERM should trigger exit even if pidFile.Remove() fails")
+	exitMutex.Unlock()
+}
