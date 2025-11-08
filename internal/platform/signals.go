@@ -12,19 +12,51 @@ import (
 	"github.com/soulteary/webhook/internal/pidfile"
 )
 
-func SetupSignals(signals chan os.Signal, reloadFn func(), pidFile *pidfile.PIDFile) {
+// ExitFunc is a function type for exiting the program. It can be replaced with a mock function in tests.
+type ExitFunc func(code int)
+
+// SignalHandler encapsulates signal handling dependencies to make the code more testable.
+type SignalHandler struct {
+	exitFunc ExitFunc
+}
+
+// NewSignalHandler creates a new SignalHandler instance.
+// If exitFunc is nil, it uses the default os.Exit.
+func NewSignalHandler(exitFunc ExitFunc) *SignalHandler {
+	if exitFunc == nil {
+		exitFunc = os.Exit
+	}
+	return &SignalHandler{
+		exitFunc: exitFunc,
+	}
+}
+
+// SetupSignals sets up the signal handler and returns the created signal channel.
+// If the provided signals is nil, a new channel is created.
+func SetupSignals(signals chan os.Signal, reloadFn func(), pidFile *pidfile.PIDFile) chan os.Signal {
+	return SetupSignalsWithHandler(signals, reloadFn, pidFile, nil)
+}
+
+// SetupSignalsWithHandler sets up the signal handler with support for custom ExitFunc for testing.
+func SetupSignalsWithHandler(signals chan os.Signal, reloadFn func(), pidFile *pidfile.PIDFile, exitFunc ExitFunc) chan os.Signal {
 	log.Printf("setting up os signal watcher\n")
 
-	signals = make(chan os.Signal, 1)
+	if signals == nil {
+		signals = make(chan os.Signal, 1)
+	}
 	signal.Notify(signals, syscall.SIGUSR1)
 	signal.Notify(signals, syscall.SIGHUP)
 	signal.Notify(signals, syscall.SIGTERM)
 	signal.Notify(signals, os.Interrupt)
 
-	go watchForSignals(signals, reloadFn, pidFile)
+	handler := NewSignalHandler(exitFunc)
+	go handler.watchForSignals(signals, reloadFn, pidFile)
+
+	return signals
 }
 
-func watchForSignals(signals chan os.Signal, reloadFn func(), pidFile *pidfile.PIDFile) {
+// watchForSignals listens for signals and handles them.
+func (h *SignalHandler) watchForSignals(signals chan os.Signal, reloadFn func(), pidFile *pidfile.PIDFile) {
 	log.Println("os signal watcher ready")
 
 	for {
@@ -46,7 +78,7 @@ func watchForSignals(signals chan os.Signal, reloadFn func(), pidFile *pidfile.P
 					log.Print(err)
 				}
 			}
-			os.Exit(0)
+			h.exitFunc(0)
 
 		default:
 			log.Printf("caught unhandled signal %+v\n", sig)

@@ -138,9 +138,9 @@ func main() {
 
 	// set os signal watcher
 	if appFlags.AsTemplate {
-		platform.SetupSignals(signals, rules.ReloadAllHooksAsTemplate, pidFile)
+		signals = platform.SetupSignals(signals, rules.ReloadAllHooksAsTemplate, pidFile)
 	} else {
-		platform.SetupSignals(signals, rules.ReloadAllHooksNotAsTemplate, pidFile)
+		signals = platform.SetupSignals(signals, rules.ReloadAllHooksNotAsTemplate, pidFile)
 	}
 
 	// load and parse hooks
