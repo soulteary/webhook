@@ -10,3 +10,4 @@ coverage.out
 coverage.html
 config.json
 redeploy.sh
+coverage_monitor.out

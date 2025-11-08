@@ -14,7 +14,7 @@ func TestWatchForFileChange(t *testing.T) {
 	// Create a temporary file for testing
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test-hooks.json")
-	
+
 	// Create the file
 	err := os.WriteFile(testFile, []byte(`[]`), 0644)
 	assert.NoError(t, err)
@@ -22,7 +22,12 @@ func TestWatchForFileChange(t *testing.T) {
 	// Create a watcher
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
+	defer func() {
+		// Close watcher to stop the goroutine
+		watcher.Close()
+		// Give goroutine time to exit
+		time.Sleep(100 * time.Millisecond)
+	}()
 
 	// Add the file to the watcher
 	err = watcher.Add(testFile)
@@ -70,7 +75,7 @@ func TestWatchForFileChange_Remove(t *testing.T) {
 	// Create a temporary file for testing
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test-hooks.json")
-	
+
 	// Create the file
 	err := os.WriteFile(testFile, []byte(`[]`), 0644)
 	assert.NoError(t, err)
@@ -78,7 +83,12 @@ func TestWatchForFileChange_Remove(t *testing.T) {
 	// Create a watcher
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
+	defer func() {
+		// Close watcher to stop the goroutine
+		watcher.Close()
+		// Give goroutine time to exit
+		time.Sleep(100 * time.Millisecond)
+	}()
 
 	// Add the file to the watcher
 	err = watcher.Add(testFile)
@@ -115,7 +125,6 @@ func TestWatchForFileChange_Error(t *testing.T) {
 	// Create a watcher
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
 
 	// Track function calls
 	reloadHooks := func(hooksFilePath string, asTemplate bool) {}
@@ -130,7 +139,6 @@ func TestWatchForFileChange_Error(t *testing.T) {
 	// Close the watcher to trigger an error
 	watcher.Close()
 
-	// Wait for the error to be processed
+	// Wait for the error to be processed and goroutine to exit
 	time.Sleep(200 * time.Millisecond)
 }
-
