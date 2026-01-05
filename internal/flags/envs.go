@@ -31,6 +31,11 @@ func ParseEnvs() AppFlags {
 	flags.Lang = fn.GetEnvStr(ENV_KEY_LANG, DEFAULT_LANG)
 	flags.I18nDir = fn.GetEnvStr(ENV_KEY_I18N, DEFAULT_I18N_DIR)
 
+	// hook execution configuration
+	flags.HookTimeoutSeconds = fn.GetEnvInt(ENV_KEY_HOOK_TIMEOUT_SECONDS, DEFAULT_HOOK_TIMEOUT_SECONDS)
+	flags.MaxConcurrentHooks = fn.GetEnvInt(ENV_KEY_MAX_CONCURRENT_HOOKS, DEFAULT_MAX_CONCURRENT_HOOKS)
+	flags.HookExecutionTimeout = fn.GetEnvInt(ENV_KEY_HOOK_EXECUTION_TIMEOUT, DEFAULT_HOOK_EXECUTION_TIMEOUT)
+
 	hooks := strings.Split(fn.GetEnvStr(ENV_KEY_HOOKS, ""), ",")
 	var hooksFiles hook.HooksFiles
 	for _, hook := range hooks {

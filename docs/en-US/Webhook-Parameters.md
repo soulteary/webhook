@@ -43,6 +43,12 @@ Usage of webhook:
     	set the language code for the webhook (default "en-US")
   -lang-dir string
     	set the directory for the i18n files (default "./locales")
+  -hook-timeout-seconds int
+    	default timeout in seconds for hook execution (default 30)
+  -max-concurrent-hooks int
+    	maximum number of concurrent hook executions (default 10)
+  -hook-execution-timeout int
+    	timeout in seconds for acquiring execution slot when max concurrent hooks reached (default 5)
 ```
 
 Use any of the above specified flags to override their default behavior.

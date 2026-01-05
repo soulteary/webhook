@@ -33,8 +33,8 @@ const (
 
 // HookExecutor 管理 hook 执行的并发控制和超时
 type HookExecutor struct {
-	sem           chan struct{}
-	maxConcurrent int
+	sem            chan struct{}
+	maxConcurrent  int
 	defaultTimeout time.Duration
 }
 
@@ -47,19 +47,19 @@ func NewHookExecutor(maxConcurrent int, defaultTimeout time.Duration) *HookExecu
 		defaultTimeout = DefaultHookTimeout
 	}
 	return &HookExecutor{
-		sem:           make(chan struct{}, maxConcurrent),
-		maxConcurrent: maxConcurrent,
+		sem:            make(chan struct{}, maxConcurrent),
+		maxConcurrent:  maxConcurrent,
 		defaultTimeout: defaultTimeout,
 	}
 }
 
 // Execute 执行 hook，带并发控制和超时
-func (he *HookExecutor) Execute(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+func (he *HookExecutor) Execute(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter, executionTimeout time.Duration) (string, error) {
 	// 尝试获取 semaphore，带超时
 	select {
 	case he.sem <- struct{}{}:
 		defer func() { <-he.sem }()
-	case <-time.After(HookExecutionTimeout):
+	case <-time.After(executionTimeout):
 		return "", errors.New("too many concurrent hooks, execution timeout")
 	case <-ctx.Done():
 		return "", ctx.Err()
@@ -87,8 +87,24 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 }
 
 func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *http.Request) {
+	// 从配置中获取超时和并发设置，如果未配置则使用默认值
+	maxConcurrent := appFlags.MaxConcurrentHooks
+	if maxConcurrent <= 0 {
+		maxConcurrent = DefaultMaxConcurrentHooks
+	}
+
+	hookTimeout := time.Duration(appFlags.HookTimeoutSeconds) * time.Second
+	if hookTimeout <= 0 {
+		hookTimeout = DefaultHookTimeout
+	}
+
+	executionTimeout := time.Duration(appFlags.HookExecutionTimeout) * time.Second
+	if executionTimeout <= 0 {
+		executionTimeout = HookExecutionTimeout
+	}
+
 	// 创建 HookExecutor 实例，管理并发控制
-	executor := NewHookExecutor(DefaultMaxConcurrentHooks, DefaultHookTimeout)
+	executor := NewHookExecutor(maxConcurrent, hookTimeout)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID := middleware.GetReqID(r.Context())
@@ -302,8 +318,14 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 			// 使用请求的 context，支持取消和超时
 			ctx := r.Context()
 
+			// 获取执行超时时间
+			executionTimeout := time.Duration(appFlags.HookExecutionTimeout) * time.Second
+			if executionTimeout <= 0 {
+				executionTimeout = HookExecutionTimeout
+			}
+
 			if matchedHook.StreamCommandOutput {
-				_, err := executor.Execute(ctx, matchedHook, req, w)
+				_, err := executor.Execute(ctx, matchedHook, req, w, executionTimeout)
 				if err != nil {
 					if errors.Is(err, context.DeadlineExceeded) {
 						log.Printf("[%s] hook execution timeout: %v", requestID, err)
@@ -315,7 +337,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					}
 				}
 			} else if matchedHook.CaptureCommandOutput {
-				response, err := executor.Execute(ctx, matchedHook, req, nil)
+				response, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
 
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
@@ -338,7 +360,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 			} else {
 				// 异步执行，但仍需要并发控制和超时
 				go func() {
-					_, err := executor.Execute(ctx, matchedHook, req, nil)
+					_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
 					if err != nil {
 						if errors.Is(err, context.DeadlineExceeded) {
 							log.Printf("[%s] hook execution timeout: %v", requestID, err)

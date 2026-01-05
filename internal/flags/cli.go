@@ -29,6 +29,10 @@ func ParseCLI(flags AppFlags) AppFlags {
 		Lang    = flag.String("lang", DEFAULT_LANG, "set the language code for the webhook")
 		I18nDir = flag.String("lang-dir", DEFAULT_I18N_DIR, "set the directory for the i18n files")
 
+		HookTimeoutSeconds   = flag.Int("hook-timeout-seconds", DEFAULT_HOOK_TIMEOUT_SECONDS, "default timeout in seconds for hook execution (default 30)")
+		MaxConcurrentHooks   = flag.Int("max-concurrent-hooks", DEFAULT_MAX_CONCURRENT_HOOKS, "maximum number of concurrent hook executions (default 10)")
+		HookExecutionTimeout = flag.Int("hook-execution-timeout", DEFAULT_HOOK_EXECUTION_TIMEOUT, "timeout in seconds for acquiring execution slot when max concurrent hooks reached (default 5)")
+
 		ShowVersion     = flag.Bool("version", false, "display webhook version and quit")
 		ResponseHeaders hook.ResponseHeaders
 	)
@@ -123,5 +127,18 @@ func ParseCLI(flags AppFlags) AppFlags {
 	if *I18nDir != DEFAULT_I18N_DIR {
 		flags.I18nDir = *I18nDir
 	}
+
+	if *HookTimeoutSeconds != DEFAULT_HOOK_TIMEOUT_SECONDS {
+		flags.HookTimeoutSeconds = *HookTimeoutSeconds
+	}
+
+	if *MaxConcurrentHooks != DEFAULT_MAX_CONCURRENT_HOOKS {
+		flags.MaxConcurrentHooks = *MaxConcurrentHooks
+	}
+
+	if *HookExecutionTimeout != DEFAULT_HOOK_EXECUTION_TIMEOUT {
+		flags.HookExecutionTimeout = *HookExecutionTimeout
+	}
+
 	return flags
 }

@@ -84,6 +84,23 @@
 - `-lang-dir string`
   设置国际化文件的目录（默认值：`./locales`）
 
+### Hook 执行控制
+
+- `-hook-timeout-seconds int`
+  设置 hook 执行的默认超时时间（秒，默认值：`30`）
+  
+  当 hook 执行时间超过此值时，将被强制终止，防止长时间运行的命令占用资源。
+
+- `-max-concurrent-hooks int`
+  设置同时执行的最大 hook 数量（默认值：`10`）
+  
+  用于限制并发执行的 hook 数量，防止资源耗尽。当达到最大并发数时，新的 hook 请求将等待执行槽位。
+
+- `-hook-execution-timeout int`
+  设置获取执行槽位的超时时间（秒，默认值：`5`）
+  
+  当达到最大并发数时，新请求等待执行槽位的最大时间。超过此时间仍未获得执行机会的请求将返回错误。
+
 ### 其他
 
 - `-version`
@@ -115,6 +132,9 @@
 | `GID` | `-setgid` | 组 ID | `0` |
 | `LANGUAGE` | `-lang` | 语言代码 | `en-US` |
 | `LANG_DIR` | `-lang-dir` | 国际化文件目录 | `./locales` |
+| `HOOK_TIMEOUT_SECONDS` | `-hook-timeout-seconds` | Hook 执行超时时间（秒） | `30` |
+| `MAX_CONCURRENT_HOOKS` | `-max-concurrent-hooks` | 最大并发 hook 数量 | `10` |
+| `HOOK_EXECUTION_TIMEOUT` | `-hook-execution-timeout` | 获取执行槽位超时时间（秒） | `5` |
 
 ### 环境变量使用示例
 
