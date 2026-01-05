@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/soulteary/webhook/internal/flags"
@@ -18,6 +21,57 @@ import (
 	"github.com/soulteary/webhook/internal/middleware"
 	"github.com/soulteary/webhook/internal/rules"
 )
+
+const (
+	// DefaultHookTimeout 默认 hook 执行超时时间
+	DefaultHookTimeout = 30 * time.Second
+	// DefaultMaxConcurrentHooks 默认最大并发执行的 hook 数量
+	DefaultMaxConcurrentHooks = 10
+	// HookExecutionTimeout 获取 semaphore 的超时时间
+	HookExecutionTimeout = 5 * time.Second
+)
+
+// HookExecutor 管理 hook 执行的并发控制和超时
+type HookExecutor struct {
+	sem           chan struct{}
+	maxConcurrent int
+	defaultTimeout time.Duration
+}
+
+// NewHookExecutor 创建新的 HookExecutor 实例
+func NewHookExecutor(maxConcurrent int, defaultTimeout time.Duration) *HookExecutor {
+	if maxConcurrent <= 0 {
+		maxConcurrent = DefaultMaxConcurrentHooks
+	}
+	if defaultTimeout <= 0 {
+		defaultTimeout = DefaultHookTimeout
+	}
+	return &HookExecutor{
+		sem:           make(chan struct{}, maxConcurrent),
+		maxConcurrent: maxConcurrent,
+		defaultTimeout: defaultTimeout,
+	}
+}
+
+// Execute 执行 hook，带并发控制和超时
+func (he *HookExecutor) Execute(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+	// 尝试获取 semaphore，带超时
+	select {
+	case he.sem <- struct{}{}:
+		defer func() { <-he.sem }()
+	case <-time.After(HookExecutionTimeout):
+		return "", errors.New("too many concurrent hooks, execution timeout")
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+
+	// 创建带超时的 context
+	timeout := he.defaultTimeout
+	execCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	return handleHook(execCtx, h, r, w)
+}
 
 type flushWriter struct {
 	f http.Flusher
@@ -33,6 +87,9 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 }
 
 func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *http.Request) {
+	// 创建 HookExecutor 实例，管理并发控制
+	executor := NewHookExecutor(DefaultMaxConcurrentHooks, DefaultHookTimeout)
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID := middleware.GetReqID(r.Context())
 		req := &hook.Request{
@@ -208,8 +265,8 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		}
 
 		// handle hook
-		errors := matchedHook.ParseJSONParameters(req)
-		for _, err := range errors {
+		errs := matchedHook.ParseJSONParameters(req)
+		for _, err := range errs {
 			log.Printf("[%s] error parsing JSON parameters: %s\n", requestID, err)
 		}
 
@@ -242,17 +299,30 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 				w.Header().Set(responseHeader.Name, responseHeader.Value)
 			}
 
+			// 使用请求的 context，支持取消和超时
+			ctx := r.Context()
+
 			if matchedHook.StreamCommandOutput {
-				_, err := handleHook(matchedHook, req, w)
+				_, err := executor.Execute(ctx, matchedHook, req, w)
 				if err != nil {
-					fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
+					if errors.Is(err, context.DeadlineExceeded) {
+						log.Printf("[%s] hook execution timeout: %v", requestID, err)
+						w.WriteHeader(http.StatusRequestTimeout)
+						fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
+					} else {
+						log.Printf("[%s] error executing hook: %v", requestID, err)
+						fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
+					}
 				}
 			} else if matchedHook.CaptureCommandOutput {
-				response, err := handleHook(matchedHook, req, nil)
+				response, err := executor.Execute(ctx, matchedHook, req, nil)
 
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
-					if matchedHook.CaptureCommandOutputOnError {
+					if errors.Is(err, context.DeadlineExceeded) {
+						log.Printf("[%s] hook execution timeout: %v", requestID, err)
+						fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
+					} else if matchedHook.CaptureCommandOutputOnError {
 						fmt.Fprint(w, response)
 					} else {
 						w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -266,7 +336,17 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					fmt.Fprint(w, response)
 				}
 			} else {
-				go handleHook(matchedHook, req, nil)
+				// 异步执行，但仍需要并发控制和超时
+				go func() {
+					_, err := executor.Execute(ctx, matchedHook, req, nil)
+					if err != nil {
+						if errors.Is(err, context.DeadlineExceeded) {
+							log.Printf("[%s] hook execution timeout: %v", requestID, err)
+						} else {
+							log.Printf("[%s] error executing hook: %v", requestID, err)
+						}
+					}
+				}()
 
 				// Check if a success return code is configured for the hook
 				if matchedHook.SuccessHttpResponseCode != 0 {
@@ -330,32 +410,33 @@ func makeSureCallable(h *hook.Hook, r *hook.Request) (string, error) {
 	return cmdPath, nil
 }
 
-func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
-	var errors []error
+func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+	var errs []error
 
 	cmdPath, err := makeSureCallable(h, r)
 	if err != nil {
 		return "", err
 	}
 
-	cmd := exec.Command(cmdPath)
+	// 使用 exec.CommandContext 替代 exec.Command，支持超时和取消
+	cmd := exec.CommandContext(ctx, cmdPath)
 	cmd.Dir = h.CommandWorkingDirectory
 
-	cmd.Args, errors = h.ExtractCommandArguments(r)
-	for _, err := range errors {
+	cmd.Args, errs = h.ExtractCommandArguments(r)
+	for _, err := range errs {
 		log.Printf("[%s] error extracting command arguments: %s\n", r.ID, err)
 	}
 
 	var envs []string
-	envs, errors = h.ExtractCommandArgumentsForEnv(r)
+	envs, errs = h.ExtractCommandArgumentsForEnv(r)
 
-	for _, err := range errors {
+	for _, err := range errs {
 		log.Printf("[%s] error extracting command arguments for environment: %s\n", r.ID, err)
 	}
 
-	files, errors := h.ExtractCommandArgumentsForFile(r)
+	files, errs := h.ExtractCommandArgumentsForFile(r)
 
-	for _, err := range errors {
+	for _, err := range errs {
 		log.Printf("[%s] error extracting command arguments for file: %s\n", r.ID, err)
 	}
 
@@ -398,6 +479,14 @@ func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, e
 		cmd.Stdout = &fw
 
 		if err := cmd.Run(); err != nil {
+			// 检查是否是超时错误
+			if ctx.Err() == context.DeadlineExceeded {
+				log.Printf("[%s] command execution timeout: %+v\n", r.ID, err)
+				return "", context.DeadlineExceeded
+			} else if ctx.Err() == context.Canceled {
+				log.Printf("[%s] command execution canceled: %+v\n", r.ID, err)
+				return "", context.Canceled
+			}
 			log.Printf("[%s] error occurred: %+v\n", r.ID, err)
 		}
 	} else {
@@ -406,6 +495,14 @@ func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, e
 		log.Printf("[%s] command output: %s\n", r.ID, out)
 
 		if err != nil {
+			// 检查是否是超时错误
+			if ctx.Err() == context.DeadlineExceeded {
+				log.Printf("[%s] command execution timeout: %+v\n", r.ID, err)
+				return string(out), context.DeadlineExceeded
+			} else if ctx.Err() == context.Canceled {
+				log.Printf("[%s] command execution canceled: %+v\n", r.ID, err)
+				return string(out), context.Canceled
+			}
 			log.Printf("[%s] error occurred: %+v\n", r.ID, err)
 		}
 	}
