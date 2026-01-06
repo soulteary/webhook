@@ -56,8 +56,8 @@ func TestWatchForFileChange(t *testing.T) {
 	err = os.WriteFile(testFile, []byte(`[{"id":"test"}]`), 0644)
 	assert.NoError(t, err)
 
-	// Wait for the event to be processed
-	time.Sleep(200 * time.Millisecond)
+	// Wait for the event to be processed (debounce delay + processing time)
+	time.Sleep(400 * time.Millisecond)
 	assert.True(t, reloadCalled, "reloadHooks should have been called")
 
 	// Reset for next test
@@ -67,8 +67,8 @@ func TestWatchForFileChange(t *testing.T) {
 	err = os.WriteFile(testFile, []byte(`[{"id":"test2"}]`), 0644)
 	assert.NoError(t, err)
 
-	// Wait for the event to be processed
-	time.Sleep(300 * time.Millisecond)
+	// Wait for the event to be processed (debounce delay + processing time)
+	time.Sleep(400 * time.Millisecond)
 	assert.True(t, reloadCalled, "reloadHooks should have been called for overwrite")
 }
 
@@ -189,8 +189,8 @@ func TestWatchForFileChange_Rename_Overwritten(t *testing.T) {
 	err = os.WriteFile(testFile, []byte(`[{"id":"test2"}]`), 0644)
 	assert.NoError(t, err)
 
-	// Wait for the event to be processed
-	time.Sleep(300 * time.Millisecond)
+	// Wait for the event to be processed (Rename events are handled asynchronously, so wait longer)
+	time.Sleep(500 * time.Millisecond)
 
 	reloadMutex.Lock()
 	assert.True(t, reloadCalled, "reloadHooks should have been called for overwritten file")
@@ -391,8 +391,8 @@ func TestWatchForFileChange_RenameAddError(t *testing.T) {
 	err = os.WriteFile(testFile, []byte(`[{"id":"test2"}]`), 0644)
 	assert.NoError(t, err)
 
-	// Wait for the event to be processed
-	time.Sleep(300 * time.Millisecond)
+	// Wait for the event to be processed (Rename events are handled asynchronously, so wait longer)
+	time.Sleep(500 * time.Millisecond)
 
 	reloadMutex.Lock()
 	assert.True(t, reloadCalled, "reloadHooks should have been called for overwritten file")
