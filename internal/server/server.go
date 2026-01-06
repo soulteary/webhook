@@ -168,8 +168,21 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		isMultipart := strings.HasPrefix(req.ContentType, "multipart/form-data;")
 
 		if !isMultipart {
-			req.Body, err = io.ReadAll(r.Body)
+			// 限制请求体大小以防止内存耗尽
+			maxBodySize := appFlags.MaxRequestBodySize
+			if maxBodySize <= 0 {
+				maxBodySize = flags.DEFAULT_MAX_REQUEST_BODY_SIZE
+			}
+			limitedBody := http.MaxBytesReader(w, r.Body, maxBodySize)
+			req.Body, err = io.ReadAll(limitedBody)
 			if err != nil {
+				// 检查是否是请求体过大错误
+				var maxBytesErr *http.MaxBytesError
+				if errors.As(err, &maxBytesErr) {
+					HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusRequestEntityTooLarge,
+						fmt.Sprintf("Request body too large: maximum size is %d bytes", maxBodySize), err), requestID, hookID)
+					return
+				}
 				HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
 					"Error reading request body.", err), requestID, hookID)
 				return

@@ -18,10 +18,11 @@ const (
 	DEFAULT_ENABLE_PARSE_TEMPLATE = false
 	DEFAULT_ENABLE_X_REQUEST_ID   = false
 
-	DEFAULT_X_REQUEST_ID_LIMIT = 0
-	DEFAULT_MAX_MPART_MEM      = 1 << 20
-	DEFAULT_GID                = 0
-	DEFAULT_UID                = 0
+	DEFAULT_X_REQUEST_ID_LIMIT    = 0
+	DEFAULT_MAX_MPART_MEM         = 1 << 20
+	DEFAULT_MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024 // 10MB
+	DEFAULT_GID                   = 0
+	DEFAULT_UID                   = 0
 
 	DEFAULT_LANG     = "en-US"
 	DEFAULT_I18N_DIR = "./locales"
@@ -50,16 +51,17 @@ const (
 	ENV_KEY_LOG_PATH   = "LOG_PATH"
 	ENV_KEY_HOT_RELOAD = "HOT_RELOAD"
 
-	ENV_KEY_HOOKS_URLPREFIX = "URL_PREFIX"
-	ENV_KEY_HOOKS           = "HOOKS"
-	ENV_KEY_TEMPLATE        = "TEMPLATE"
-	ENV_KEY_HTTP_METHODS    = "HTTP_METHODS"
-	ENV_KEY_PID_FILE        = "PID_FILE"
-	ENV_KEY_X_REQUEST_ID    = "X_REQUEST_ID"
-	ENV_KEY_MAX_MPART_MEM   = "MAX_MPART_MEM"
-	ENV_KEY_GID             = "GID"
-	ENV_KEY_UID             = "UID"
-	ENV_KEY_HEADER          = "HEADER"
+	ENV_KEY_HOOKS_URLPREFIX       = "URL_PREFIX"
+	ENV_KEY_HOOKS                 = "HOOKS"
+	ENV_KEY_TEMPLATE              = "TEMPLATE"
+	ENV_KEY_HTTP_METHODS          = "HTTP_METHODS"
+	ENV_KEY_PID_FILE              = "PID_FILE"
+	ENV_KEY_X_REQUEST_ID          = "X_REQUEST_ID"
+	ENV_KEY_MAX_MPART_MEM         = "MAX_MPART_MEM"
+	ENV_KEY_MAX_REQUEST_BODY_SIZE = "MAX_REQUEST_BODY_SIZE"
+	ENV_KEY_GID                   = "GID"
+	ENV_KEY_UID                   = "UID"
+	ENV_KEY_HEADER                = "HEADER"
 
 	ENV_KEY_LANG = "LANGUAGE"
 	ENV_KEY_I18N = "LANG_DIR"
@@ -78,22 +80,23 @@ const (
 )
 
 type AppFlags struct {
-	Host            string
-	Port            int
-	Verbose         bool
-	LogPath         string
-	Debug           bool
-	NoPanic         bool
-	HotReload       bool
-	HooksURLPrefix  string
-	AsTemplate      bool
-	UseXRequestID   bool
-	XRequestIDLimit int
-	MaxMultipartMem int64
-	SetGID          int
-	SetUID          int
-	HttpMethods     string
-	PidPath         string
+	Host               string
+	Port               int
+	Verbose            bool
+	LogPath            string
+	Debug              bool
+	NoPanic            bool
+	HotReload          bool
+	HooksURLPrefix     string
+	AsTemplate         bool
+	UseXRequestID      bool
+	XRequestIDLimit    int
+	MaxMultipartMem    int64
+	MaxRequestBodySize int64
+	SetGID             int
+	SetUID             int
+	HttpMethods        string
+	PidPath            string
 
 	ShowVersion     bool
 	HooksFiles      hook.HooksFiles
