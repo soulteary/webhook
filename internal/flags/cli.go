@@ -45,7 +45,12 @@ func ParseCLI(flags AppFlags) AppFlags {
 		ResponseHeaders hook.ResponseHeaders
 	)
 
-	hooksFiles := rules.HooksFiles
+	// 加锁读取 HooksFiles
+	rules.RLockHooksFiles()
+	var hooksFiles hook.HooksFiles
+	hooksFiles = make(hook.HooksFiles, len(rules.HooksFiles))
+	copy(hooksFiles, rules.HooksFiles)
+	rules.RUnlockHooksFiles()
 	flag.Var(&hooksFiles, "hooks", "path to the json file containing defined hooks the webhook should serve, use multiple times to load from different files")
 	flag.Var(&ResponseHeaders, "header", "response header to return, specified in format name=value, use multiple times to set multiple headers")
 
@@ -122,7 +127,10 @@ func ParseCLI(flags AppFlags) AppFlags {
 	if len(hooksFiles) > 0 {
 		flags.HooksFiles = append(flags.HooksFiles, hooksFiles...)
 	}
+	// 加写锁更新 HooksFiles
+	rules.LockHooksFiles()
 	rules.HooksFiles = flags.HooksFiles
+	rules.UnlockHooksFiles()
 
 	if len(ResponseHeaders) > 0 {
 		flags.ResponseHeaders = ResponseHeaders

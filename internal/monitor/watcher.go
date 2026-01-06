@@ -18,7 +18,13 @@ func ApplyWatcher(appFlags flags.AppFlags) {
 	}
 	defer watcher.Close()
 
-	for _, hooksFilePath := range rules.HooksFiles {
+	// 加锁读取 HooksFiles
+	rules.RLockHooksFiles()
+	hooksFilesCopy := make([]string, len(rules.HooksFiles))
+	copy(hooksFilesCopy, rules.HooksFiles)
+	rules.RUnlockHooksFiles()
+
+	for _, hooksFilePath := range hooksFilesCopy {
 		// set up file watcher
 		log.Printf("setting up file watcher for %s\n", hooksFilePath)
 
