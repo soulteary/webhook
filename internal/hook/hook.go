@@ -16,8 +16,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/soulteary/webhook/internal/logger"
 	"hash"
-	"log"
 	"math"
 	"net"
 	"net/textproto"
@@ -753,7 +753,7 @@ func (h *Hook) ExtractCommandArgumentsForFile(r *Request) ([]FileParameter, []er
 		envName := h.PassFileToCommand[i].EnvName
 		if envName == "" {
 			envName = EnvNamespace + strings.ToUpper(h.PassFileToCommand[i].Name)
-			log.Printf("no ENVVAR name specified, falling back to [%s]", envName)
+			logger.Warnf("no ENVVAR name specified, falling back to [%s]", envName)
 			h.PassFileToCommand[i].EnvName = envName
 		}
 
@@ -761,7 +761,7 @@ func (h *Hook) ExtractCommandArgumentsForFile(r *Request) ([]FileParameter, []er
 		if h.PassFileToCommand[i].Base64Decode {
 			dec, err := base64.StdEncoding.DecodeString(arg)
 			if err != nil {
-				log.Printf("error decoding base64 string for hook %s (parameter: %s, arg_length: %d): %v", h.ID, h.PassFileToCommand[i].Name, len(arg), err)
+				logger.Errorf("error decoding base64 string for hook %s (parameter: %s, arg_length: %d): %v", h.ID, h.PassFileToCommand[i].Name, len(arg), err)
 				errs = append(errs, fmt.Errorf("base64 decode error for parameter %s: %w", h.PassFileToCommand[i].Name, err))
 				continue
 			}
@@ -996,19 +996,19 @@ func (r MatchRule) Evaluate(req *Request) (bool, error) {
 			}
 			return re.MatchString(arg), nil
 		case MatchHashSHA1:
-			log.Print(`warn: use of deprecated option payload-hash-sha1; use payload-hmac-sha1 instead`)
+			logger.Warn(`warn: use of deprecated option payload-hash-sha1; use payload-hmac-sha1 instead`)
 			fallthrough
 		case MatchHMACSHA1:
 			_, err := CheckPayloadSignature(req.Body, r.Secret, arg)
 			return err == nil, err
 		case MatchHashSHA256:
-			log.Print(`warn: use of deprecated option payload-hash-sha256: use payload-hmac-sha256 instead`)
+			logger.Warn(`warn: use of deprecated option payload-hash-sha256: use payload-hmac-sha256 instead`)
 			fallthrough
 		case MatchHMACSHA256:
 			_, err := CheckPayloadSignature256(req.Body, r.Secret, arg)
 			return err == nil, err
 		case MatchHashSHA512:
-			log.Print(`warn: use of deprecated option payload-hash-sha512: use payload-hmac-sha512 instead`)
+			logger.Warn(`warn: use of deprecated option payload-hash-sha512: use payload-hmac-sha512 instead`)
 			fallthrough
 		case MatchHMACSHA512:
 			_, err := CheckPayloadSignature512(req.Body, r.Secret, arg)

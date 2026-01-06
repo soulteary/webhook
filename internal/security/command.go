@@ -2,11 +2,12 @@ package security
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/soulteary/webhook/internal/logger"
 )
 
 const (
@@ -77,7 +78,7 @@ func (cv *CommandValidator) ValidateCommandPath(cmdPath string) error {
 	for _, allowedPath := range cv.AllowedPaths {
 		allowedAbs, err := filepath.Abs(allowedPath)
 		if err != nil {
-			log.Printf("WARNING: invalid allowed path in whitelist: %s", allowedPath)
+			logger.Warnf("WARNING: invalid allowed path in whitelist: %s", allowedPath)
 			continue
 		}
 
@@ -220,7 +221,7 @@ func (cv *CommandValidator) LogCommandExecution(requestID, hookID, cmdPath strin
 		}
 	}
 
-	log.Printf("[%s] [SECURITY] executing hook %s: command=%s, args=%v, envs=%v",
+	logger.Debugf("[%s] [SECURITY] executing hook %s: command=%s, args=%v, envs=%v",
 		requestID, hookID, sanitizedCmd, sanitizedArgs, sanitizedEnvs)
 }
 
