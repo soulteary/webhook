@@ -436,13 +436,17 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		if _, err := tmpfile.Write(files[i].Data); err != nil {
 			log.Printf("[%s] error writing file %s [%s]", r.ID, tmpfile.Name(), err)
 			// 如果写入失败，立即清理这个文件
-			os.Remove(tmpfile.Name())
+			if removeErr := os.Remove(tmpfile.Name()); removeErr != nil {
+				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, tmpfile.Name(), removeErr)
+			}
 			continue
 		}
 		if err := tmpfile.Close(); err != nil {
 			log.Printf("[%s] error closing file %s [%s]", r.ID, tmpfile.Name(), err)
 			// 如果关闭失败，立即清理这个文件
-			os.Remove(tmpfile.Name())
+			if removeErr := os.Remove(tmpfile.Name()); removeErr != nil {
+				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, tmpfile.Name(), removeErr)
+			}
 			continue
 		}
 
