@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -22,6 +23,9 @@ import (
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/soulteary/webhook/internal/security"
 )
+
+// asyncHookWaitGroup 跟踪所有异步执行的 hook goroutine，用于防止 goroutine 泄漏
+var asyncHookWaitGroup sync.WaitGroup
 
 type flushWriter struct {
 	f http.Flusher
@@ -387,7 +391,10 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 				}
 			} else {
 				// 异步执行，但仍需要并发控制和超时
+				// 使用 WaitGroup 跟踪 goroutine，防止泄漏
+				asyncHookWaitGroup.Add(1)
 				go func() {
+					defer asyncHookWaitGroup.Done()
 					_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
 					if err != nil {
 						if errors.Is(err, context.DeadlineExceeded) {

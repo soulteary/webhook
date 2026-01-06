@@ -84,9 +84,12 @@ func main() {
 		appFlags.Verbose = true
 	}
 
+	// 加锁检查和更新 HooksFiles
+	rules.LockHooksFiles()
 	if len(rules.HooksFiles) == 0 {
 		rules.HooksFiles = append(rules.HooksFiles, "hooks.json")
 	}
+	rules.UnlockHooksFiles()
 
 	// logQueue is a queue for log messages encountered during startup. We need
 	// to queue the messages so that we can handle any privilege dropping and
