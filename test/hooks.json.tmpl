@@ -554,5 +554,18 @@
         }
       ]
     }
+  },
+  {
+    "id": "static-params-name-space",
+    "execute-command": "{{ .ScriptWithSpace }}",
+    "command-working-directory": "{{ .TempDir }}",
+    "response-message": "success",
+    "include-command-output-in-response": true,
+    "pass-arguments-to-command": [
+      {
+        "source": "string",
+        "name": "passed"
+      }
+    ]
   }
 ]
