@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/soulteary/webhook/internal/hook"
@@ -216,21 +217,31 @@ func logError(httpErr *HTTPError) {
 		return
 	}
 
-	var logMsg string
+	var builder strings.Builder
 	if httpErr.RequestID != "" {
-		logMsg = fmt.Sprintf("[%s] ", httpErr.RequestID)
+		builder.WriteString("[")
+		builder.WriteString(httpErr.RequestID)
+		builder.WriteString("] ")
 	}
 
 	if httpErr.HookID != "" {
-		logMsg += fmt.Sprintf("hook %s: ", httpErr.HookID)
+		builder.WriteString("hook ")
+		builder.WriteString(httpErr.HookID)
+		builder.WriteString(": ")
 	}
 
-	logMsg += fmt.Sprintf("%s error (status: %d): %s", httpErr.Type, httpErr.Status, httpErr.Message)
+	builder.WriteString(string(httpErr.Type))
+	builder.WriteString(" error (status: ")
+	builder.WriteString(strconv.Itoa(httpErr.Status))
+	builder.WriteString("): ")
+	builder.WriteString(httpErr.Message)
 
 	if httpErr.Err != nil {
-		logMsg += fmt.Sprintf(" - %v", httpErr.Err)
+		builder.WriteString(" - ")
+		builder.WriteString(fmt.Sprintf("%v", httpErr.Err))
 	}
 
+	logMsg := builder.String()
 	switch httpErr.Type {
 	case ErrorTypeClient:
 		log.Printf("%s", logMsg)

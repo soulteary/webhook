@@ -646,7 +646,7 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 
 		// 文件创建成功，保存到 files 数组
 		files[i].File = tmpfile
-		envs = append(envs, files[i].EnvName+"="+fileName)
+		envs = append(envs, fmt.Sprintf("%s=%s", files[i].EnvName, fileName))
 	}
 
 	cmd.Env = append(os.Environ(), envs...)

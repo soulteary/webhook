@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"path/filepath"
+	"sync"
 
 	// #nosec
 	"crypto/sha1"
@@ -433,13 +434,26 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 
 		// Check for dotted references
 		p := strings.Split(s, ".")
+		var refBuilder strings.Builder
 		for i := range p {
-			ref := strings.Join(p[:i+1], ".")
+			if i > 0 {
+				refBuilder.WriteByte('.')
+			}
+			refBuilder.WriteString(p[i])
+			ref := refBuilder.String()
 			if pValue, ok := params.(map[string]interface{})[ref]; ok {
 				if i == len(p)-1 {
 					return pValue, nil
 				}
-				return GetParameter(strings.Join(p[i+1:], "."), pValue)
+				// Build remaining path for recursive call
+				var remainingBuilder strings.Builder
+				for j := i + 1; j < len(p); j++ {
+					if j > i+1 {
+						remainingBuilder.WriteByte('.')
+					}
+					remainingBuilder.WriteString(p[j])
+				}
+				return GetParameter(remainingBuilder.String(), pValue)
 			}
 		}
 	}
@@ -908,6 +922,31 @@ func (r NotRule) Evaluate(req *Request) (bool, error) {
 	return !rv, err
 }
 
+// regexCache 缓存编译后的正则表达式，避免重复编译
+var regexCache sync.Map // map[string]*regexp.Regexp
+
+// getCompiledRegex 获取或编译正则表达式，使用缓存提高性能
+func getCompiledRegex(pattern string) (*regexp.Regexp, error) {
+	if pattern == "" {
+		return nil, errors.New("empty regex pattern")
+	}
+
+	// 尝试从缓存获取
+	if cached, ok := regexCache.Load(pattern); ok {
+		return cached.(*regexp.Regexp), nil
+	}
+
+	// 编译正则表达式
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	// 存储到缓存
+	regexCache.Store(pattern, re)
+	return re, nil
+}
+
 // MatchRule will evaluate to true based on the type
 type MatchRule struct {
 	Type      string   `json:"type,omitempty"`
@@ -951,7 +990,11 @@ func (r MatchRule) Evaluate(req *Request) (bool, error) {
 		case MatchValue:
 			return compare(arg, r.Value), nil
 		case MatchRegex:
-			return regexp.MatchString(r.Regex, arg)
+			re, err := getCompiledRegex(r.Regex)
+			if err != nil {
+				return false, err
+			}
+			return re.MatchString(arg), nil
 		case MatchHashSHA1:
 			log.Print(`warn: use of deprecated option payload-hash-sha1; use payload-hmac-sha1 instead`)
 			fallthrough
