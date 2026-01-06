@@ -65,9 +65,14 @@ func TestNewHookExecutor_DefaultValues(t *testing.T) {
 		},
 	}
 
+	// Mock executor function for testing
+	mockExecutorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+		return "", nil
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			executor := NewHookExecutor(tt.maxConcurrent, tt.defaultTimeout)
+			executor := NewHookExecutorWithFunc(tt.maxConcurrent, tt.defaultTimeout, mockExecutorFunc)
 			assert.Equal(t, tt.expectedMax, executor.GetMaxConcurrent())
 			assert.Equal(t, tt.expectedTimeout, executor.GetDefaultTimeout())
 		})
