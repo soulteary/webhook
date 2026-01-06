@@ -20,7 +20,7 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 					log.Printf("hooks file %s removed, no longer watching this file for changes, removing hooks that were loaded from it\n", event.Name)
 					err = (*watcher).Remove(event.Name)
 					if err != nil {
-						log.Printf("error removing file %s from watcher: %s\n", event.Name, err)
+						log.Printf("error removing file %s from watcher (operation: Remove, event: %v): %v", event.Name, event.Op, err)
 					}
 					removeHooks(event.Name, verbose, noPanic)
 				}
@@ -31,7 +31,7 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 					log.Printf("hooks file %s removed, no longer watching this file for changes, and removing hooks that were loaded from it\n", event.Name)
 					err = (*watcher).Remove(event.Name)
 					if err != nil {
-						log.Printf("error removing file %s from watcher: %s\n", event.Name, err)
+						log.Printf("error removing file %s from watcher (operation: Remove, event: %v): %v", event.Name, event.Op, err)
 					}
 					removeHooks(event.Name, verbose, noPanic)
 				} else {
@@ -40,18 +40,18 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 					reloadHooks(event.Name, asTemplate)
 					err = (*watcher).Remove(event.Name)
 					if err != nil {
-						log.Printf("error removing file %s from watcher: %s\n", event.Name, err)
+						log.Printf("error removing file %s from watcher (operation: Remove after overwrite, event: %v): %v", event.Name, event.Op, err)
 					}
 					err = (*watcher).Add(event.Name)
 					if err != nil {
-						log.Printf("error adding file %s to watcher: %s\n", event.Name, err)
+						log.Printf("error adding file %s to watcher (operation: Add after overwrite, event: %v): %v", event.Name, event.Op, err)
 					}
 				}
 			}
 		case err := <-(*watcher).Errors:
 			// 只在有实际错误时才记录，nil 表示 channel 已关闭或没有错误
 			if err != nil {
-				log.Println("watcher error:", err)
+				log.Printf("watcher error (asTemplate: %v): %v", asTemplate, err)
 			}
 		}
 	}

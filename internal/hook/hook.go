@@ -747,8 +747,8 @@ func (h *Hook) ExtractCommandArgumentsForFile(r *Request) ([]FileParameter, []er
 		if h.PassFileToCommand[i].Base64Decode {
 			dec, err := base64.StdEncoding.DecodeString(arg)
 			if err != nil {
-				log.Printf("error decoding string [%s]", err)
-				errs = append(errs, fmt.Errorf("base64 decode error: %w", err))
+				log.Printf("error decoding base64 string for hook %s (parameter: %s, arg_length: %d): %v", h.ID, h.PassFileToCommand[i].Name, len(arg), err)
+				errs = append(errs, fmt.Errorf("base64 decode error for parameter %s: %w", h.PassFileToCommand[i].Name, err))
 				continue
 			}
 			fileContent = dec

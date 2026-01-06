@@ -24,7 +24,7 @@ func ApplyWatcher(appFlags flags.AppFlags) {
 
 		err = watcher.Add(hooksFilePath)
 		if err != nil {
-			log.Print("error adding hooks file to the watcher\n", err)
+			log.Printf("error adding hooks file %s to the watcher: %v", hooksFilePath, err)
 			return
 		}
 	}

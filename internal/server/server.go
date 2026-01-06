@@ -167,7 +167,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		if !isMultipart {
 			req.Body, err = io.ReadAll(r.Body)
 			if err != nil {
-				log.Printf("[%s] error reading the request body: %+v\n", requestID, err)
+				log.Printf("[%s] error reading request body for hook %s (content-type: %s): %v", requestID, hookID, req.ContentType, err)
 			}
 		}
 
@@ -258,7 +258,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					var part map[string]interface{}
 					err = decoder.Decode(&part)
 					if err != nil {
-						log.Printf("[%s] error parsing JSON payload file: %+v\n", requestID, err)
+						log.Printf("[%s] error parsing JSON payload file %q for hook %s: %v", requestID, k, hookID, err)
 						// 跳过这个文件，不添加到 payload，避免使用无效数据
 						continue
 					}
@@ -278,7 +278,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		// handle hook
 		errs := matchedHook.ParseJSONParameters(req)
 		for _, err := range errs {
-			log.Printf("[%s] error parsing JSON parameters: %s\n", requestID, err)
+			log.Printf("[%s] error parsing JSON parameters for hook %s: %v", requestID, hookID, err)
 		}
 
 		var ok bool
@@ -292,14 +292,13 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 			ok, err = matchedHook.TriggerRule.Evaluate(req)
 			if err != nil {
 				if !hook.IsParameterNodeError(err) {
-					msg := fmt.Sprintf("[%s] error evaluating hook: %s", requestID, err)
-					log.Println(msg)
+					log.Printf("[%s] error evaluating hook %s trigger rules: %v", requestID, hookID, err)
 					w.WriteHeader(http.StatusInternalServerError)
 					fmt.Fprint(w, "Error occurred while evaluating hook rules.")
 					return
 				}
 
-				log.Printf("[%s] %v", requestID, err)
+				log.Printf("[%s] parameter error evaluating hook %s trigger rules: %v", requestID, hookID, err)
 			}
 		}
 
@@ -327,17 +326,17 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					// 如果还没有写入响应，可以设置错误状态码
 					if !trw.HasWritten() {
 						if errors.Is(err, context.DeadlineExceeded) {
-							log.Printf("[%s] hook execution timeout: %v", requestID, err)
+							log.Printf("[%s] hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
 							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 							w.WriteHeader(http.StatusRequestTimeout)
 							fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
 						} else if errors.Is(err, context.Canceled) {
-							log.Printf("[%s] hook execution cancelled: %v", requestID, err)
+							log.Printf("[%s] hook %s execution cancelled (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 							w.WriteHeader(http.StatusRequestTimeout)
 							fmt.Fprint(w, "Hook execution cancelled. Please check your logs for more details.")
 						} else {
-							log.Printf("[%s] error executing hook: %v", requestID, err)
+							log.Printf("[%s] error executing hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 							w.WriteHeader(http.StatusInternalServerError)
 							fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
@@ -345,11 +344,11 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					} else {
 						// 如果已经开始输出，只能记录错误，无法设置状态码
 						if errors.Is(err, context.DeadlineExceeded) {
-							log.Printf("[%s] hook execution timeout (output already started): %v", requestID, err)
+							log.Printf("[%s] hook %s execution timeout (output already started, command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
 						} else if errors.Is(err, context.Canceled) {
-							log.Printf("[%s] hook execution cancelled (output already started): %v", requestID, err)
+							log.Printf("[%s] hook %s execution cancelled (output already started, command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 						} else {
-							log.Printf("[%s] error executing hook (output already started): %v", requestID, err)
+							log.Printf("[%s] error executing hook %s (output already started, command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 						}
 						// 尝试刷新输出
 						if f, ok := w.(http.Flusher); ok {
@@ -365,11 +364,13 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 					w.WriteHeader(http.StatusInternalServerError)
 					if errors.Is(err, context.DeadlineExceeded) {
-						log.Printf("[%s] hook execution timeout: %v", requestID, err)
+						log.Printf("[%s] hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
 						fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
 					} else if matchedHook.CaptureCommandOutputOnError {
+						log.Printf("[%s] hook %s execution failed (command: %s): %v, output captured", requestID, hookID, matchedHook.ExecuteCommand, err)
 						fmt.Fprint(w, response)
 					} else {
+						log.Printf("[%s] error executing hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 						fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
 					}
 				} else {
@@ -385,11 +386,11 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
 					if err != nil {
 						if errors.Is(err, context.DeadlineExceeded) {
-							log.Printf("[%s] hook execution timeout: %v", requestID, err)
+							log.Printf("[%s] async hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
 						} else if errors.Is(err, context.Canceled) {
-							log.Printf("[%s] async hook execution cancelled due to request context: %v", requestID, err)
+							log.Printf("[%s] async hook %s execution cancelled due to request context (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 						} else {
-							log.Printf("[%s] error executing hook: %v", requestID, err)
+							log.Printf("[%s] error executing async hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 						}
 					}
 				}()
@@ -458,22 +459,22 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, va
 
 	cmdPath, err := exec.LookPath(lookpath)
 	if err != nil {
-		log.Printf("[%s] error in %s", r.ID, err)
+		log.Printf("[%s] error looking up command path for hook %s (command: %s, lookpath: %s): %v", r.ID, h.ID, h.ExecuteCommand, lookpath, err)
 
 		if strings.Contains(err.Error(), "permission denied") {
 			if !appFlags.AllowAutoChmod {
-				log.Printf("[%s] SECURITY WARNING: Command file '%s' is not executable. Auto-chmod is disabled for security reasons. Please manually set correct file permissions (chmod +x) or enable auto-chmod with --allow-auto-chmod flag (NOT RECOMMENDED)", r.ID, lookpath)
-				return "", fmt.Errorf("permission denied: file '%s' is not executable and auto-chmod is disabled", lookpath)
+				log.Printf("[%s] SECURITY WARNING: Command file '%s' for hook %s is not executable. Auto-chmod is disabled for security reasons. Please manually set correct file permissions (chmod +x) or enable auto-chmod with --allow-auto-chmod flag (NOT RECOMMENDED)", r.ID, lookpath, h.ID)
+				return "", fmt.Errorf("permission denied: file '%s' is not executable and auto-chmod is disabled: %w", lookpath, err)
 			}
 
 			// SECURITY WARNING: Only modify permissions if explicitly enabled
-			log.Printf("[%s] SECURITY WARNING: Automatically modifying file permissions for '%s' (auto-chmod is enabled). This is a security risk and should be avoided in production.", r.ID, lookpath)
+			log.Printf("[%s] SECURITY WARNING: Automatically modifying file permissions for '%s' (hook: %s, auto-chmod is enabled). This is a security risk and should be avoided in production.", r.ID, lookpath, h.ID)
 			// try to make the command executable
 			// #nosec G302 - file permissions are intentionally modified when AllowAutoChmod is enabled
 			err2 := os.Chmod(lookpath, 0o755)
 			if err2 != nil {
-				log.Printf("[%s] make command script executable error in %s", r.ID, err2)
-				return "", err
+				log.Printf("[%s] error making command script executable for hook %s (file: %s): %v", r.ID, h.ID, lookpath, err2)
+				return "", fmt.Errorf("failed to make file executable: %w", err)
 			}
 
 			log.Printf("[%s] make command script executable success", r.ID)
@@ -493,8 +494,8 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, va
 	// 验证命令路径是否在白名单中
 	if validator != nil {
 		if err := validator.ValidateCommandPath(cmdPath); err != nil {
-			log.Printf("[%s] SECURITY ERROR: Command path validation failed: %v", r.ID, err)
-			return "", fmt.Errorf("command path validation failed: %w", err)
+			log.Printf("[%s] SECURITY ERROR: Command path validation failed for hook %s (command: %s, path: %s): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, err)
+			return "", fmt.Errorf("command path validation failed for hook %s: %w", h.ID, err)
 		}
 	}
 
@@ -518,14 +519,14 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 
 	cmd.Args, errs = h.ExtractCommandArguments(r)
 	for _, err := range errs {
-		log.Printf("[%s] error extracting command arguments: %s\n", r.ID, err)
+		log.Printf("[%s] error extracting command arguments for hook %s (command: %s): %v", r.ID, h.ID, h.ExecuteCommand, err)
 	}
 
 	// 验证命令参数
 	if validator != nil {
 		if err := validator.ValidateArgs(cmd.Args); err != nil {
-			log.Printf("[%s] SECURITY ERROR: Command arguments validation failed: %v", r.ID, err)
-			return "", fmt.Errorf("command arguments validation failed: %w", err)
+			log.Printf("[%s] SECURITY ERROR: Command arguments validation failed for hook %s (command: %s, args count: %d): %v", r.ID, h.ID, h.ExecuteCommand, len(cmd.Args), err)
+			return "", fmt.Errorf("command arguments validation failed for hook %s: %w", h.ID, err)
 		}
 	}
 
@@ -533,13 +534,13 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 	envs, errs = h.ExtractCommandArgumentsForEnv(r)
 
 	for _, err := range errs {
-		log.Printf("[%s] error extracting command arguments for environment: %s\n", r.ID, err)
+		log.Printf("[%s] error extracting command arguments for environment for hook %s (command: %s): %v", r.ID, h.ID, h.ExecuteCommand, err)
 	}
 
 	files, errs := h.ExtractCommandArgumentsForFile(r)
 
 	for _, err := range errs {
-		log.Printf("[%s] error extracting command arguments for file: %s\n", r.ID, err)
+		log.Printf("[%s] error extracting command arguments for file for hook %s (command: %s): %v", r.ID, h.ID, h.ExecuteCommand, err)
 	}
 
 	// 跟踪所有创建的临时文件，确保在任何情况下都能被清理
@@ -553,7 +554,7 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 			if err != nil {
 				// 如果文件不存在（可能已经被删除），这是正常的，只记录警告
 				if !os.IsNotExist(err) {
-					log.Printf("[%s] error removing temp file %s [%s]", r.ID, fileName, err)
+					log.Printf("[%s] error removing temp file for hook %s (file: %s): %v", r.ID, h.ID, fileName, err)
 				}
 			}
 		}
@@ -574,7 +575,7 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 				if !found {
 					log.Printf("[%s] removing file %s (from files array)\n", r.ID, fileName)
 					if err := os.Remove(fileName); err != nil && !os.IsNotExist(err) {
-						log.Printf("[%s] error removing file %s [%s]", r.ID, fileName, err)
+						log.Printf("[%s] error removing file for hook %s (file: %s): %v", r.ID, h.ID, fileName, err)
 					}
 				}
 			}
@@ -584,7 +585,7 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 	for i := range files {
 		tmpfile, err := os.CreateTemp(h.CommandWorkingDirectory, files[i].EnvName)
 		if err != nil {
-			log.Printf("[%s] error creating temp file [%s]", r.ID, err)
+			log.Printf("[%s] error creating temp file for hook %s (env_name: %s, working_dir: %s): %v", r.ID, h.ID, files[i].EnvName, h.CommandWorkingDirectory, err)
 			continue
 		}
 
@@ -594,11 +595,11 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 
 		log.Printf("[%s] writing env %s file %s", r.ID, files[i].EnvName, fileName)
 		if _, err := tmpfile.Write(files[i].Data); err != nil {
-			log.Printf("[%s] error writing file %s [%s]", r.ID, fileName, err)
+			log.Printf("[%s] error writing temp file for hook %s (file: %s, env_name: %s, data_size: %d): %v", r.ID, h.ID, fileName, files[i].EnvName, len(files[i].Data), err)
 			// 确保文件关闭后再删除
 			_ = tmpfile.Close()
 			if removeErr := os.Remove(fileName); removeErr != nil {
-				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, fileName, removeErr)
+				log.Printf("[%s] error removing failed temp file for hook %s (file: %s): %v", r.ID, h.ID, fileName, removeErr)
 			}
 			// 从列表中移除，避免 defer 中重复删除
 			tempFileNames = tempFileNames[:len(tempFileNames)-1]
@@ -606,10 +607,10 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		}
 
 		if err := tmpfile.Close(); err != nil {
-			log.Printf("[%s] error closing file %s [%s]", r.ID, fileName, err)
+			log.Printf("[%s] error closing temp file for hook %s (file: %s, env_name: %s): %v", r.ID, h.ID, fileName, files[i].EnvName, err)
 			// 尝试删除文件（即使关闭失败）
 			if removeErr := os.Remove(fileName); removeErr != nil {
-				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, fileName, removeErr)
+				log.Printf("[%s] error removing failed temp file for hook %s (file: %s): %v", r.ID, h.ID, fileName, removeErr)
 			}
 			// 从列表中移除，避免 defer 中重复删除
 			tempFileNames = tempFileNames[:len(tempFileNames)-1]
@@ -648,13 +649,13 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		if err := cmd.Run(); err != nil {
 			// 检查是否是超时错误
 			if ctx.Err() == context.DeadlineExceeded {
-				log.Printf("[%s] command execution timeout: %+v\n", r.ID, err)
+				log.Printf("[%s] command execution timeout for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, err)
 				return "", context.DeadlineExceeded
 			} else if ctx.Err() == context.Canceled {
-				log.Printf("[%s] command execution canceled: %+v\n", r.ID, err)
+				log.Printf("[%s] command execution canceled for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, err)
 				return "", context.Canceled
 			}
-			log.Printf("[%s] error occurred: %+v\n", r.ID, err)
+			log.Printf("[%s] error executing command for hook %s (command: %s, path: %s, args: %v, working_dir: %s): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, cmd.Dir, err)
 		}
 	} else {
 		out, err = cmd.CombinedOutput()
@@ -664,13 +665,13 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		if err != nil {
 			// 检查是否是超时错误
 			if ctx.Err() == context.DeadlineExceeded {
-				log.Printf("[%s] command execution timeout: %+v\n", r.ID, err)
+				log.Printf("[%s] command execution timeout for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, err)
 				return string(out), context.DeadlineExceeded
 			} else if ctx.Err() == context.Canceled {
-				log.Printf("[%s] command execution canceled: %+v\n", r.ID, err)
+				log.Printf("[%s] command execution canceled for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, err)
 				return string(out), context.Canceled
 			}
-			log.Printf("[%s] error occurred: %+v\n", r.ID, err)
+			log.Printf("[%s] error executing command for hook %s (command: %s, path: %s, args: %v, working_dir: %s, exit_code: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, cmd.Dir, err, err)
 		}
 	}
 
