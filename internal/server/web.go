@@ -35,9 +35,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) {
 	hooksURL := link.MakeRoutePattern(&appFlags.HooksURLPrefix)
 
 	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		for _, responseHeader := range appFlags.ResponseHeaders {
-			w.Header().Set(responseHeader.Name, responseHeader.Value)
-		}
+		setResponseHeaders(w, appFlags.ResponseHeaders)
 
 		fmt.Fprint(w, "OK")
 	})

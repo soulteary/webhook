@@ -78,6 +78,42 @@ func (trw *trackingResponseWriter) Flush() {
 	}
 }
 
+// isMethodAllowed 检查 HTTP 方法是否被允许
+// 优先级：hook 的 HTTPMethods > appFlags.HttpMethods > 默认允许所有方法
+func isMethodAllowed(method string, h *hook.Hook, appFlags flags.AppFlags) bool {
+	// 如果 hook 配置了允许的方法，优先使用 hook 的配置
+	if len(h.HTTPMethods) != 0 {
+		for i := range h.HTTPMethods {
+			// TODO(moorereason): refactor config loading and reloading to
+			// sanitize these methods once at load time.
+			if method == strings.ToUpper(strings.TrimSpace(h.HTTPMethods[i])) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 如果应用配置了默认允许的方法，使用应用配置
+	if appFlags.HttpMethods != "" {
+		for _, v := range strings.Split(appFlags.HttpMethods, ",") {
+			if method == v {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 默认允许所有方法
+	return true
+}
+
+// setResponseHeaders 设置响应头
+func setResponseHeaders(w http.ResponseWriter, headers hook.ResponseHeaders) {
+	for _, header := range headers {
+		w.Header().Set(header.Name, header.Value)
+	}
+}
+
 func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *http.Request) {
 	// 从配置中获取超时和并发设置，如果未配置则使用默认值
 	maxConcurrent := appFlags.MaxConcurrentHooks
@@ -121,30 +157,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		}
 
 		// Check for allowed methods
-		var allowedMethod bool
-
-		switch {
-		case len(matchedHook.HTTPMethods) != 0:
-			for i := range matchedHook.HTTPMethods {
-				// TODO(moorereason): refactor config loading and reloading to
-				// sanitize these methods once at load time.
-				if r.Method == strings.ToUpper(strings.TrimSpace(matchedHook.HTTPMethods[i])) {
-					allowedMethod = true
-					break
-				}
-			}
-		case appFlags.HttpMethods != "":
-			for _, v := range strings.Split(appFlags.HttpMethods, ",") {
-				if r.Method == v {
-					allowedMethod = true
-					break
-				}
-			}
-		default:
-			allowedMethod = true
-		}
-
-		if !allowedMethod {
+		if !isMethodAllowed(r.Method, matchedHook, appFlags) {
 			err := NewHTTPError(ErrorTypeClient, http.StatusMethodNotAllowed,
 				fmt.Sprintf("HTTP %s method not allowed for hook %q", r.Method, hookID), nil)
 			HandleErrorPlain(w, err, requestID, hookID)
@@ -153,9 +166,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 
 		log.Printf("[%s] %s got matched\n", requestID, hookID)
 
-		for _, responseHeader := range appFlags.ResponseHeaders {
-			w.Header().Set(responseHeader.Name, responseHeader.Value)
-		}
+		setResponseHeaders(w, appFlags.ResponseHeaders)
 
 		var err error
 
@@ -324,9 +335,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		if ok {
 			log.Printf("[%s] %s hook triggered successfully\n", requestID, matchedHook.ID)
 
-			for _, responseHeader := range matchedHook.ResponseHeaders {
-				w.Header().Set(responseHeader.Name, responseHeader.Value)
-			}
+			setResponseHeaders(w, matchedHook.ResponseHeaders)
 
 			// 使用请求的 context，支持取消和超时
 			ctx := r.Context()
