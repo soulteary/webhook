@@ -150,7 +150,7 @@ func TestMakeSureCallable(t *testing.T) {
 	}
 
 	appFlags := flags.AppFlags{AllowAutoChmod: false}
-	cmdPath, err := makeSureCallable(h, r, appFlags, nil)
+	cmdPath, err := makeSureCallable(context.Background(), h, r, appFlags, nil)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
 }
@@ -178,7 +178,7 @@ func TestMakeSureCallable_RelativePath(t *testing.T) {
 	}
 
 	appFlags := flags.AppFlags{AllowAutoChmod: false}
-	cmdPath, err := makeSureCallable(h, r, appFlags, nil)
+	cmdPath, err := makeSureCallable(context.Background(), h, r, appFlags, nil)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
 }
@@ -206,7 +206,7 @@ func TestMakeSureCallable_WithSpace(t *testing.T) {
 	}
 
 	appFlags := flags.AppFlags{AllowAutoChmod: false}
-	cmdPath, err := makeSureCallable(h, r, appFlags, nil)
+	cmdPath, err := makeSureCallable(context.Background(), h, r, appFlags, nil)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
 }
@@ -614,7 +614,7 @@ func TestMakeSureCallable_PermissionDenied(t *testing.T) {
 
 	// This should try to make it executable and retry (when AllowAutoChmod is enabled)
 	appFlags := flags.AppFlags{AllowAutoChmod: true}
-	cmdPath, err := makeSureCallable(h, r, appFlags, nil)
+	cmdPath, err := makeSureCallable(context.Background(), h, r, appFlags, nil)
 	// Should succeed after making it executable
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
@@ -635,7 +635,7 @@ func TestMakeSureCallable_CommandNotFound(t *testing.T) {
 	}
 
 	appFlags := flags.AppFlags{AllowAutoChmod: false}
-	cmdPath, err := makeSureCallable(h, r, appFlags, nil)
+	cmdPath, err := makeSureCallable(context.Background(), h, r, appFlags, nil)
 	// Should return error for nonexistent command
 	assert.Error(t, err)
 	assert.Empty(t, cmdPath)
@@ -664,7 +664,7 @@ func TestMakeSureCallable_CommandWithSpace(t *testing.T) {
 	}
 
 	appFlags := flags.AppFlags{AllowAutoChmod: false}
-	cmdPath, err := makeSureCallable(h, r, appFlags, nil)
+	cmdPath, err := makeSureCallable(context.Background(), h, r, appFlags, nil)
 	// Should handle command with space
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
@@ -1115,7 +1115,7 @@ func TestMakeSureCallable_ChmodError(t *testing.T) {
 
 	// This should try to make it executable (when AllowAutoChmod is enabled)
 	appFlags := flags.AppFlags{AllowAutoChmod: true}
-	cmdPath, err := makeSureCallable(h, r, appFlags, nil)
+	cmdPath, err := makeSureCallable(context.Background(), h, r, appFlags, nil)
 	// Should succeed after making it executable
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)

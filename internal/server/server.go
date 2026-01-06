@@ -482,7 +482,14 @@ func createCommandValidator(appFlags flags.AppFlags) *security.CommandValidator 
 	return validator
 }
 
-func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, validator *security.CommandValidator) (string, error) {
+func makeSureCallable(ctx context.Context, h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, validator *security.CommandValidator) (string, error) {
+	// 检查 context 是否已取消
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	default:
+	}
+
 	// check the command exists
 	var lookpath string
 	if filepath.IsAbs(h.ExecuteCommand) || h.CommandWorkingDirectory == "" {
@@ -493,6 +500,13 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, va
 
 	cmdPath, err := exec.LookPath(lookpath)
 	if err != nil {
+		// 检查 context 是否已取消
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+		}
+
 		// check if parameters specified in execute-command by mistake
 		if strings.IndexByte(h.ExecuteCommand, ' ') != -1 {
 			s := strings.Fields(h.ExecuteCommand)[0]
@@ -521,10 +535,17 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, va
 
 			log.Printf("[%s] make command script executable success", r.ID)
 			// retry
-			return makeSureCallable(h, r, appFlags, validator)
+			return makeSureCallable(ctx, h, r, appFlags, validator)
 		}
 
 		return "", err
+	}
+
+	// 检查 context 是否已取消
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	default:
 	}
 
 	// 验证命令路径是否在白名单中
@@ -539,12 +560,19 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, va
 }
 
 func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter, appFlags flags.AppFlags) (string, error) {
+	// 检查 context 是否已取消
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	default:
+	}
+
 	var errs []error
 
 	// 创建命令验证器
 	validator := createCommandValidator(appFlags)
 
-	cmdPath, err := makeSureCallable(h, r, appFlags, validator)
+	cmdPath, err := makeSureCallable(ctx, h, r, appFlags, validator)
 	if err != nil {
 		return "", err
 	}
@@ -619,6 +647,13 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 	}()
 
 	for i := range files {
+		// 检查 context 是否已取消
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+		}
+
 		tmpfile, err := os.CreateTemp(h.CommandWorkingDirectory, files[i].EnvName)
 		if err != nil {
 			log.Printf("[%s] error creating temp file for hook %s (env_name: %s, working_dir: %s): %v", r.ID, h.ID, files[i].EnvName, h.CommandWorkingDirectory, err)
