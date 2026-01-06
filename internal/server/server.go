@@ -250,6 +250,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 						fmt.Fprint(w, "Error occurred while parsing multipart form file.")
 						return
 					}
+					defer f.Close()
 
 					decoder := json.NewDecoder(f)
 					decoder.UseNumber()
@@ -258,6 +259,8 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					err = decoder.Decode(&part)
 					if err != nil {
 						log.Printf("[%s] error parsing JSON payload file: %+v\n", requestID, err)
+						// 跳过这个文件，不添加到 payload，避免使用无效数据
+						continue
 					}
 
 					if req.Payload == nil {
