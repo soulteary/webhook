@@ -35,11 +35,21 @@ func NewSignalHandler(exitFunc ExitFunc) *SignalHandler {
 // SetupSignals sets up the signal handler and returns the created signal channel.
 // If the provided signals is nil, a new channel is created.
 func SetupSignals(signals chan os.Signal, reloadFn func(), pidFile *pidfile.PIDFile) chan os.Signal {
-	return SetupSignalsWithHandler(signals, reloadFn, pidFile, nil)
+	return SetupSignalsWithShutdown(signals, reloadFn, nil, pidFile, nil)
+}
+
+// SetupSignalsWithShutdown sets up the signal handler with support for shutdown callback.
+func SetupSignalsWithShutdown(signals chan os.Signal, reloadFn func(), shutdownFn func(), pidFile *pidfile.PIDFile, exitFunc ExitFunc) chan os.Signal {
+	return SetupSignalsWithHandlerAndShutdown(signals, reloadFn, shutdownFn, pidFile, exitFunc)
 }
 
 // SetupSignalsWithHandler sets up the signal handler with support for custom ExitFunc for testing.
 func SetupSignalsWithHandler(signals chan os.Signal, reloadFn func(), pidFile *pidfile.PIDFile, exitFunc ExitFunc) chan os.Signal {
+	return SetupSignalsWithHandlerAndShutdown(signals, reloadFn, nil, pidFile, exitFunc)
+}
+
+// SetupSignalsWithHandlerAndShutdown sets up the signal handler with support for shutdown callback and custom ExitFunc.
+func SetupSignalsWithHandlerAndShutdown(signals chan os.Signal, reloadFn func(), shutdownFn func(), pidFile *pidfile.PIDFile, exitFunc ExitFunc) chan os.Signal {
 	logger.Infof("setting up os signal watcher")
 
 	if signals == nil {
@@ -51,13 +61,13 @@ func SetupSignalsWithHandler(signals chan os.Signal, reloadFn func(), pidFile *p
 	signal.Notify(signals, os.Interrupt)
 
 	handler := NewSignalHandler(exitFunc)
-	go handler.watchForSignals(signals, reloadFn, pidFile)
+	go handler.watchForSignals(signals, reloadFn, shutdownFn, pidFile)
 
 	return signals
 }
 
 // watchForSignals listens for signals and handles them.
-func (h *SignalHandler) watchForSignals(signals chan os.Signal, reloadFn func(), pidFile *pidfile.PIDFile) {
+func (h *SignalHandler) watchForSignals(signals chan os.Signal, reloadFn func(), shutdownFn func(), pidFile *pidfile.PIDFile) {
 	logger.Info("os signal watcher ready")
 
 	for {
@@ -72,7 +82,10 @@ func (h *SignalHandler) watchForSignals(signals chan os.Signal, reloadFn func(),
 			reloadFn()
 
 		case os.Interrupt, syscall.SIGTERM:
-			logger.Infof("caught %s signal; exiting", sig)
+			logger.Infof("caught %s signal; shutting down gracefully", sig)
+			if shutdownFn != nil {
+				shutdownFn()
+			}
 			if pidFile != nil {
 				err := pidFile.Remove()
 				if err != nil {
