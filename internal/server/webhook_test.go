@@ -135,9 +135,9 @@ func TestMakeSureCallable(t *testing.T) {
 	tempDir := t.TempDir()
 	scriptPath := filepath.Join(tempDir, "test-script.sh")
 
-	// Create a test script
+	// Create a test script with execute permission
 	scriptContent := "#!/bin/sh\necho 'test'\n"
-	err := os.WriteFile(scriptPath, []byte(scriptContent), 0644)
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0755)
 	assert.NoError(t, err)
 
 	h := &hook.Hook{
