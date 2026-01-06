@@ -1,9 +1,8 @@
 package rules
 
 import (
-	"log"
-
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/logger"
 )
 
 func ParseAndLoadHooks(isAsTemplate bool) {
@@ -24,21 +23,21 @@ func ParseAndLoadHooks(isAsTemplate bool) {
 
 	// load and parse hooks
 	for _, hooksFilePath := range hooksFilesCopy {
-		log.Printf("attempting to load hooks from %s\n", hooksFilePath)
+		logger.Infof("attempting to load hooks from %s", hooksFilePath)
 
 		newHooks := hook.Hooks{}
 
 		err := newHooks.LoadFromFile(hooksFilePath, isAsTemplate)
 		if err != nil {
-			log.Printf("couldn't load hooks from file! %+v\n", err)
+			logger.Errorf("couldn't load hooks from file! %+v", err)
 		} else {
-			log.Printf("found %d hook(s) in file\n", len(newHooks))
+			logger.Infof("found %d hook(s) in file", len(newHooks))
 
 			for _, hook := range newHooks {
 				if MatchLoadedHook(hook.ID) != nil {
-					log.Fatalf("error: hook with the id %s has already been loaded!\nplease check your hooks file for duplicate hooks ids!\n", hook.ID)
+					logger.Fatalf("error: hook with the id %s has already been loaded! please check your hooks file for duplicate hooks ids!", hook.ID)
 				}
-				log.Printf("\tloaded: %s\n", hook.ID)
+				logger.Debugf("\tloaded: %s", hook.ID)
 			}
 
 			// 加写锁更新 LoadedHooksFromFiles

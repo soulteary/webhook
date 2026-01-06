@@ -1,11 +1,10 @@
 package rules
 
 import (
-	"log"
-	"os"
 	"sync"
 
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/logger"
 )
 
 var (
@@ -22,7 +21,7 @@ func RemoveHooks(hooksFilePath string, verbose bool, noPanic bool) {
 	defer hooksMutex.Unlock()
 
 	for _, hook := range LoadedHooksFromFiles[hooksFilePath] {
-		log.Printf("\tremoving: %s\n", hook.ID)
+		logger.Debugf("\tremoving: %s", hook.ID)
 	}
 
 	newHooksFiles := HooksFiles[:0]
@@ -41,11 +40,10 @@ func RemoveHooks(hooksFilePath string, verbose bool, noPanic bool) {
 
 	delete(LoadedHooksFromFiles, hooksFilePath)
 
-	log.Printf("removed %d hook(s) that were loaded from file %s\n", removedHooksCount, hooksFilePath)
+	logger.Infof("removed %d hook(s) that were loaded from file %s", removedHooksCount, hooksFilePath)
 
 	if !verbose && !noPanic && lenLoadedHooksLocked() == 0 {
-		log.SetOutput(os.Stdout)
-		log.Fatalln("couldn't load any hooks from file!\naborting webhook execution since the -verbose flag is set to false.\nIf, for some reason, you want webhook to run without the hooks, either use -verbose flag, or -nopanic")
+		logger.Fatalln("couldn't load any hooks from file!\naborting webhook execution since the -verbose flag is set to false.\nIf, for some reason, you want webhook to run without the hooks, either use -verbose flag, or -nopanic")
 	}
 }
 
@@ -141,16 +139,16 @@ func ReloadHooks(hooksFilePath string, asTemplate bool) {
 	hooksInFile := hook.Hooks{}
 
 	// parse and swap
-	log.Printf("attempting to reload hooks from %s\n", hooksFilePath)
+	logger.Infof("attempting to reload hooks from %s", hooksFilePath)
 
 	err := hooksInFile.LoadFromFile(hooksFilePath, asTemplate)
 
 	if err != nil {
-		log.Printf("couldn't load hooks from file! %+v\n", err)
+		logger.Errorf("couldn't load hooks from file! %+v", err)
 	} else {
 		seenHooksIds := make(map[string]bool)
 
-		log.Printf("found %d hook(s) in file\n", len(hooksInFile))
+		logger.Infof("found %d hook(s) in file", len(hooksInFile))
 
 		// 在加锁前检查重复的 hook ID（需要读取当前加载的 hooks）
 		hooksMutex.RLock()
@@ -178,16 +176,16 @@ func ReloadHooks(hooksFilePath string, asTemplate bool) {
 			// 检查是否在当前文件中有重复的 ID
 			if seenHooksIds[hook.ID] {
 				hooksMutex.RUnlock()
-				log.Printf("error: hook with the id %s has already been loaded from file %s!\nplease check your hooks file for duplicate hooks ids!", hook.ID, hooksFilePath)
-				log.Printf("reverting hooks back to the previous configuration (file: %s)", hooksFilePath)
+				logger.Errorf("error: hook with the id %s has already been loaded from file %s! please check your hooks file for duplicate hooks ids!", hook.ID, hooksFilePath)
+				logger.Warnf("reverting hooks back to the previous configuration (file: %s)", hooksFilePath)
 				return
 			}
 
 			// 检查是否在其他文件中已存在
 			if hookExistsInOtherFile {
 				hooksMutex.RUnlock()
-				log.Printf("error: hook with the id %s has already been loaded from file %s!\nplease check your hooks file for duplicate hooks ids!", hook.ID, hooksFilePath)
-				log.Printf("reverting hooks back to the previous configuration (file: %s)", hooksFilePath)
+				logger.Errorf("error: hook with the id %s has already been loaded from file %s! please check your hooks file for duplicate hooks ids!", hook.ID, hooksFilePath)
+				logger.Warnf("reverting hooks back to the previous configuration (file: %s)", hooksFilePath)
 				return
 			}
 
@@ -198,7 +196,7 @@ func ReloadHooks(hooksFilePath string, asTemplate bool) {
 		// 加写锁进行更新
 		hooksMutex.Lock()
 		for _, hook := range hooksInFile {
-			log.Printf("\tloaded: %s\n", hook.ID)
+			logger.Debugf("\tloaded: %s", hook.ID)
 		}
 		LoadedHooksFromFiles[hooksFilePath] = hooksInFile
 		// 更新索引

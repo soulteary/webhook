@@ -1,12 +1,12 @@
 package monitor
 
 import (
-	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/soulteary/webhook/internal/logger"
 )
 
 const (
@@ -48,7 +48,7 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 				select {
 				case eventQueue <- event:
 				default:
-					log.Printf("warning: event queue full, dropping event for file %s (operation: %v)", event.Name, event.Op)
+					logger.Warnf("warning: event queue full, dropping event for file %s (operation: %v)", event.Name, event.Op)
 				}
 			case err, ok := <-(*watcher).Errors:
 				if !ok {
@@ -56,7 +56,7 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 				}
 				// 只在有实际错误时才记录，nil 表示 channel 已关闭或没有错误
 				if err != nil {
-					log.Printf("watcher error (asTemplate: %v): %v", asTemplate, err)
+					logger.Errorf("watcher error (asTemplate: %v): %v", asTemplate, err)
 				}
 			}
 		}
@@ -103,7 +103,7 @@ func handleEvent(event fsnotify.Event, watcher *fsnotify.Watcher, asTemplate boo
 			}
 			processor.processing = true
 
-			log.Printf("hooks file %s modified\n", fileName)
+			logger.Infof("hooks file %s modified", fileName)
 			// 使用重试机制执行 reloadHooks
 			retryReloadHooks(fileName, asTemplate, reloadHooks)
 
@@ -128,10 +128,10 @@ func handleEvent(event fsnotify.Event, watcher *fsnotify.Watcher, asTemplate boo
 		processorsMu.Unlock()
 
 		if _, err := os.Stat(fileName); os.IsNotExist(err) {
-			log.Printf("hooks file %s removed, no longer watching this file for changes, removing hooks that were loaded from it\n", fileName)
+			logger.Infof("hooks file %s removed, no longer watching this file for changes, removing hooks that were loaded from it", fileName)
 			err = (*watcher).Remove(fileName)
 			if err != nil {
-				log.Printf("error removing file %s from watcher (operation: Remove, event: %v): %v", fileName, event.Op, err)
+				logger.Errorf("error removing file %s from watcher (operation: Remove, event: %v): %v", fileName, event.Op, err)
 			}
 			removeHooks(fileName, verbose, noPanic)
 		}
@@ -155,10 +155,10 @@ func handleEvent(event fsnotify.Event, watcher *fsnotify.Watcher, asTemplate boo
 			time.Sleep(100 * time.Millisecond)
 			if _, err := os.Stat(fileName); os.IsNotExist(err) {
 				// file was removed
-				log.Printf("hooks file %s removed, no longer watching this file for changes, and removing hooks that were loaded from it\n", fileName)
+				logger.Infof("hooks file %s removed, no longer watching this file for changes, and removing hooks that were loaded from it", fileName)
 				err = (*watcher).Remove(fileName)
 				if err != nil {
-					log.Printf("error removing file %s from watcher (operation: Remove, event: %v): %v", fileName, event.Op, err)
+					logger.Errorf("error removing file %s from watcher (operation: Remove, event: %v): %v", fileName, event.Op, err)
 				}
 				removeHooks(fileName, verbose, noPanic)
 
@@ -168,16 +168,16 @@ func handleEvent(event fsnotify.Event, watcher *fsnotify.Watcher, asTemplate boo
 				processorsMu.Unlock()
 			} else {
 				// file was overwritten
-				log.Printf("hooks file %s overwritten\n", fileName)
+				logger.Infof("hooks file %s overwritten", fileName)
 				retryReloadHooks(fileName, asTemplate, reloadHooks)
 
 				err = (*watcher).Remove(fileName)
 				if err != nil {
-					log.Printf("error removing file %s from watcher (operation: Remove after overwrite, event: %v): %v", fileName, event.Op, err)
+					logger.Errorf("error removing file %s from watcher (operation: Remove after overwrite, event: %v): %v", fileName, event.Op, err)
 				}
 				err = (*watcher).Add(fileName)
 				if err != nil {
-					log.Printf("error adding file %s to watcher (operation: Add after overwrite, event: %v): %v", fileName, event.Op, err)
+					logger.Errorf("error adding file %s to watcher (operation: Add after overwrite, event: %v): %v", fileName, event.Op, err)
 				}
 			}
 		}()

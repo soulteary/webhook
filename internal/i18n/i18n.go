@@ -3,7 +3,6 @@ package i18n
 import (
 	"embed"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/soulteary/webhook/internal/fn"
+	"github.com/soulteary/webhook/internal/logger"
 	"golang.org/x/text/language"
 )
 
@@ -27,7 +27,7 @@ func LoadLocaleFiles(localesDir string, webhookLocalesEmbed embed.FS) (aliveLoca
 	if len(localesFiles) == 0 {
 		files, err := webhookLocalesEmbed.ReadDir("locales")
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatalf("%v", err)
 		}
 		for _, file := range files {
 			fileName := file.Name()

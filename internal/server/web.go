@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/link"
+	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/middleware"
 )
 
@@ -26,7 +26,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) {
 	r.Use(chimiddleware.Recoverer)
 
 	if appFlags.Debug {
-		r.Use(middleware.Dumper(log.Writer()))
+		r.Use(middleware.Dumper(logger.Writer()))
 	}
 
 	// Clean up input
@@ -52,6 +52,6 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) {
 	}
 
 	// Serve HTTP
-	log.Printf("serving hooks on http://%s%s", addr, link.MakeHumanPattern(&appFlags.HooksURLPrefix))
-	log.Print(svr.Serve(ln))
+	logger.Infof("serving hooks on http://%s%s", addr, link.MakeHumanPattern(&appFlags.HooksURLPrefix))
+	logger.Error(fmt.Sprintf("%v", svr.Serve(ln)))
 }

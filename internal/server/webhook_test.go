@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -18,6 +17,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,7 +53,20 @@ func TestStaticParams(t *testing.T) {
 	}
 
 	b := &bytes.Buffer{}
-	log.SetOutput(b)
+	// 初始化日志系统，将输出重定向到 buffer（用于测试）
+	// verbose=true, debug=true 以确保所有日志级别都被输出
+	err = logger.InitWithWriter(b, true, true, false)
+	if err != nil {
+		t.Fatalf("Failed to initialize logger: %v", err)
+	}
+	// 验证 logger 已正确初始化
+	if logger.DefaultLogger == nil {
+		t.Fatalf("Logger was not initialized")
+	}
+	defer func() {
+		// 测试结束后恢复默认日志配置
+		logger.Init(true, true, "", false)
+	}()
 
 	r := &hook.Request{
 		ID:      "test",
@@ -64,9 +77,12 @@ func TestStaticParams(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v\n", err)
 	}
-	matched, _ := regexp.MatchString("(?s)command output: .*static-params-name-space", b.String())
+
+	// 获取 buffer 内容
+	logOutput := b.String()
+	matched, _ := regexp.MatchString("(?s)command output: .*static-params-name-space", logOutput)
 	if !matched {
-		t.Fatalf("Unexpected log output:\n%sn", b)
+		t.Fatalf("Unexpected log output:\n%q\nBuffer length: %d\n", logOutput, b.Len())
 	}
 }
 

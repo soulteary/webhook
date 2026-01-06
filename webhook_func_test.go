@@ -89,32 +89,27 @@ func TestDropPrivileges(t *testing.T) {
 
 func TestSetupLogger(t *testing.T) {
 	// Test when LogPath is empty
-	appFlags := flags.AppFlags{LogPath: ""}
+	appFlags := flags.AppFlags{LogPath: "", Verbose: true}
 	var logQueue []string
-	logFile, err := SetupLogger(appFlags, &logQueue)
+	err := SetupLogger(appFlags, &logQueue)
 
 	assert.NoError(t, err)
-	assert.Nil(t, logFile)
 	assert.Equal(t, 0, len(logQueue))
 
 	// Test with valid log path
 	tmpDir := t.TempDir()
 	logPath := filepath.Join(tmpDir, "test.log")
-	appFlags = flags.AppFlags{LogPath: logPath}
+	appFlags = flags.AppFlags{LogPath: logPath, Verbose: true}
 	logQueue = []string{}
-	logFile, err = SetupLogger(appFlags, &logQueue)
+	err = SetupLogger(appFlags, &logQueue)
 
 	assert.NoError(t, err)
-	assert.NotNil(t, logFile)
 	assert.Equal(t, 0, len(logQueue))
-	if logFile != nil {
-		logFile.Close()
-	}
 
 	// Test with invalid log path (should add to log queue)
-	appFlags = flags.AppFlags{LogPath: "/nonexistent/dir/test.log"}
+	appFlags = flags.AppFlags{LogPath: "/nonexistent/dir/test.log", Verbose: true}
 	logQueue = []string{}
-	logFile, err = SetupLogger(appFlags, &logQueue)
+	err = SetupLogger(appFlags, &logQueue)
 
 	// Should have error in log queue
 	assert.Greater(t, len(logQueue), 0)
@@ -153,13 +148,10 @@ func TestSetupLogger_ErrorHandling(t *testing.T) {
 	defer os.Chmod(readOnlyDir, 0755)
 
 	logPath := filepath.Join(readOnlyDir, "test.log")
-	appFlags := flags.AppFlags{LogPath: logPath}
+	appFlags := flags.AppFlags{LogPath: logPath, Verbose: true}
 	var logQueue []string
-	logFile, _ := SetupLogger(appFlags, &logQueue)
+	_ = SetupLogger(appFlags, &logQueue)
 
 	// Should have error in log queue
 	assert.Greater(t, len(logQueue), 0)
-	if logFile != nil {
-		logFile.Close()
-	}
 }

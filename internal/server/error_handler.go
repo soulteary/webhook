@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/security"
 )
 
@@ -163,7 +162,7 @@ func HandleError(w http.ResponseWriter, r *http.Request, err error, requestID, h
 	// 序列化为JSON
 	if jsonErr := json.NewEncoder(w).Encode(errorResp); jsonErr != nil {
 		// 如果JSON编码失败，回退到纯文本
-		log.Printf("[%s] error encoding error response to JSON: %v", requestID, jsonErr)
+		logger.Errorf("[%s] error encoding error response to JSON: %v", requestID, jsonErr)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		fmt.Fprintf(w, "%s: %s", errorResp.Error, errorResp.Message)
 	}
@@ -211,46 +210,50 @@ func HandleErrorWithCustomMessage(w http.ResponseWriter, err error, requestID, h
 	fmt.Fprint(w, httpErr.Message)
 }
 
-// logError 记录错误日志
+// logError 记录错误日志（使用结构化日志格式）
 func logError(httpErr *HTTPError) {
 	if httpErr == nil {
 		return
 	}
 
-	var builder strings.Builder
+	// 构建结构化日志属性
+	args := []any{
+		"type", string(httpErr.Type),
+		"status", httpErr.Status,
+		"message", httpErr.Message,
+	}
+
 	if httpErr.RequestID != "" {
-		builder.WriteString("[")
-		builder.WriteString(httpErr.RequestID)
-		builder.WriteString("] ")
+		args = append(args, "request_id", httpErr.RequestID)
 	}
 
 	if httpErr.HookID != "" {
-		builder.WriteString("hook ")
-		builder.WriteString(httpErr.HookID)
-		builder.WriteString(": ")
+		args = append(args, "hook_id", httpErr.HookID)
 	}
-
-	builder.WriteString(string(httpErr.Type))
-	builder.WriteString(" error (status: ")
-	builder.WriteString(strconv.Itoa(httpErr.Status))
-	builder.WriteString("): ")
-	builder.WriteString(httpErr.Message)
 
 	if httpErr.Err != nil {
-		builder.WriteString(" - ")
-		builder.WriteString(fmt.Sprintf("%v", httpErr.Err))
+		args = append(args, "error", httpErr.Err.Error())
 	}
 
-	logMsg := builder.String()
+	// 构建日志消息
+	var msgBuilder strings.Builder
+	msgBuilder.WriteString(string(httpErr.Type))
+	msgBuilder.WriteString(" error")
+	if httpErr.HookID != "" {
+		msgBuilder.WriteString(" for hook ")
+		msgBuilder.WriteString(httpErr.HookID)
+	}
+
+	logMsg := msgBuilder.String()
 	switch httpErr.Type {
 	case ErrorTypeClient:
-		log.Printf("%s", logMsg)
+		logger.Warn(logMsg, args...)
 	case ErrorTypeServer:
-		log.Printf("%s", logMsg)
+		logger.Error(logMsg, args...)
 	case ErrorTypeTimeout:
-		log.Printf("%s", logMsg)
+		logger.Warn(logMsg, args...)
 	default:
-		log.Printf("%s", logMsg)
+		logger.Error(logMsg, args...)
 	}
 }
 
