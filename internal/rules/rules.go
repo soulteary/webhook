@@ -83,8 +83,8 @@ func ReloadHooks(hooksFilePath string, asTemplate bool) {
 			}
 
 			if (MatchLoadedHook(hook.ID) != nil && !wasHookIDAlreadyLoaded) || seenHooksIds[hook.ID] {
-				log.Printf("error: hook with the id %s has already been loaded!\nplease check your hooks file for duplicate hooks ids!", hook.ID)
-				log.Println("reverting hooks back to the previous configuration")
+				log.Printf("error: hook with the id %s has already been loaded from file %s!\nplease check your hooks file for duplicate hooks ids!", hook.ID, hooksFilePath)
+				log.Printf("reverting hooks back to the previous configuration (file: %s)", hooksFilePath)
 				return
 			}
 
