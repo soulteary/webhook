@@ -22,28 +22,53 @@ type responseDupper struct {
 	Status int
 }
 
+// DumperConfig 配置Dumper中间件的行为
+type DumperConfig struct {
+	IncludeRequestBody bool // 是否包含请求体（默认false，避免敏感信息泄露）
+}
+
 // Dumper returns a debug middleware which prints detailed information about
 // incoming requests and outgoing responses including all headers, parameters
-// and bodies.
+// and bodies. 敏感信息会被自动脱敏。
 func Dumper(w io.Writer) func(http.Handler) http.Handler {
+	return DumperWithConfig(w, DumperConfig{
+		IncludeRequestBody: false, // 默认不包含请求体，避免敏感信息泄露
+	})
+}
+
+// DumperWithConfig returns a debug middleware with custom configuration.
+func DumperWithConfig(w io.Writer, config DumperConfig) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			buf := &bytes.Buffer{}
 			// Request ID
 			rid := r.Context().Value(RequestIDKey)
 
-			// Dump request
-
+			// Dump request (包含请求体)
 			bd, err := httputil.DumpRequest(r, true)
 			if err != nil {
 				buf.WriteString(fmt.Sprintf("[%s] Error dumping request for debugging: %s\n", rid, err))
-			}
+			} else {
+				// 脱敏请求转储
+				sanitized := SanitizeDumpRequest(bd, config.IncludeRequestBody)
 
-			sc := bufio.NewScanner(bytes.NewBuffer(bd))
-			sc.Split(bufio.ScanLines)
-			for sc.Scan() {
-				buf.WriteString(fmt.Sprintf("> [%s] ", rid))
-				buf.WriteString(sc.Text() + "\n")
+				sc := bufio.NewScanner(bytes.NewBuffer(sanitized))
+				sc.Split(bufio.ScanLines)
+				for sc.Scan() {
+					line := sc.Text()
+					// 如果配置不包含请求体，跳过空行后的内容
+					if !config.IncludeRequestBody && line == "" {
+						// 找到空行，停止处理（空行后是请求体）
+						break
+					}
+					buf.WriteString(fmt.Sprintf("> [%s] ", rid))
+					buf.WriteString(line + "\n")
+				}
+
+				// 如果不包含请求体，添加提示
+				if !config.IncludeRequestBody && len(bd) > 0 {
+					buf.WriteString(fmt.Sprintf("> [%s] [Request body omitted for security - use --log-request-body to include]\n", rid))
+				}
 			}
 
 			_, err = w.Write(buf.Bytes())
@@ -72,14 +97,24 @@ func Dumper(w io.Writer) func(http.Handler) http.Handler {
 				buf.WriteString(fmt.Sprintf("< [%s] %s: %s\n", rid, k, strings.Join(dupper.Header()[k], ", ")))
 			}
 
-			// Response Body
+			// Response Body (脱敏处理)
 			if dupper.Buffer.Len() > 0 {
-				buf.WriteString(fmt.Sprintf("< [%s]\n", rid))
-				sc = bufio.NewScanner(dupper.Buffer)
-				sc.Split(bufio.ScanLines)
-				for sc.Scan() {
-					buf.WriteString(fmt.Sprintf("< [%s] ", rid))
-					buf.WriteString(sc.Text() + "\n")
+				responseBody := dupper.Buffer.Bytes()
+				// 获取响应Content-Type
+				responseContentType := dupper.Header().Get("Content-Type")
+				// 脱敏响应体
+				sanitizedBody := SanitizeRequestBody(responseContentType, responseBody, config.IncludeRequestBody)
+
+				if sanitizedBody != "" {
+					buf.WriteString(fmt.Sprintf("< [%s]\n", rid))
+					sc := bufio.NewScanner(bytes.NewBufferString(sanitizedBody))
+					sc.Split(bufio.ScanLines)
+					for sc.Scan() {
+						buf.WriteString(fmt.Sprintf("< [%s] ", rid))
+						buf.WriteString(sc.Text() + "\n")
+					}
+				} else if !config.IncludeRequestBody {
+					buf.WriteString(fmt.Sprintf("< [%s] [Response body omitted for security]\n", rid))
 				}
 			}
 			_, err = w.Write(buf.Bytes())

@@ -50,6 +50,9 @@ func ParseEnvs() AppFlags {
 	flags.RateLimitRPS = fn.GetEnvInt(ENV_KEY_RATE_LIMIT_RPS, DEFAULT_RATE_LIMIT_RPS)
 	flags.RateLimitBurst = fn.GetEnvInt(ENV_KEY_RATE_LIMIT_BURST, DEFAULT_RATE_LIMIT_BURST)
 
+	// Logging settings
+	flags.LogRequestBody = fn.GetEnvBool(ENV_KEY_LOG_REQUEST_BODY, DEFAULT_LOG_REQUEST_BODY)
+
 	hooks := strings.Split(fn.GetEnvStr(ENV_KEY_HOOKS, ""), ",")
 	var hooksFiles hook.HooksFiles
 	for _, hook := range hooks {

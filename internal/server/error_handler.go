@@ -10,6 +10,7 @@ import (
 
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/logger"
+	"github.com/soulteary/webhook/internal/middleware"
 	"github.com/soulteary/webhook/internal/security"
 )
 
@@ -232,7 +233,9 @@ func logError(httpErr *HTTPError) {
 	}
 
 	if httpErr.Err != nil {
-		args = append(args, "error", httpErr.Err.Error())
+		// 脱敏错误消息中的敏感信息
+		sanitizedErrMsg := middleware.SanitizeError(httpErr.Err.Error())
+		args = append(args, "error", sanitizedErrMsg)
 	}
 
 	// 构建日志消息
