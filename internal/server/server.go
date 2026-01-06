@@ -488,19 +488,40 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		log.Printf("[%s] error extracting command arguments for file: %s\n", r.ID, err)
 	}
 
+	// 跟踪所有创建的临时文件，确保在任何情况下都能被清理
+	var tempFileNames []string
+
 	// 使用 defer 确保临时文件在任何情况下都会被清理
 	defer func() {
+		for _, fileName := range tempFileNames {
+			log.Printf("[%s] removing temp file %s\n", r.ID, fileName)
+			err := os.Remove(fileName)
+			if err != nil {
+				// 如果文件不存在（可能已经被删除），这是正常的，只记录警告
+				if !os.IsNotExist(err) {
+					log.Printf("[%s] error removing temp file %s [%s]", r.ID, fileName, err)
+				}
+			}
+		}
+		// 同时清理 files 中记录的文件（双重保险）
 		for i := range files {
 			if files[i].File != nil {
 				fileName := files[i].File.Name()
-				// 确保文件句柄已关闭（虽然通常已经在创建时关闭了）
-				if files[i].File != nil {
-					_ = files[i].File.Close()
+				// 确保文件句柄已关闭
+				_ = files[i].File.Close()
+				// 如果文件名不在 tempFileNames 中，也尝试清理（避免重复）
+				found := false
+				for _, name := range tempFileNames {
+					if name == fileName {
+						found = true
+						break
+					}
 				}
-				log.Printf("[%s] removing file %s\n", r.ID, fileName)
-				err := os.Remove(fileName)
-				if err != nil {
-					log.Printf("[%s] error removing file %s [%s]", r.ID, fileName, err)
+				if !found {
+					log.Printf("[%s] removing file %s (from files array)\n", r.ID, fileName)
+					if err := os.Remove(fileName); err != nil && !os.IsNotExist(err) {
+						log.Printf("[%s] error removing file %s [%s]", r.ID, fileName, err)
+					}
 				}
 			}
 		}
@@ -512,26 +533,38 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 			log.Printf("[%s] error creating temp file [%s]", r.ID, err)
 			continue
 		}
-		log.Printf("[%s] writing env %s file %s", r.ID, files[i].EnvName, tmpfile.Name())
+
+		// 立即记录文件名，确保即使后续步骤失败也能清理
+		fileName := tmpfile.Name()
+		tempFileNames = append(tempFileNames, fileName)
+
+		log.Printf("[%s] writing env %s file %s", r.ID, files[i].EnvName, fileName)
 		if _, err := tmpfile.Write(files[i].Data); err != nil {
-			log.Printf("[%s] error writing file %s [%s]", r.ID, tmpfile.Name(), err)
-			// 如果写入失败，立即清理这个文件
-			if removeErr := os.Remove(tmpfile.Name()); removeErr != nil {
-				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, tmpfile.Name(), removeErr)
+			log.Printf("[%s] error writing file %s [%s]", r.ID, fileName, err)
+			// 确保文件关闭后再删除
+			_ = tmpfile.Close()
+			if removeErr := os.Remove(fileName); removeErr != nil {
+				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, fileName, removeErr)
 			}
-			continue
-		}
-		if err := tmpfile.Close(); err != nil {
-			log.Printf("[%s] error closing file %s [%s]", r.ID, tmpfile.Name(), err)
-			// 如果关闭失败，立即清理这个文件
-			if removeErr := os.Remove(tmpfile.Name()); removeErr != nil {
-				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, tmpfile.Name(), removeErr)
-			}
+			// 从列表中移除，避免 defer 中重复删除
+			tempFileNames = tempFileNames[:len(tempFileNames)-1]
 			continue
 		}
 
+		if err := tmpfile.Close(); err != nil {
+			log.Printf("[%s] error closing file %s [%s]", r.ID, fileName, err)
+			// 尝试删除文件（即使关闭失败）
+			if removeErr := os.Remove(fileName); removeErr != nil {
+				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, fileName, removeErr)
+			}
+			// 从列表中移除，避免 defer 中重复删除
+			tempFileNames = tempFileNames[:len(tempFileNames)-1]
+			continue
+		}
+
+		// 文件创建成功，保存到 files 数组
 		files[i].File = tmpfile
-		envs = append(envs, files[i].EnvName+"="+tmpfile.Name())
+		envs = append(envs, files[i].EnvName+"="+fileName)
 	}
 
 	cmd.Env = append(os.Environ(), envs...)
