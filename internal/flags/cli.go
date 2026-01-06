@@ -34,6 +34,13 @@ func ParseCLI(flags AppFlags) AppFlags {
 		HookExecutionTimeout = flag.Int("hook-execution-timeout", DEFAULT_HOOK_EXECUTION_TIMEOUT, "timeout in seconds for acquiring execution slot when max concurrent hooks reached (default 5)")
 		AllowAutoChmod       = flag.Bool("allow-auto-chmod", DEFAULT_ALLOW_AUTO_CHMOD, "allow automatically modifying file permissions when permission denied (SECURITY RISK: default false)")
 
+		// Security flags
+		AllowedCommandPaths = flag.String("allowed-command-paths", DEFAULT_ALLOWED_COMMAND_PATHS, "comma-separated list of allowed command paths (directories or files) for command execution whitelist; empty means no whitelist check")
+		MaxArgLength        = flag.Int("max-arg-length", DEFAULT_MAX_ARG_LENGTH, "maximum length for a single command argument in bytes (default 1MB)")
+		MaxTotalArgsLength  = flag.Int("max-total-args-length", DEFAULT_MAX_TOTAL_ARGS_LENGTH, "maximum total length for all command arguments in bytes (default 10MB)")
+		MaxArgsCount        = flag.Int("max-args-count", DEFAULT_MAX_ARGS_COUNT, "maximum number of command arguments (default 1000)")
+		StrictMode          = flag.Bool("strict-mode", DEFAULT_STRICT_MODE, "strict mode: reject arguments containing potentially dangerous characters (default false)")
+
 		ShowVersion     = flag.Bool("version", false, "display webhook version and quit")
 		ResponseHeaders hook.ResponseHeaders
 	)
@@ -143,6 +150,23 @@ func ParseCLI(flags AppFlags) AppFlags {
 
 	if *AllowAutoChmod != DEFAULT_ALLOW_AUTO_CHMOD {
 		flags.AllowAutoChmod = *AllowAutoChmod
+	}
+
+	// Security settings
+	if *AllowedCommandPaths != DEFAULT_ALLOWED_COMMAND_PATHS {
+		flags.AllowedCommandPaths = *AllowedCommandPaths
+	}
+	if *MaxArgLength != DEFAULT_MAX_ARG_LENGTH {
+		flags.MaxArgLength = *MaxArgLength
+	}
+	if *MaxTotalArgsLength != DEFAULT_MAX_TOTAL_ARGS_LENGTH {
+		flags.MaxTotalArgsLength = *MaxTotalArgsLength
+	}
+	if *MaxArgsCount != DEFAULT_MAX_ARGS_COUNT {
+		flags.MaxArgsCount = *MaxArgsCount
+	}
+	if *StrictMode != DEFAULT_STRICT_MODE {
+		flags.StrictMode = *StrictMode
 	}
 
 	return flags
