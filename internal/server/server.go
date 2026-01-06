@@ -91,7 +91,11 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 	}
 
 	// 创建 HookExecutor 实例，管理并发控制
-	executor := NewHookExecutor(maxConcurrent, hookTimeout)
+	// 创建一个包装函数，将 appFlags 传递给 handleHook
+	executorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+		return handleHook(ctx, h, r, w, appFlags)
+	}
+	executor := NewHookExecutorWithFunc(maxConcurrent, hookTimeout, executorFunc)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID := middleware.GetReqID(r.Context())
@@ -408,7 +412,7 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 	}
 }
 
-func makeSureCallable(h *hook.Hook, r *hook.Request) (string, error) {
+func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags) (string, error) {
 	// check the command exists
 	var lookpath string
 	if filepath.IsAbs(h.ExecuteCommand) || h.CommandWorkingDirectory == "" {
@@ -422,18 +426,24 @@ func makeSureCallable(h *hook.Hook, r *hook.Request) (string, error) {
 		log.Printf("[%s] error in %s", r.ID, err)
 
 		if strings.Contains(err.Error(), "permission denied") {
+			if !appFlags.AllowAutoChmod {
+				log.Printf("[%s] SECURITY WARNING: Command file '%s' is not executable. Auto-chmod is disabled for security reasons. Please manually set correct file permissions (chmod +x) or enable auto-chmod with --allow-auto-chmod flag (NOT RECOMMENDED)", r.ID, lookpath)
+				return "", fmt.Errorf("permission denied: file '%s' is not executable and auto-chmod is disabled", lookpath)
+			}
+
+			// SECURITY WARNING: Only modify permissions if explicitly enabled
+			log.Printf("[%s] SECURITY WARNING: Automatically modifying file permissions for '%s' (auto-chmod is enabled). This is a security risk and should be avoided in production.", r.ID, lookpath)
 			// try to make the command executable
-			// #nosec
+			// #nosec G302 - file permissions are intentionally modified when AllowAutoChmod is enabled
 			err2 := os.Chmod(lookpath, 0o755)
 			if err2 != nil {
 				log.Printf("[%s] make command script executable error in %s", r.ID, err2)
-
 				return "", err
 			}
 
 			log.Printf("[%s] make command script executable success", r.ID)
 			// retry
-			return makeSureCallable(h, r)
+			return makeSureCallable(h, r, appFlags)
 		}
 
 		// check if parameters specified in execute-command by mistake
@@ -448,10 +458,10 @@ func makeSureCallable(h *hook.Hook, r *hook.Request) (string, error) {
 	return cmdPath, nil
 }
 
-func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter, appFlags flags.AppFlags) (string, error) {
 	var errs []error
 
-	cmdPath, err := makeSureCallable(h, r)
+	cmdPath, err := makeSureCallable(h, r, appFlags)
 	if err != nil {
 		return "", err
 	}
