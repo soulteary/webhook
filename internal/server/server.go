@@ -274,21 +274,27 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 			}
 
 			if matchedHook.StreamCommandOutput {
+				// 在流模式下，如果命令已经开始输出，WriteHeader 必须在任何写入之前调用
+				// 由于命令可能已经开始输出，我们无法再设置状态码，只能记录错误
 				_, err := executor.Execute(ctx, matchedHook, req, w, executionTimeout)
 				if err != nil {
 					if errors.Is(err, context.DeadlineExceeded) {
 						log.Printf("[%s] hook execution timeout: %v", requestID, err)
-						w.WriteHeader(http.StatusRequestTimeout)
-						fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
+						// 注意：在流模式下，如果输出已经开始，WriteHeader 可能无效
+						// 但尝试设置状态码仍然是有意义的（如果还没有写入响应头）
+						if f, ok := w.(http.Flusher); ok {
+							f.Flush()
+						}
 					} else {
 						log.Printf("[%s] error executing hook: %v", requestID, err)
-						fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
 					}
 				}
 			} else if matchedHook.CaptureCommandOutput {
 				response, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
 
 				if err != nil {
+					// 在 WriteHeader 之前设置所有 headers
+					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 					w.WriteHeader(http.StatusInternalServerError)
 					if errors.Is(err, context.DeadlineExceeded) {
 						log.Printf("[%s] hook execution timeout: %v", requestID, err)
@@ -296,7 +302,6 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					} else if matchedHook.CaptureCommandOutputOnError {
 						fmt.Fprint(w, response)
 					} else {
-						w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 						fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
 					}
 				} else {
@@ -417,10 +422,15 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 	defer func() {
 		for i := range files {
 			if files[i].File != nil {
-				log.Printf("[%s] removing file %s\n", r.ID, files[i].File.Name())
-				err := os.Remove(files[i].File.Name())
+				fileName := files[i].File.Name()
+				// 确保文件句柄已关闭（虽然通常已经在创建时关闭了）
+				if files[i].File != nil {
+					_ = files[i].File.Close()
+				}
+				log.Printf("[%s] removing file %s\n", r.ID, fileName)
+				err := os.Remove(fileName)
 				if err != nil {
-					log.Printf("[%s] error removing file %s [%s]", r.ID, files[i].File.Name(), err)
+					log.Printf("[%s] error removing file %s [%s]", r.ID, fileName, err)
 				}
 			}
 		}
