@@ -190,7 +190,7 @@ func parseRequestBody(w http.ResponseWriter, r *http.Request, req *hook.Request,
 
 	default:
 		// 直接输出错误消息以匹配测试期望
-		logger.Warnf("error parsing body payload due to unsupported content type header: %s", req.ContentType)
+		logger.Warnf("[%s] error parsing body payload due to unsupported content type header: %s", requestID, req.ContentType)
 	}
 
 	return nil
@@ -324,7 +324,7 @@ func evaluateTriggerRules(w http.ResponseWriter, matchedHook *hook.Hook, req *ho
 		}
 		// 参数节点错误只记录日志，不阻止请求继续（可能是可选参数）
 		// 直接输出错误消息以匹配测试期望
-		logger.Debug(err.Error())
+		logger.Debugf("[%s] %s", requestID, err.Error())
 	}
 
 	return ok, nil

@@ -114,6 +114,102 @@ func With(args ...any) *slog.Logger {
 	return DefaultLogger.With(args...)
 }
 
+// WithRequestID 返回一个带有请求 ID 的日志记录器
+func WithRequestID(requestID string) *slog.Logger {
+	if DefaultLogger == nil {
+		// 如果未初始化，使用默认配置初始化
+		Init(true, false, "", false)
+	}
+	if requestID != "" {
+		return DefaultLogger.With("request_id", requestID)
+	}
+	return DefaultLogger
+}
+
+// WithContext 返回一个带有请求 ID 的日志记录器（从 context 中提取）
+// 注意：context 中必须包含通过 middleware.RequestIDKey 设置的请求 ID
+// 如果需要使用此函数，请确保 context 中已设置请求 ID
+func WithContext(ctx context.Context) *slog.Logger {
+	if DefaultLogger == nil {
+		// 如果未初始化，使用默认配置初始化
+		Init(true, false, "", false)
+	}
+	if ctx == nil {
+		return DefaultLogger
+	}
+	// 从 context 中提取请求 ID（使用与 middleware.RequestIDKey 相同的 key）
+	type ctxKeyRequestID int
+	const RequestIDKey ctxKeyRequestID = 0
+	if reqID, ok := ctx.Value(RequestIDKey).(string); ok && reqID != "" {
+		return DefaultLogger.With("request_id", reqID)
+	}
+	return DefaultLogger
+}
+
+// DebugContext 使用 context 记录调试级别日志（自动包含请求 ID）
+func DebugContext(ctx context.Context, msg string, args ...any) {
+	if DefaultLogger != nil {
+		logger := WithContext(ctx)
+		logger.Debug(msg, args...)
+	}
+}
+
+// InfoContext 使用 context 记录信息级别日志（自动包含请求 ID）
+func InfoContext(ctx context.Context, msg string, args ...any) {
+	if DefaultLogger != nil {
+		logger := WithContext(ctx)
+		logger.Info(msg, args...)
+	}
+}
+
+// WarnContext 使用 context 记录警告级别日志（自动包含请求 ID）
+func WarnContext(ctx context.Context, msg string, args ...any) {
+	if DefaultLogger != nil {
+		logger := WithContext(ctx)
+		logger.Warn(msg, args...)
+	}
+}
+
+// ErrorContext 使用 context 记录错误级别日志（自动包含请求 ID）
+func ErrorContext(ctx context.Context, msg string, args ...any) {
+	if DefaultLogger != nil {
+		logger := WithContext(ctx)
+		logger.Error(msg, args...)
+	}
+}
+
+// DebugfContext 使用 context 和格式化字符串记录调试级别日志（自动包含请求 ID）
+func DebugfContext(ctx context.Context, format string, args ...any) {
+	if DefaultLogger != nil {
+		logger := WithContext(ctx)
+		logger.Debug(fmt.Sprintf(format, args...))
+	}
+}
+
+// InfofContext 使用 context 和格式化字符串记录信息级别日志（自动包含请求 ID）
+func InfofContext(ctx context.Context, format string, args ...any) {
+	if DefaultLogger != nil {
+		logger := WithContext(ctx)
+		logger.Info(fmt.Sprintf(format, args...))
+	}
+}
+
+// WarnfContext 使用 context 和格式化字符串记录警告级别日志（自动包含请求 ID）
+func WarnfContext(ctx context.Context, format string, args ...any) {
+	if DefaultLogger != nil {
+		logger := WithContext(ctx)
+		logger.Warn(fmt.Sprintf(format, args...))
+	}
+}
+
+// ErrorfContext 使用 context 和格式化字符串记录错误级别日志（自动包含请求 ID）
+func ErrorfContext(ctx context.Context, format string, args ...any) {
+	if DefaultLogger != nil {
+		logger := WithContext(ctx)
+		logger.Error(fmt.Sprintf(format, args...))
+	}
+}
+
 // Debug 记录调试级别日志
 func Debug(msg string, args ...any) {
 	if DefaultLogger != nil {
