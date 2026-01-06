@@ -313,6 +313,8 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					if err != nil {
 						if errors.Is(err, context.DeadlineExceeded) {
 							log.Printf("[%s] hook execution timeout: %v", requestID, err)
+						} else if errors.Is(err, context.Canceled) {
+							log.Printf("[%s] async hook execution cancelled due to request context: %v", requestID, err)
 						} else {
 							log.Printf("[%s] error executing hook: %v", requestID, err)
 						}
@@ -411,6 +413,19 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		log.Printf("[%s] error extracting command arguments for file: %s\n", r.ID, err)
 	}
 
+	// 使用 defer 确保临时文件在任何情况下都会被清理
+	defer func() {
+		for i := range files {
+			if files[i].File != nil {
+				log.Printf("[%s] removing file %s\n", r.ID, files[i].File.Name())
+				err := os.Remove(files[i].File.Name())
+				if err != nil {
+					log.Printf("[%s] error removing file %s [%s]", r.ID, files[i].File.Name(), err)
+				}
+			}
+		}
+	}()
+
 	for i := range files {
 		tmpfile, err := os.CreateTemp(h.CommandWorkingDirectory, files[i].EnvName)
 		if err != nil {
@@ -420,10 +435,14 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		log.Printf("[%s] writing env %s file %s", r.ID, files[i].EnvName, tmpfile.Name())
 		if _, err := tmpfile.Write(files[i].Data); err != nil {
 			log.Printf("[%s] error writing file %s [%s]", r.ID, tmpfile.Name(), err)
+			// 如果写入失败，立即清理这个文件
+			os.Remove(tmpfile.Name())
 			continue
 		}
 		if err := tmpfile.Close(); err != nil {
 			log.Printf("[%s] error closing file %s [%s]", r.ID, tmpfile.Name(), err)
+			// 如果关闭失败，立即清理这个文件
+			os.Remove(tmpfile.Name())
 			continue
 		}
 
@@ -475,16 +494,6 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 				return string(out), context.Canceled
 			}
 			log.Printf("[%s] error occurred: %+v\n", r.ID, err)
-		}
-	}
-
-	for i := range files {
-		if files[i].File != nil {
-			log.Printf("[%s] removing file %s\n", r.ID, files[i].File.Name())
-			err := os.Remove(files[i].File.Name())
-			if err != nil {
-				log.Printf("[%s] error removing file %s [%s]", r.ID, files[i].File.Name(), err)
-			}
 		}
 	}
 
