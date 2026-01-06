@@ -44,6 +44,9 @@ const (
 	DEFAULT_RATE_LIMIT_ENABLED = false
 	DEFAULT_RATE_LIMIT_RPS     = 100 // requests per second
 	DEFAULT_RATE_LIMIT_BURST   = 10  // burst size
+
+	// Logging defaults
+	DEFAULT_LOG_REQUEST_BODY = false // 默认不记录请求体，避免敏感信息泄露
 )
 
 const (
@@ -87,6 +90,9 @@ const (
 	ENV_KEY_RATE_LIMIT_ENABLED = "RATE_LIMIT_ENABLED"
 	ENV_KEY_RATE_LIMIT_RPS     = "RATE_LIMIT_RPS"
 	ENV_KEY_RATE_LIMIT_BURST   = "RATE_LIMIT_BURST"
+
+	// Logging environment keys
+	ENV_KEY_LOG_REQUEST_BODY = "LOG_REQUEST_BODY"
 )
 
 type AppFlags struct {
@@ -131,4 +137,7 @@ type AppFlags struct {
 	RateLimitEnabled bool // 是否启用限流
 	RateLimitRPS     int  // 每秒请求数限制
 	RateLimitBurst   int  // 突发请求数限制
+
+	// Logging settings
+	LogRequestBody bool // 是否在调试模式下记录请求体（默认false，避免敏感信息泄露）
 }

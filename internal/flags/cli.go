@@ -47,6 +47,9 @@ func ParseCLI(flags AppFlags) AppFlags {
 		RateLimitRPS     = flag.Int("rate-limit-rps", DEFAULT_RATE_LIMIT_RPS, "rate limit requests per second (default 100)")
 		RateLimitBurst   = flag.Int("rate-limit-burst", DEFAULT_RATE_LIMIT_BURST, "rate limit burst size (default 10)")
 
+		// Logging flags
+		LogRequestBody = flag.Bool("log-request-body", DEFAULT_LOG_REQUEST_BODY, "log request body in debug mode (default false, SECURITY: may expose sensitive data)")
+
 		ShowVersion     = flag.Bool("version", false, "display webhook version and quit")
 		ResponseHeaders hook.ResponseHeaders
 	)
@@ -196,6 +199,11 @@ func ParseCLI(flags AppFlags) AppFlags {
 	}
 	if *RateLimitBurst != DEFAULT_RATE_LIMIT_BURST {
 		flags.RateLimitBurst = *RateLimitBurst
+	}
+
+	// Logging settings
+	if *LogRequestBody != DEFAULT_LOG_REQUEST_BODY {
+		flags.LogRequestBody = *LogRequestBody
 	}
 
 	return flags

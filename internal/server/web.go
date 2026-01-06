@@ -48,7 +48,10 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	}
 
 	if appFlags.Debug {
-		r.Use(middleware.Dumper(logger.Writer()))
+		dumperConfig := middleware.DumperConfig{
+			IncludeRequestBody: appFlags.LogRequestBody,
+		}
+		r.Use(middleware.DumperWithConfig(logger.Writer(), dumperConfig))
 	}
 
 	// Clean up input
