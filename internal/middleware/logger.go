@@ -3,12 +3,12 @@ package middleware
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/soulteary/webhook/internal/logger"
 )
 
 // Logger is a middleware that logs useful data about each HTTP request.
@@ -41,19 +41,37 @@ type LogEntry struct {
 // Write constructs and writes the final log entry.
 func (l *LogEntry) Write(status int, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
 	rid := GetReqID(l.req.Context())
-	if rid != "" {
-		fmt.Fprintf(l.buf, "[%s] ", rid)
+
+	// 使用结构化日志格式
+	args := []any{
+		"status", status,
+		"bytes", bytes,
+		"size", humanize.IBytes(uint64(bytes)),
+		"elapsed", elapsed.String(),
+		"host", l.req.Host,
+		"method", l.req.Method,
+		"uri", l.req.RequestURI,
 	}
 
-	fmt.Fprintf(l.buf, "%03d | %s | %s | ", status, humanize.IBytes(uint64(bytes)), elapsed)
-	l.buf.WriteString(l.req.Host + " | " + l.req.Method + " " + l.req.RequestURI)
-	log.Print(l.buf.String())
+	if rid != "" {
+		args = append(args, "request_id", rid)
+	}
+
+	logger.Info("HTTP request completed", args...)
 }
 
 // Panic prints the call stack for a panic.
 func (l *LogEntry) Panic(v interface{}, stack []byte) {
-	e := l.NewLogEntry(l.req).(*LogEntry)
-	fmt.Fprintf(e.buf, "panic: %#v", v)
-	log.Print(e.buf.String())
-	log.Print(string(stack))
+	rid := GetReqID(l.req.Context())
+
+	args := []any{
+		"panic_value", fmt.Sprintf("%#v", v),
+		"stack", string(stack),
+	}
+
+	if rid != "" {
+		args = append(args, "request_id", rid)
+	}
+
+	logger.Error("panic occurred", args...)
 }
