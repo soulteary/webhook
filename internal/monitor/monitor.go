@@ -49,7 +49,10 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 				}
 			}
 		case err := <-(*watcher).Errors:
-			log.Println("watcher error:", err)
+			// 只在有实际错误时才记录，nil 表示 channel 已关闭或没有错误
+			if err != nil {
+				log.Println("watcher error:", err)
+			}
 		}
 	}
 }

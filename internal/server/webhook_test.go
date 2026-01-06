@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"log"
 	"mime/multipart"
@@ -58,7 +59,7 @@ func TestStaticParams(t *testing.T) {
 		ID:      "test",
 		Headers: spHeaders,
 	}
-	_, err = handleHook(spHook, r, nil)
+	_, err = handleHook(context.Background(), spHook, r, nil)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v\n", err)
 	}
@@ -308,7 +309,7 @@ func TestHandleHook_StreamOutput(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	_, err = handleHook(h, r, w)
+	_, err = handleHook(context.Background(), h, r, w)
 	assert.NoError(t, err)
 }
 
@@ -336,7 +337,7 @@ func TestHandleHook_CaptureOutput(t *testing.T) {
 		ID: "test-request",
 	}
 
-	output, err := handleHook(h, r, nil)
+	output, err := handleHook(context.Background(), h, r, nil)
 	assert.NoError(t, err)
 	assert.Contains(t, output, "test output")
 }
@@ -364,7 +365,7 @@ func TestHandleHook_Async(t *testing.T) {
 		ID: "test-request",
 	}
 
-	output, err := handleHook(h, r, nil)
+	output, err := handleHook(context.Background(), h, r, nil)
 	assert.NoError(t, err)
 	assert.Contains(t, output, "test output")
 }
@@ -675,7 +676,7 @@ func TestHandleHook_FileCreationError(t *testing.T) {
 	}
 
 	// Test with invalid working directory (should still work but may have file creation issues)
-	output, err := handleHook(h, r, nil)
+	output, err := handleHook(context.Background(), h, r, nil)
 	// Should handle file creation errors gracefully
 	assert.NoError(t, err)
 	assert.Contains(t, output, "test output")
@@ -705,7 +706,7 @@ func TestHandleHook_CommandError(t *testing.T) {
 		ID: "test-request",
 	}
 
-	output, err := handleHook(h, r, nil)
+	output, err := handleHook(context.Background(), h, r, nil)
 	// Should return error when command fails
 	assert.Error(t, err)
 	_ = output
@@ -1055,7 +1056,7 @@ func TestHandleHook_FileOperations(t *testing.T) {
 	}
 
 	// Test file creation and cleanup
-	output, err := handleHook(h, r, nil)
+	output, err := handleHook(context.Background(), h, r, nil)
 	assert.NoError(t, err)
 	assert.Contains(t, output, "test output")
 }

@@ -10,3 +10,5 @@ coverage.html
 config.json
 redeploy.sh
 *.out
+
+OPTIMIZATION_REPORT.md

@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/soulteary/webhook/internal/flags"
@@ -32,7 +35,64 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 	return
 }
 
+// trackingResponseWriter 用于跟踪是否已经写入响应，以便在错误时设置状态码
+type trackingResponseWriter struct {
+	http.ResponseWriter
+	written bool
+	status  int
+}
+
+func (trw *trackingResponseWriter) Write(p []byte) (n int, err error) {
+	if !trw.written {
+		// 第一次写入时，如果没有设置状态码，使用默认的 200
+		if trw.status == 0 {
+			trw.status = http.StatusOK
+		}
+		trw.ResponseWriter.WriteHeader(trw.status)
+		trw.written = true
+	}
+	return trw.ResponseWriter.Write(p)
+}
+
+func (trw *trackingResponseWriter) WriteHeader(code int) {
+	if !trw.written {
+		trw.status = code
+		trw.ResponseWriter.WriteHeader(code)
+		trw.written = true
+	}
+}
+
+func (trw *trackingResponseWriter) HasWritten() bool {
+	return trw.written
+}
+
+// Flush 实现 http.Flusher 接口，以便支持流式输出
+func (trw *trackingResponseWriter) Flush() {
+	if f, ok := trw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *http.Request) {
+	// 从配置中获取超时和并发设置，如果未配置则使用默认值
+	maxConcurrent := appFlags.MaxConcurrentHooks
+	if maxConcurrent <= 0 {
+		maxConcurrent = DefaultMaxConcurrentHooks
+	}
+
+	hookTimeout := time.Duration(appFlags.HookTimeoutSeconds) * time.Second
+	if hookTimeout <= 0 {
+		hookTimeout = DefaultHookTimeout
+	}
+
+	executionTimeout := time.Duration(appFlags.HookExecutionTimeout) * time.Second
+	if executionTimeout <= 0 {
+		executionTimeout = HookExecutionTimeout
+	}
+
+	// 创建 HookExecutor 实例，管理并发控制
+	executor := NewHookExecutor(maxConcurrent, hookTimeout)
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID := middleware.GetReqID(r.Context())
 		req := &hook.Request{
@@ -208,8 +268,8 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 		}
 
 		// handle hook
-		errors := matchedHook.ParseJSONParameters(req)
-		for _, err := range errors {
+		errs := matchedHook.ParseJSONParameters(req)
+		for _, err := range errs {
 			log.Printf("[%s] error parsing JSON parameters: %s\n", requestID, err)
 		}
 
@@ -242,20 +302,66 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 				w.Header().Set(responseHeader.Name, responseHeader.Value)
 			}
 
+			// 使用请求的 context，支持取消和超时
+			ctx := r.Context()
+
+			// 获取执行超时时间
+			executionTimeout := time.Duration(appFlags.HookExecutionTimeout) * time.Second
+			if executionTimeout <= 0 {
+				executionTimeout = HookExecutionTimeout
+			}
+
 			if matchedHook.StreamCommandOutput {
-				_, err := handleHook(matchedHook, req, w)
+				// 使用 trackingResponseWriter 来跟踪是否已经写入响应
+				trw := &trackingResponseWriter{ResponseWriter: w}
+				_, err := executor.Execute(ctx, matchedHook, req, trw, executionTimeout)
 				if err != nil {
-					fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
+					// 如果还没有写入响应，可以设置错误状态码
+					if !trw.HasWritten() {
+						if errors.Is(err, context.DeadlineExceeded) {
+							log.Printf("[%s] hook execution timeout: %v", requestID, err)
+							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+							w.WriteHeader(http.StatusRequestTimeout)
+							fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
+						} else if errors.Is(err, context.Canceled) {
+							log.Printf("[%s] hook execution cancelled: %v", requestID, err)
+							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+							w.WriteHeader(http.StatusRequestTimeout)
+							fmt.Fprint(w, "Hook execution cancelled. Please check your logs for more details.")
+						} else {
+							log.Printf("[%s] error executing hook: %v", requestID, err)
+							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+							w.WriteHeader(http.StatusInternalServerError)
+							fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
+						}
+					} else {
+						// 如果已经开始输出，只能记录错误，无法设置状态码
+						if errors.Is(err, context.DeadlineExceeded) {
+							log.Printf("[%s] hook execution timeout (output already started): %v", requestID, err)
+						} else if errors.Is(err, context.Canceled) {
+							log.Printf("[%s] hook execution cancelled (output already started): %v", requestID, err)
+						} else {
+							log.Printf("[%s] error executing hook (output already started): %v", requestID, err)
+						}
+						// 尝试刷新输出
+						if f, ok := w.(http.Flusher); ok {
+							f.Flush()
+						}
+					}
 				}
 			} else if matchedHook.CaptureCommandOutput {
-				response, err := handleHook(matchedHook, req, nil)
+				response, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
 
 				if err != nil {
+					// 在 WriteHeader 之前设置所有 headers
+					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 					w.WriteHeader(http.StatusInternalServerError)
-					if matchedHook.CaptureCommandOutputOnError {
+					if errors.Is(err, context.DeadlineExceeded) {
+						log.Printf("[%s] hook execution timeout: %v", requestID, err)
+						fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
+					} else if matchedHook.CaptureCommandOutputOnError {
 						fmt.Fprint(w, response)
 					} else {
-						w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 						fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
 					}
 				} else {
@@ -266,7 +372,19 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 					fmt.Fprint(w, response)
 				}
 			} else {
-				go handleHook(matchedHook, req, nil)
+				// 异步执行，但仍需要并发控制和超时
+				go func() {
+					_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
+					if err != nil {
+						if errors.Is(err, context.DeadlineExceeded) {
+							log.Printf("[%s] hook execution timeout: %v", requestID, err)
+						} else if errors.Is(err, context.Canceled) {
+							log.Printf("[%s] async hook execution cancelled due to request context: %v", requestID, err)
+						} else {
+							log.Printf("[%s] error executing hook: %v", requestID, err)
+						}
+					}
+				}()
 
 				// Check if a success return code is configured for the hook
 				if matchedHook.SuccessHttpResponseCode != 0 {
@@ -330,34 +448,53 @@ func makeSureCallable(h *hook.Hook, r *hook.Request) (string, error) {
 	return cmdPath, nil
 }
 
-func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
-	var errors []error
+func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+	var errs []error
 
 	cmdPath, err := makeSureCallable(h, r)
 	if err != nil {
 		return "", err
 	}
 
-	cmd := exec.Command(cmdPath)
+	// 使用 exec.CommandContext 替代 exec.Command，支持超时和取消
+	cmd := exec.CommandContext(ctx, cmdPath)
 	cmd.Dir = h.CommandWorkingDirectory
 
-	cmd.Args, errors = h.ExtractCommandArguments(r)
-	for _, err := range errors {
+	cmd.Args, errs = h.ExtractCommandArguments(r)
+	for _, err := range errs {
 		log.Printf("[%s] error extracting command arguments: %s\n", r.ID, err)
 	}
 
 	var envs []string
-	envs, errors = h.ExtractCommandArgumentsForEnv(r)
+	envs, errs = h.ExtractCommandArgumentsForEnv(r)
 
-	for _, err := range errors {
+	for _, err := range errs {
 		log.Printf("[%s] error extracting command arguments for environment: %s\n", r.ID, err)
 	}
 
-	files, errors := h.ExtractCommandArgumentsForFile(r)
+	files, errs := h.ExtractCommandArgumentsForFile(r)
 
-	for _, err := range errors {
+	for _, err := range errs {
 		log.Printf("[%s] error extracting command arguments for file: %s\n", r.ID, err)
 	}
+
+	// 使用 defer 确保临时文件在任何情况下都会被清理
+	defer func() {
+		for i := range files {
+			if files[i].File != nil {
+				fileName := files[i].File.Name()
+				// 确保文件句柄已关闭（虽然通常已经在创建时关闭了）
+				if files[i].File != nil {
+					_ = files[i].File.Close()
+				}
+				log.Printf("[%s] removing file %s\n", r.ID, fileName)
+				err := os.Remove(fileName)
+				if err != nil {
+					log.Printf("[%s] error removing file %s [%s]", r.ID, fileName, err)
+				}
+			}
+		}
+	}()
 
 	for i := range files {
 		tmpfile, err := os.CreateTemp(h.CommandWorkingDirectory, files[i].EnvName)
@@ -368,10 +505,18 @@ func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, e
 		log.Printf("[%s] writing env %s file %s", r.ID, files[i].EnvName, tmpfile.Name())
 		if _, err := tmpfile.Write(files[i].Data); err != nil {
 			log.Printf("[%s] error writing file %s [%s]", r.ID, tmpfile.Name(), err)
+			// 如果写入失败，立即清理这个文件
+			if removeErr := os.Remove(tmpfile.Name()); removeErr != nil {
+				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, tmpfile.Name(), removeErr)
+			}
 			continue
 		}
 		if err := tmpfile.Close(); err != nil {
 			log.Printf("[%s] error closing file %s [%s]", r.ID, tmpfile.Name(), err)
+			// 如果关闭失败，立即清理这个文件
+			if removeErr := os.Remove(tmpfile.Name()); removeErr != nil {
+				log.Printf("[%s] error removing failed temp file %s [%s]", r.ID, tmpfile.Name(), removeErr)
+			}
 			continue
 		}
 
@@ -398,6 +543,14 @@ func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, e
 		cmd.Stdout = &fw
 
 		if err := cmd.Run(); err != nil {
+			// 检查是否是超时错误
+			if ctx.Err() == context.DeadlineExceeded {
+				log.Printf("[%s] command execution timeout: %+v\n", r.ID, err)
+				return "", context.DeadlineExceeded
+			} else if ctx.Err() == context.Canceled {
+				log.Printf("[%s] command execution canceled: %+v\n", r.ID, err)
+				return "", context.Canceled
+			}
 			log.Printf("[%s] error occurred: %+v\n", r.ID, err)
 		}
 	} else {
@@ -406,17 +559,15 @@ func handleHook(h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, e
 		log.Printf("[%s] command output: %s\n", r.ID, out)
 
 		if err != nil {
-			log.Printf("[%s] error occurred: %+v\n", r.ID, err)
-		}
-	}
-
-	for i := range files {
-		if files[i].File != nil {
-			log.Printf("[%s] removing file %s\n", r.ID, files[i].File.Name())
-			err := os.Remove(files[i].File.Name())
-			if err != nil {
-				log.Printf("[%s] error removing file %s [%s]", r.ID, files[i].File.Name(), err)
+			// 检查是否是超时错误
+			if ctx.Err() == context.DeadlineExceeded {
+				log.Printf("[%s] command execution timeout: %+v\n", r.ID, err)
+				return string(out), context.DeadlineExceeded
+			} else if ctx.Err() == context.Canceled {
+				log.Printf("[%s] command execution canceled: %+v\n", r.ID, err)
+				return string(out), context.Canceled
 			}
+			log.Printf("[%s] error occurred: %+v\n", r.ID, err)
 		}
 	}
 

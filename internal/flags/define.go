@@ -25,6 +25,10 @@ const (
 
 	DEFAULT_LANG     = "en-US"
 	DEFAULT_I18N_DIR = "./locales"
+
+	DEFAULT_HOOK_TIMEOUT_SECONDS   = 30
+	DEFAULT_MAX_CONCURRENT_HOOKS   = 10
+	DEFAULT_HOOK_EXECUTION_TIMEOUT = 5
 )
 
 const (
@@ -50,6 +54,10 @@ const (
 
 	ENV_KEY_LANG = "LANGUAGE"
 	ENV_KEY_I18N = "LANG_DIR"
+
+	ENV_KEY_HOOK_TIMEOUT_SECONDS   = "HOOK_TIMEOUT_SECONDS"
+	ENV_KEY_MAX_CONCURRENT_HOOKS   = "MAX_CONCURRENT_HOOKS"
+	ENV_KEY_HOOK_EXECUTION_TIMEOUT = "HOOK_EXECUTION_TIMEOUT"
 )
 
 type AppFlags struct {
@@ -76,4 +84,8 @@ type AppFlags struct {
 
 	Lang    string
 	I18nDir string
+
+	HookTimeoutSeconds   int
+	MaxConcurrentHooks   int
+	HookExecutionTimeout int
 }
