@@ -114,6 +114,303 @@ func setResponseHeaders(w http.ResponseWriter, headers hook.ResponseHeaders) {
 	}
 }
 
+// parseRequestBody 解析请求体，包括 JSON、Form、XML 和 Multipart 格式
+func parseRequestBody(w http.ResponseWriter, r *http.Request, req *hook.Request, matchedHook *hook.Hook, appFlags flags.AppFlags, requestID, hookID string) error {
+	// set contentType to IncomingPayloadContentType or header value
+	req.ContentType = r.Header.Get("Content-Type")
+	if len(matchedHook.IncomingPayloadContentType) != 0 {
+		req.ContentType = matchedHook.IncomingPayloadContentType
+	}
+
+	isMultipart := strings.HasPrefix(req.ContentType, "multipart/form-data;")
+
+	if !isMultipart {
+		// 限制请求体大小以防止内存耗尽
+		maxBodySize := appFlags.MaxRequestBodySize
+		if maxBodySize <= 0 {
+			maxBodySize = flags.DEFAULT_MAX_REQUEST_BODY_SIZE
+		}
+		limitedBody := http.MaxBytesReader(w, r.Body, maxBodySize)
+		var err error
+		req.Body, err = io.ReadAll(limitedBody)
+		if err != nil {
+			// 检查是否是请求体过大错误
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) {
+				HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusRequestEntityTooLarge,
+					fmt.Sprintf("Request body too large: maximum size is %d bytes", maxBodySize), err), requestID, hookID)
+				return err
+			}
+			HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
+				"Error reading request body.", err), requestID, hookID)
+			return err
+		}
+	}
+
+	req.ParseHeaders(r.Header)
+	req.ParseQuery(r.URL.Query())
+
+	switch {
+	case strings.Contains(req.ContentType, "json"):
+		err := req.ParseJSONPayload()
+		if err != nil {
+			logger.Warnf("[%s] %s", requestID, err)
+		}
+
+	case strings.Contains(req.ContentType, "x-www-form-urlencoded"):
+		err := req.ParseFormPayload()
+		if err != nil {
+			logger.Warnf("[%s] %s", requestID, err)
+		}
+
+	case strings.Contains(req.ContentType, "xml"):
+		err := req.ParseXMLPayload()
+		if err != nil {
+			logger.Warnf("[%s] %s", requestID, err)
+		}
+
+	case isMultipart:
+		return handleMultipartForm(w, r, req, matchedHook, appFlags, requestID, hookID)
+
+	default:
+		// 直接输出错误消息以匹配测试期望
+		logger.Warnf("error parsing body payload due to unsupported content type header: %s", req.ContentType)
+	}
+
+	return nil
+}
+
+// handleMultipartForm 处理 multipart 表单数据
+func handleMultipartForm(w http.ResponseWriter, r *http.Request, req *hook.Request, matchedHook *hook.Hook, appFlags flags.AppFlags, requestID, hookID string) error {
+	err := r.ParseMultipartForm(appFlags.MaxMultipartMem)
+	if err != nil {
+		HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
+			"Error occurred while parsing multipart form.", err), requestID, hookID)
+		return err
+	}
+
+	for k, v := range r.MultipartForm.Value {
+		logger.Debugf("[%s] found multipart form value %q", requestID, k)
+
+		if req.Payload == nil {
+			req.Payload = make(map[string]interface{})
+		}
+
+		// TODO(moorereason): support duplicate, named values
+		req.Payload[k] = v[0]
+	}
+
+	for k, v := range r.MultipartForm.File {
+		// Force parsing as JSON regardless of Content-Type.
+		var parseAsJSON bool
+		for _, j := range matchedHook.JSONStringParameters {
+			if j.Source == "payload" && j.Name == k {
+				parseAsJSON = true
+				break
+			}
+		}
+
+		// TODO(moorereason): we need to support multiple parts
+		// with the same name instead of just processing the first
+		// one. Will need #215 resolved first.
+
+		// MIME encoding can contain duplicate headers, so check them
+		// all.
+		if !parseAsJSON && len(v[0].Header["Content-Type"]) > 0 {
+			for _, j := range v[0].Header["Content-Type"] {
+				if j == "application/json" {
+					parseAsJSON = true
+					break
+				}
+			}
+		}
+
+		if parseAsJSON {
+			logger.Debugf("[%s] parsing multipart form file %q as JSON", requestID, k)
+
+			f, err := v[0].Open()
+			if err != nil {
+				HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
+					"Error occurred while parsing multipart form file.", err), requestID, hookID)
+				return err
+			}
+			defer f.Close()
+
+			decoder := json.NewDecoder(f)
+			decoder.UseNumber()
+
+			var part map[string]interface{}
+			err = decoder.Decode(&part)
+			if err != nil {
+				logger.Warnf("[%s] error parsing JSON payload file %q for hook %s: %v", requestID, k, hookID, err)
+				// 跳过这个文件，不添加到 payload，避免使用无效数据
+				continue
+			}
+
+			if req.Payload == nil {
+				req.Payload = make(map[string]interface{})
+			}
+			req.Payload[k] = part
+		}
+	}
+
+	return nil
+}
+
+// evaluateTriggerRules 评估触发规则，返回是否触发以及可能的错误
+func evaluateTriggerRules(w http.ResponseWriter, matchedHook *hook.Hook, req *hook.Request, requestID, hookID string) (bool, error) {
+	// handle hook
+	errs := matchedHook.ParseJSONParameters(req)
+	for _, err := range errs {
+		logger.Warnf("[%s] error parsing JSON parameters for hook %s: %v", requestID, hookID, err)
+	}
+
+	if matchedHook.TriggerRule == nil {
+		return true, nil
+	}
+
+	// Save signature soft failures option in request for evaluators
+	req.AllowSignatureErrors = matchedHook.TriggerSignatureSoftFailures
+
+	ok, err := matchedHook.TriggerRule.Evaluate(req)
+	if err != nil {
+		// ParameterNodeError 是客户端错误，但通常不应该阻止请求继续
+		// 只有在非参数节点错误时才返回错误响应
+		if !hook.IsParameterNodeError(err) {
+			// 为了保持向后兼容性，评估规则失败时统一返回 500 错误
+			// 而不是根据错误类型自动分类（例如签名错误应该是 401，但测试期望 500）
+			logger.Errorf("[%s] error evaluating hook %s trigger rules: %v", requestID, hookID, err)
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Error occurred while evaluating hook rules.")
+			return false, err
+		}
+		// 参数节点错误只记录日志，不阻止请求继续（可能是可选参数）
+		// 直接输出错误消息以匹配测试期望
+		logger.Debug(err.Error())
+	}
+
+	return ok, nil
+}
+
+// executeHookWithResponse 执行 hook 并根据配置处理响应（流式、捕获输出或异步）
+func executeHookWithResponse(w http.ResponseWriter, r *http.Request, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, appFlags flags.AppFlags, requestID, hookID string) {
+	// 使用请求的 context，支持取消和超时
+	ctx := r.Context()
+
+	// 获取执行超时时间
+	executionTimeout := time.Duration(appFlags.HookExecutionTimeout) * time.Second
+	if executionTimeout <= 0 {
+		executionTimeout = HookExecutionTimeout
+	}
+
+	if matchedHook.StreamCommandOutput {
+		executeStreamingHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID)
+	} else if matchedHook.CaptureCommandOutput {
+		executeCapturingHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID)
+	} else {
+		executeAsyncHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID)
+	}
+}
+
+// executeStreamingHook 执行流式输出的 hook
+func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string) {
+	// 使用 trackingResponseWriter 来跟踪是否已经写入响应
+	trw := &trackingResponseWriter{ResponseWriter: w}
+	_, err := executor.Execute(ctx, matchedHook, req, trw, executionTimeout)
+	if err != nil {
+		// 如果还没有写入响应，可以设置错误状态码
+		if !trw.HasWritten() {
+			// 为了保持向后兼容性，使用特定的错误消息
+			if errors.Is(err, context.DeadlineExceeded) {
+				logger.Errorf("[%s] hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusRequestTimeout)
+				fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
+			} else if errors.Is(err, context.Canceled) {
+				logger.Warnf("[%s] hook %s execution cancelled (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusRequestTimeout)
+				fmt.Fprint(w, "Hook execution cancelled. Please check your logs for more details.")
+			} else {
+				logger.Errorf("[%s] error executing hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
+			}
+		} else {
+			// 如果已经开始输出，只能记录错误，无法设置状态码
+			httpErr := ClassifyError(err, requestID, hookID)
+			logError(httpErr)
+			// 尝试刷新输出
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
+		}
+	}
+}
+
+// executeCapturingHook 执行捕获输出的 hook
+func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string) {
+	response, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
+
+	if err != nil {
+		// 如果配置了在错误时捕获输出，则返回输出内容
+		if matchedHook.CaptureCommandOutputOnError {
+			// 记录错误但不使用 ClassifyError，保持原有的日志格式
+			logger.Errorf("[%s] hook %s execution failed (command: %s): %v, output captured", requestID, hookID, matchedHook.ExecuteCommand, err)
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, response)
+		} else {
+			// 为了保持向后兼容性，使用特定的错误消息
+			// 检查错误消息中是否包含 "exec:"，如果是，使用 "error in exec:" 格式以匹配测试期望
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "exec:") {
+				logger.Errorf("[%s] error in exec: %v", requestID, err)
+			} else {
+				logger.Errorf("[%s] error executing hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
+			}
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
+		}
+	} else {
+		// Check if a success return code is configured for the hook
+		if matchedHook.SuccessHttpResponseCode != 0 {
+			writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
+		}
+		fmt.Fprint(w, response)
+	}
+}
+
+// executeAsyncHook 执行异步 hook
+func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string) {
+	// 异步执行，但仍需要并发控制和超时
+	// 使用 WaitGroup 跟踪 goroutine，防止泄漏
+	asyncHookWaitGroup.Add(1)
+	go func() {
+		defer asyncHookWaitGroup.Done()
+		_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
+		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				logger.Errorf("[%s] async hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
+			} else if errors.Is(err, context.Canceled) {
+				logger.Warnf("[%s] async hook %s execution cancelled due to request context (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
+			} else {
+				logger.Errorf("[%s] error executing async hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
+			}
+		}
+	}()
+
+	// Check if a success return code is configured for the hook
+	if matchedHook.SuccessHttpResponseCode != 0 {
+		writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
+	}
+
+	fmt.Fprint(w, matchedHook.ResponseMessage)
+}
+
 func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *http.Request) {
 	// 从配置中获取超时和并发设置，如果未配置则使用默认值
 	maxConcurrent := appFlags.MaxConcurrentHooks
@@ -168,169 +465,18 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 
 		setResponseHeaders(w, appFlags.ResponseHeaders)
 
-		var err error
-
-		// set contentType to IncomingPayloadContentType or header value
-		req.ContentType = r.Header.Get("Content-Type")
-		if len(matchedHook.IncomingPayloadContentType) != 0 {
-			req.ContentType = matchedHook.IncomingPayloadContentType
+		// 解析请求体
+		err := parseRequestBody(w, r, req, matchedHook, appFlags, requestID, hookID)
+		if err != nil {
+			// parseRequestBody 已经处理了错误响应
+			return
 		}
 
-		isMultipart := strings.HasPrefix(req.ContentType, "multipart/form-data;")
-
-		if !isMultipart {
-			// 限制请求体大小以防止内存耗尽
-			maxBodySize := appFlags.MaxRequestBodySize
-			if maxBodySize <= 0 {
-				maxBodySize = flags.DEFAULT_MAX_REQUEST_BODY_SIZE
-			}
-			limitedBody := http.MaxBytesReader(w, r.Body, maxBodySize)
-			req.Body, err = io.ReadAll(limitedBody)
-			if err != nil {
-				// 检查是否是请求体过大错误
-				var maxBytesErr *http.MaxBytesError
-				if errors.As(err, &maxBytesErr) {
-					HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusRequestEntityTooLarge,
-						fmt.Sprintf("Request body too large: maximum size is %d bytes", maxBodySize), err), requestID, hookID)
-					return
-				}
-				HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
-					"Error reading request body.", err), requestID, hookID)
-				return
-			}
-		}
-
-		req.ParseHeaders(r.Header)
-		req.ParseQuery(r.URL.Query())
-
-		switch {
-		case strings.Contains(req.ContentType, "json"):
-			err = req.ParseJSONPayload()
-			if err != nil {
-				logger.Warnf("[%s] %s", requestID, err)
-			}
-
-		case strings.Contains(req.ContentType, "x-www-form-urlencoded"):
-			err = req.ParseFormPayload()
-			if err != nil {
-				logger.Warnf("[%s] %s", requestID, err)
-			}
-
-		case strings.Contains(req.ContentType, "xml"):
-			err = req.ParseXMLPayload()
-			if err != nil {
-				logger.Warnf("[%s] %s", requestID, err)
-			}
-
-		case isMultipart:
-			err = r.ParseMultipartForm(appFlags.MaxMultipartMem)
-			if err != nil {
-				HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
-					"Error occurred while parsing multipart form.", err), requestID, hookID)
-				return
-			}
-
-			for k, v := range r.MultipartForm.Value {
-				logger.Debugf("[%s] found multipart form value %q", requestID, k)
-
-				if req.Payload == nil {
-					req.Payload = make(map[string]interface{})
-				}
-
-				// TODO(moorereason): support duplicate, named values
-				req.Payload[k] = v[0]
-			}
-
-			for k, v := range r.MultipartForm.File {
-				// Force parsing as JSON regardless of Content-Type.
-				var parseAsJSON bool
-				for _, j := range matchedHook.JSONStringParameters {
-					if j.Source == "payload" && j.Name == k {
-						parseAsJSON = true
-						break
-					}
-				}
-
-				// TODO(moorereason): we need to support multiple parts
-				// with the same name instead of just processing the first
-				// one. Will need #215 resolved first.
-
-				// MIME encoding can contain duplicate headers, so check them
-				// all.
-				if !parseAsJSON && len(v[0].Header["Content-Type"]) > 0 {
-					for _, j := range v[0].Header["Content-Type"] {
-						if j == "application/json" {
-							parseAsJSON = true
-							break
-						}
-					}
-				}
-
-				if parseAsJSON {
-					logger.Debugf("[%s] parsing multipart form file %q as JSON", requestID, k)
-
-					f, err := v[0].Open()
-					if err != nil {
-						HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
-							"Error occurred while parsing multipart form file.", err), requestID, hookID)
-						return
-					}
-					defer f.Close()
-
-					decoder := json.NewDecoder(f)
-					decoder.UseNumber()
-
-					var part map[string]interface{}
-					err = decoder.Decode(&part)
-					if err != nil {
-						logger.Warnf("[%s] error parsing JSON payload file %q for hook %s: %v", requestID, k, hookID, err)
-						// 跳过这个文件，不添加到 payload，避免使用无效数据
-						continue
-					}
-
-					if req.Payload == nil {
-						req.Payload = make(map[string]interface{})
-					}
-					req.Payload[k] = part
-				}
-			}
-
-		default:
-			// 直接输出错误消息以匹配测试期望
-			logger.Warnf("error parsing body payload due to unsupported content type header: %s", req.ContentType)
-		}
-
-		// handle hook
-		errs := matchedHook.ParseJSONParameters(req)
-		for _, err := range errs {
-			logger.Warnf("[%s] error parsing JSON parameters for hook %s: %v", requestID, hookID, err)
-		}
-
-		var ok bool
-
-		if matchedHook.TriggerRule == nil {
-			ok = true
-		} else {
-			// Save signature soft failures option in request for evaluators
-			req.AllowSignatureErrors = matchedHook.TriggerSignatureSoftFailures
-
-			ok, err = matchedHook.TriggerRule.Evaluate(req)
-			if err != nil {
-				// ParameterNodeError 是客户端错误，但通常不应该阻止请求继续
-				// 只有在非参数节点错误时才返回错误响应
-				if !hook.IsParameterNodeError(err) {
-					// 为了保持向后兼容性，评估规则失败时统一返回 500 错误
-					// 而不是根据错误类型自动分类（例如签名错误应该是 401，但测试期望 500）
-					logger.Errorf("[%s] error evaluating hook %s trigger rules: %v", requestID, hookID, err)
-					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprint(w, "Error occurred while evaluating hook rules.")
-					return
-				}
-				// 参数节点错误只记录日志，不阻止请求继续（可能是可选参数）
-				// 直接输出错误消息以匹配测试期望
-				logger.Debug(err.Error())
-			}
+		// 评估触发规则
+		ok, err := evaluateTriggerRules(w, matchedHook, req, requestID, hookID)
+		if err != nil {
+			// evaluateTriggerRules 已经处理了错误响应
+			return
 		}
 
 		if ok {
@@ -338,105 +484,8 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 
 			setResponseHeaders(w, matchedHook.ResponseHeaders)
 
-			// 使用请求的 context，支持取消和超时
-			ctx := r.Context()
-
-			// 获取执行超时时间
-			executionTimeout := time.Duration(appFlags.HookExecutionTimeout) * time.Second
-			if executionTimeout <= 0 {
-				executionTimeout = HookExecutionTimeout
-			}
-
-			if matchedHook.StreamCommandOutput {
-				// 使用 trackingResponseWriter 来跟踪是否已经写入响应
-				trw := &trackingResponseWriter{ResponseWriter: w}
-				_, err := executor.Execute(ctx, matchedHook, req, trw, executionTimeout)
-				if err != nil {
-					// 如果还没有写入响应，可以设置错误状态码
-					if !trw.HasWritten() {
-						// 为了保持向后兼容性，使用特定的错误消息
-						if errors.Is(err, context.DeadlineExceeded) {
-							logger.Errorf("[%s] hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
-							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-							w.WriteHeader(http.StatusRequestTimeout)
-							fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
-						} else if errors.Is(err, context.Canceled) {
-							logger.Warnf("[%s] hook %s execution cancelled (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
-							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-							w.WriteHeader(http.StatusRequestTimeout)
-							fmt.Fprint(w, "Hook execution cancelled. Please check your logs for more details.")
-						} else {
-							logger.Errorf("[%s] error executing hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
-							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-							w.WriteHeader(http.StatusInternalServerError)
-							fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
-						}
-					} else {
-						// 如果已经开始输出，只能记录错误，无法设置状态码
-						httpErr := ClassifyError(err, requestID, hookID)
-						logError(httpErr)
-						// 尝试刷新输出
-						if f, ok := w.(http.Flusher); ok {
-							f.Flush()
-						}
-					}
-				}
-			} else if matchedHook.CaptureCommandOutput {
-				response, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
-
-				if err != nil {
-					// 如果配置了在错误时捕获输出，则返回输出内容
-					if matchedHook.CaptureCommandOutputOnError {
-						// 记录错误但不使用 ClassifyError，保持原有的日志格式
-						logger.Errorf("[%s] hook %s execution failed (command: %s): %v, output captured", requestID, hookID, matchedHook.ExecuteCommand, err)
-						w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-						w.WriteHeader(http.StatusInternalServerError)
-						fmt.Fprint(w, response)
-					} else {
-						// 为了保持向后兼容性，使用特定的错误消息
-						// 检查错误消息中是否包含 "exec:"，如果是，使用 "error in exec:" 格式以匹配测试期望
-						errMsg := err.Error()
-						if strings.Contains(errMsg, "exec:") {
-							logger.Errorf("[%s] error in exec: %v", requestID, err)
-						} else {
-							logger.Errorf("[%s] error executing hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
-						}
-						w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-						w.WriteHeader(http.StatusInternalServerError)
-						fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
-					}
-				} else {
-					// Check if a success return code is configured for the hook
-					if matchedHook.SuccessHttpResponseCode != 0 {
-						writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
-					}
-					fmt.Fprint(w, response)
-				}
-			} else {
-				// 异步执行，但仍需要并发控制和超时
-				// 使用 WaitGroup 跟踪 goroutine，防止泄漏
-				asyncHookWaitGroup.Add(1)
-				go func() {
-					defer asyncHookWaitGroup.Done()
-					_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
-					if err != nil {
-						if errors.Is(err, context.DeadlineExceeded) {
-							logger.Errorf("[%s] async hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
-						} else if errors.Is(err, context.Canceled) {
-							logger.Warnf("[%s] async hook %s execution cancelled due to request context (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
-						} else {
-							logger.Errorf("[%s] error executing async hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
-						}
-					}
-				}()
-
-				// Check if a success return code is configured for the hook
-				if matchedHook.SuccessHttpResponseCode != 0 {
-					writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
-				}
-
-				fmt.Fprint(w, matchedHook.ResponseMessage)
-			}
+			// 执行 hook 并处理响应
+			executeHookWithResponse(w, r, matchedHook, req, executor, appFlags, requestID, hookID)
 			return
 		}
 
