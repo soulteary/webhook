@@ -365,7 +365,7 @@ func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 	trw := &trackingResponseWriter{ResponseWriter: w}
 	_, err := executor.Execute(ctx, matchedHook, req, trw, executionTimeout)
 	duration := time.Since(startTime)
-	
+
 	if err != nil {
 		// 记录失败的 hook 执行
 		status := "error"
@@ -375,7 +375,7 @@ func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 			status = "cancelled"
 		}
 		metrics.RecordHookExecution(hookID, status, duration)
-		
+
 		// 如果还没有写入响应，可以设置错误状态码
 		if !trw.HasWritten() {
 			// 为了保持向后兼容性，使用特定的错误消息
@@ -424,7 +424,7 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 			status = "cancelled"
 		}
 		metrics.RecordHookExecution(hookID, status, duration)
-		
+
 		// 如果配置了在错误时捕获输出，则返回输出内容
 		if matchedHook.CaptureCommandOutputOnError {
 			// 记录错误但不使用 ClassifyError，保持原有的日志格式
@@ -448,7 +448,7 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 	} else {
 		// 记录成功的 hook 执行
 		metrics.RecordHookExecution(hookID, "success", duration)
-		
+
 		// Check if a success return code is configured for the hook
 		if matchedHook.SuccessHttpResponseCode != 0 {
 			writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
@@ -466,7 +466,7 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 		defer asyncHookWaitGroup.Done()
 		_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
 		duration := time.Since(startTime)
-		
+
 		if err != nil {
 			// 记录失败的 hook 执行
 			status := "error"
@@ -521,14 +521,14 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 记录请求开始时间
 		startTime := time.Now()
-		
+
 		// 创建一个包装的 ResponseWriter 来捕获状态码
 		statusCode := http.StatusOK
 		wrappedWriter := &statusCodeResponseWriter{
 			ResponseWriter: w,
 			statusCode:     &statusCode,
 		}
-		
+
 		// 使用 defer 确保在函数返回时记录 HTTP 请求指标
 		defer func() {
 			duration := time.Since(startTime)

@@ -80,4 +80,3 @@ func WithTraceContext(ctx context.Context) context.Context {
 	// 如果未来需要集成 OpenTelemetry，可以在这里添加 span context
 	return ctx
 }
-

@@ -47,6 +47,13 @@ const (
 
 	// Logging defaults
 	DEFAULT_LOG_REQUEST_BODY = false // 默认不记录请求体，避免敏感信息泄露
+
+	// HTTP server timeout defaults
+	DEFAULT_READ_HEADER_TIMEOUT_SECONDS = 5       // 5 seconds
+	DEFAULT_READ_TIMEOUT_SECONDS        = 10      // 10 seconds
+	DEFAULT_WRITE_TIMEOUT_SECONDS       = 30      // 30 seconds
+	DEFAULT_IDLE_TIMEOUT_SECONDS        = 90      // 90 seconds
+	DEFAULT_MAX_HEADER_BYTES            = 1 << 20 // 1MB
 )
 
 const (
@@ -93,6 +100,13 @@ const (
 
 	// Logging environment keys
 	ENV_KEY_LOG_REQUEST_BODY = "LOG_REQUEST_BODY"
+
+	// HTTP server timeout environment keys
+	ENV_KEY_READ_HEADER_TIMEOUT_SECONDS = "READ_HEADER_TIMEOUT_SECONDS"
+	ENV_KEY_READ_TIMEOUT_SECONDS        = "READ_TIMEOUT_SECONDS"
+	ENV_KEY_WRITE_TIMEOUT_SECONDS       = "WRITE_TIMEOUT_SECONDS"
+	ENV_KEY_IDLE_TIMEOUT_SECONDS        = "IDLE_TIMEOUT_SECONDS"
+	ENV_KEY_MAX_HEADER_BYTES            = "MAX_HEADER_BYTES"
 )
 
 type AppFlags struct {
@@ -140,4 +154,11 @@ type AppFlags struct {
 
 	// Logging settings
 	LogRequestBody bool // 是否在调试模式下记录请求体（默认false，避免敏感信息泄露）
+
+	// HTTP server timeout settings
+	ReadHeaderTimeoutSeconds int // 读取请求头超时时间（秒）
+	ReadTimeoutSeconds       int // 读取请求体超时时间（秒）
+	WriteTimeoutSeconds      int // 写入响应超时时间（秒）
+	IdleTimeoutSeconds       int // 空闲连接超时时间（秒）
+	MaxHeaderBytes           int // 最大请求头大小（字节）
 }

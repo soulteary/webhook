@@ -11,12 +11,12 @@ import (
 
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/link"
 	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/metrics"
 	"github.com/soulteary/webhook/internal/middleware"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Server 管理 HTTP 服务器和优雅关闭
@@ -68,7 +68,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 			duration := time.Since(startTime)
 			metrics.RecordHTTPRequest(req.Method, "200", "/health", duration)
 		}()
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, `{"status":"ok"}`)
@@ -84,17 +84,43 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 			duration := time.Since(startTime)
 			metrics.RecordHTTPRequest(req.Method, "200", "/", duration)
 		}()
-		
+
 		setResponseHeaders(w, appFlags.ResponseHeaders)
 		fmt.Fprint(w, "OK")
 	})
 
 	// Create common HTTP server settings
+	// 使用配置的超时参数（支持通过命令行参数或环境变量覆盖）
+	// 如果未配置，envs.go 中已设置默认值
+	readHeaderTimeout := time.Duration(appFlags.ReadHeaderTimeoutSeconds) * time.Second
+	if readHeaderTimeout == 0 {
+		readHeaderTimeout = 5 * time.Second // 额外保护，防止为 0
+	}
+	readTimeout := time.Duration(appFlags.ReadTimeoutSeconds) * time.Second
+	if readTimeout == 0 {
+		readTimeout = 10 * time.Second
+	}
+	writeTimeout := time.Duration(appFlags.WriteTimeoutSeconds) * time.Second
+	if writeTimeout == 0 {
+		writeTimeout = 30 * time.Second
+	}
+	idleTimeout := time.Duration(appFlags.IdleTimeoutSeconds) * time.Second
+	if idleTimeout == 0 {
+		idleTimeout = 90 * time.Second
+	}
+	maxHeaderBytes := appFlags.MaxHeaderBytes
+	if maxHeaderBytes == 0 {
+		maxHeaderBytes = 1 << 20 // 1MB
+	}
+
 	svr := &http.Server{
 		Addr:              addr,
 		Handler:           r,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+		MaxHeaderBytes:    maxHeaderBytes,
 	}
 
 	s := &Server{

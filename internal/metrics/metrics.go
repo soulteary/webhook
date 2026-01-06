@@ -158,4 +158,3 @@ func StartSystemMetricsCollector(interval time.Duration) {
 		}
 	}()
 }
-
