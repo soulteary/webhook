@@ -98,6 +98,8 @@ Any HTTP `GET` or `POST` request to the service address will trigger the redeplo
 
 To enhance security and prevent unauthorized access, you can use the "trigger-rule" property to specify exact conditions for hook triggering. For a detailed list of available rules and their usage, please refer to [Hook Rules](docs/en-US/Hook-Rules.md).
 
+For additional security, WebHook includes command injection protection features such as command path whitelisting, argument validation, and strict mode. See the [Security Policy](SECURITY.md) and [Configuration Parameters](docs/en-US/Webhook-Parameters.md) for more details.
+
 ## Form Data
 
 [webhook][w] offers limited parsing support for form data, including both values and files. For more details on how form data is handled, please refer to the [Form Data](docs/en-US/Form-Data.md) documentation.

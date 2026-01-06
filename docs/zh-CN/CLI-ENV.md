@@ -101,6 +101,49 @@
   
   当达到最大并发数时，新请求等待执行槽位的最大时间。超过此时间仍未获得执行机会的请求将返回错误。
 
+- `-allow-auto-chmod`
+  允许在权限被拒绝时自动修改文件权限（安全风险：默认 `false`）
+  
+  **警告**：启用此选项会带来安全风险，不建议在生产环境中使用。建议手动设置正确的文件权限（`chmod +x`）。
+
+### 安全配置
+
+以下参数用于增强命令执行的安全性，防止命令注入攻击：
+
+- `-allowed-command-paths string`
+  指定允许执行的命令路径白名单（逗号分隔的目录或文件路径列表，默认值：空，表示不进行白名单检查）
+  
+  当配置此参数后，只有白名单中的命令才能被执行。可以指定目录（如 `/usr/bin`）或具体文件路径。
+  
+  **示例**：
+  ```bash
+  # 允许执行 /usr/bin 和 /opt/scripts 目录下的命令
+  -allowed-command-paths="/usr/bin,/opt/scripts"
+  
+  # 允许执行特定文件
+  -allowed-command-paths="/usr/bin/git,/opt/scripts/deploy.sh"
+  ```
+
+- `-max-arg-length int`
+  设置单个命令参数的最大长度（字节，默认值：`1048576`，即 1MB）
+  
+  用于防止超长参数导致的内存问题。
+
+- `-max-total-args-length int`
+  设置所有命令参数的总长度限制（字节，默认值：`10485760`，即 10MB）
+  
+  用于限制所有参数的总大小，防止内存耗尽。
+
+- `-max-args-count int`
+  设置命令参数的最大数量（默认值：`1000`）
+  
+  用于限制参数数量，防止参数过多导致的性能问题。
+
+- `-strict-mode`
+  启用严格模式：拒绝包含潜在危险字符的参数（默认值：`false`）
+  
+  在严格模式下，包含 shell 特殊字符（如 `;`, `|`, `&`, `` ` ``, `$`, `()`, `{}` 等）的参数将被拒绝执行。
+
 ### 其他
 
 - `-version`
@@ -135,6 +178,12 @@
 | `HOOK_TIMEOUT_SECONDS` | `-hook-timeout-seconds` | Hook 执行超时时间（秒） | `30` |
 | `MAX_CONCURRENT_HOOKS` | `-max-concurrent-hooks` | 最大并发 hook 数量 | `10` |
 | `HOOK_EXECUTION_TIMEOUT` | `-hook-execution-timeout` | 获取执行槽位超时时间（秒） | `5` |
+| `ALLOW_AUTO_CHMOD` | `-allow-auto-chmod` | 允许自动修改文件权限 | `false` |
+| `ALLOWED_COMMAND_PATHS` | `-allowed-command-paths` | 允许的命令路径白名单（逗号分隔） | - |
+| `MAX_ARG_LENGTH` | `-max-arg-length` | 单个参数最大长度（字节） | `1048576` |
+| `MAX_TOTAL_ARGS_LENGTH` | `-max-total-args-length` | 所有参数总长度限制（字节） | `10485760` |
+| `MAX_ARGS_COUNT` | `-max-args-count` | 最大参数数量 | `1000` |
+| `STRICT_MODE` | `-strict-mode` | 严格模式 | `false` |
 
 ### 环境变量使用示例
 
@@ -153,6 +202,11 @@ export HOT_RELOAD=true
 
 # 设置语言为中文
 export LANGUAGE=zh-CN
+
+# 安全配置示例
+export ALLOWED_COMMAND_PATHS="/usr/bin,/opt/scripts"
+export MAX_ARG_LENGTH=1048576
+export STRICT_MODE=true
 
 # 运行 webhook
 ./webhook
