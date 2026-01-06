@@ -35,6 +35,44 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 	return
 }
 
+// trackingResponseWriter 用于跟踪是否已经写入响应，以便在错误时设置状态码
+type trackingResponseWriter struct {
+	http.ResponseWriter
+	written bool
+	status  int
+}
+
+func (trw *trackingResponseWriter) Write(p []byte) (n int, err error) {
+	if !trw.written {
+		// 第一次写入时，如果没有设置状态码，使用默认的 200
+		if trw.status == 0 {
+			trw.status = http.StatusOK
+		}
+		trw.ResponseWriter.WriteHeader(trw.status)
+		trw.written = true
+	}
+	return trw.ResponseWriter.Write(p)
+}
+
+func (trw *trackingResponseWriter) WriteHeader(code int) {
+	if !trw.written {
+		trw.status = code
+		trw.ResponseWriter.WriteHeader(code)
+		trw.written = true
+	}
+}
+
+func (trw *trackingResponseWriter) HasWritten() bool {
+	return trw.written
+}
+
+// Flush 实现 http.Flusher 接口，以便支持流式输出
+func (trw *trackingResponseWriter) Flush() {
+	if f, ok := trw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *http.Request) {
 	// 从配置中获取超时和并发设置，如果未配置则使用默认值
 	maxConcurrent := appFlags.MaxConcurrentHooks
@@ -274,19 +312,41 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 			}
 
 			if matchedHook.StreamCommandOutput {
-				// 在流模式下，如果命令已经开始输出，WriteHeader 必须在任何写入之前调用
-				// 由于命令可能已经开始输出，我们无法再设置状态码，只能记录错误
-				_, err := executor.Execute(ctx, matchedHook, req, w, executionTimeout)
+				// 使用 trackingResponseWriter 来跟踪是否已经写入响应
+				trw := &trackingResponseWriter{ResponseWriter: w}
+				_, err := executor.Execute(ctx, matchedHook, req, trw, executionTimeout)
 				if err != nil {
-					if errors.Is(err, context.DeadlineExceeded) {
-						log.Printf("[%s] hook execution timeout: %v", requestID, err)
-						// 注意：在流模式下，如果输出已经开始，WriteHeader 可能无效
-						// 但尝试设置状态码仍然是有意义的（如果还没有写入响应头）
+					// 如果还没有写入响应，可以设置错误状态码
+					if !trw.HasWritten() {
+						if errors.Is(err, context.DeadlineExceeded) {
+							log.Printf("[%s] hook execution timeout: %v", requestID, err)
+							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+							w.WriteHeader(http.StatusRequestTimeout)
+							fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
+						} else if errors.Is(err, context.Canceled) {
+							log.Printf("[%s] hook execution cancelled: %v", requestID, err)
+							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+							w.WriteHeader(http.StatusRequestTimeout)
+							fmt.Fprint(w, "Hook execution cancelled. Please check your logs for more details.")
+						} else {
+							log.Printf("[%s] error executing hook: %v", requestID, err)
+							w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+							w.WriteHeader(http.StatusInternalServerError)
+							fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
+						}
+					} else {
+						// 如果已经开始输出，只能记录错误，无法设置状态码
+						if errors.Is(err, context.DeadlineExceeded) {
+							log.Printf("[%s] hook execution timeout (output already started): %v", requestID, err)
+						} else if errors.Is(err, context.Canceled) {
+							log.Printf("[%s] hook execution cancelled (output already started): %v", requestID, err)
+						} else {
+							log.Printf("[%s] error executing hook (output already started): %v", requestID, err)
+						}
+						// 尝试刷新输出
 						if f, ok := w.(http.Flusher); ok {
 							f.Flush()
 						}
-					} else {
-						log.Printf("[%s] error executing hook: %v", requestID, err)
 					}
 				}
 			} else if matchedHook.CaptureCommandOutput {
