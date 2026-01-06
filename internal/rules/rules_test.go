@@ -17,6 +17,7 @@ func TestRemoveHooks(t *testing.T) {
 		"test1.json": {{ID: "hook1"}},
 		"test2.json": {{ID: "hook2"}},
 	}
+	rules.BuildIndex()
 
 	// Execute
 	rules.RemoveHooks("test1.json", false, false)
@@ -46,6 +47,7 @@ func TestMatchLoadedHook(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test1.json": {{ID: "hook1"}, {ID: "hook2"}},
 	}
+	rules.BuildIndex()
 
 	// Tests
 	tests := []struct {
@@ -230,6 +232,8 @@ func TestParseAndLoadHooks(t *testing.T) {
 
 	rules.HooksFiles = []string{hooksFile}
 	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	// 确保索引也是空的
+	rules.BuildIndex()
 
 	// Parse and load hooks
 	rules.ParseAndLoadHooks(false)

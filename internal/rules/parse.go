@@ -11,7 +11,16 @@ func ParseAndLoadHooks(isAsTemplate bool) {
 	hooksMutex.RLock()
 	hooksFilesCopy := make([]string, len(HooksFiles))
 	copy(hooksFilesCopy, HooksFiles)
+	// 检查索引是否需要重建（如果索引为空但数据存在，说明索引不同步）
+	needRebuildIndex := len(hooksIndex) == 0 && len(LoadedHooksFromFiles) > 0
 	hooksMutex.RUnlock()
+
+	// 如果需要，重建索引
+	if needRebuildIndex {
+		hooksMutex.Lock()
+		buildIndexLocked()
+		hooksMutex.Unlock()
+	}
 
 	// load and parse hooks
 	for _, hooksFilePath := range hooksFilesCopy {
@@ -35,6 +44,8 @@ func ParseAndLoadHooks(isAsTemplate bool) {
 			// 加写锁更新 LoadedHooksFromFiles
 			hooksMutex.Lock()
 			LoadedHooksFromFiles[hooksFilePath] = newHooks
+			// 更新索引
+			updateIndexForFileLocked(hooksFilePath, newHooks)
 			hooksMutex.Unlock()
 		}
 	}

@@ -214,6 +214,7 @@ func TestMakeSureCallable_WithSpace(t *testing.T) {
 func TestCreateHookHandler_HookNotFound(t *testing.T) {
 	// Setup
 	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -239,6 +240,7 @@ func TestCreateHookHandler_MethodNotAllowed(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -263,6 +265,7 @@ func TestCreateHookHandler_AppFlagsHttpMethods(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{
 		HttpMethods: "POST,PUT",
 	}
@@ -433,6 +436,7 @@ func TestCreateHookHandler_JSONContentType(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -459,6 +463,7 @@ func TestCreateHookHandler_XMLContentType(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -485,6 +490,7 @@ func TestCreateHookHandler_FormUrlEncodedContentType(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -511,6 +517,7 @@ func TestCreateHookHandler_UnsupportedContentType(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -538,6 +545,7 @@ func TestCreateHookHandler_WithTriggerRule(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -566,6 +574,7 @@ func TestCreateHookHandler_WithResponseHeaders(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -734,6 +743,7 @@ func TestCreateHookHandler_MultipartForm(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{
 		MaxMultipartMem: 1024 * 1024,
 	}
@@ -771,6 +781,7 @@ func TestCreateHookHandler_MultipartFormWithFile(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{
 		MaxMultipartMem: 1024 * 1024,
 	}
@@ -808,6 +819,7 @@ func TestCreateHookHandler_MultipartFormError(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{
 		MaxMultipartMem: 1, // Very small limit to force error
 	}
@@ -847,6 +859,7 @@ func TestCreateHookHandler_ReadBodyError(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -881,6 +894,7 @@ func TestCreateHookHandler_TriggerRuleError(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -920,6 +934,7 @@ func TestCreateHookHandler_StreamCommandOutputError(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -960,6 +975,7 @@ func TestCreateHookHandler_CaptureOutputOnError(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -996,6 +1012,7 @@ func TestCreateHookHandler_TriggerRuleMismatchHttpResponseCode(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
@@ -1025,6 +1042,7 @@ func TestCreateHookHandler_SuccessHttpResponseCode(t *testing.T) {
 	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
 		"test.json": {testHook},
 	}
+	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags)
