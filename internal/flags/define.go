@@ -129,6 +129,7 @@ type AppFlags struct {
 	PidPath            string
 
 	ShowVersion     bool
+	ValidateConfig  bool
 	HooksFiles      hook.HooksFiles
 	ResponseHeaders hook.ResponseHeaders
 

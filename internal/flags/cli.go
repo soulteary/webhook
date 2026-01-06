@@ -58,6 +58,7 @@ func ParseCLI(flags AppFlags) AppFlags {
 		MaxHeaderBytes           = flag.Int("max-header-bytes", DEFAULT_MAX_HEADER_BYTES, "maximum size in bytes for request headers (default 1MB)")
 
 		ShowVersion     = flag.Bool("version", false, "display webhook version and quit")
+		ValidateConfig  = flag.Bool("validate-config", false, "validate configuration and exit")
 		ResponseHeaders hook.ResponseHeaders
 	)
 
@@ -142,6 +143,10 @@ func ParseCLI(flags AppFlags) AppFlags {
 
 	if *ShowVersion {
 		flags.ShowVersion = true
+	}
+
+	if *ValidateConfig {
+		flags.ValidateConfig = true
 	}
 
 	if len(hooksFiles) > 0 {
