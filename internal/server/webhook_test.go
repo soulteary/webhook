@@ -59,7 +59,8 @@ func TestStaticParams(t *testing.T) {
 		ID:      "test",
 		Headers: spHeaders,
 	}
-	_, err = handleHook(context.Background(), spHook, r, nil)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	_, err = handleHook(context.Background(), spHook, r, nil, appFlags)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v\n", err)
 	}
@@ -148,7 +149,8 @@ func TestMakeSureCallable(t *testing.T) {
 		ID: "test-request",
 	}
 
-	cmdPath, err := makeSureCallable(h, r)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	cmdPath, err := makeSureCallable(h, r, appFlags)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
 }
@@ -175,7 +177,8 @@ func TestMakeSureCallable_RelativePath(t *testing.T) {
 		ID: "test-request",
 	}
 
-	cmdPath, err := makeSureCallable(h, r)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	cmdPath, err := makeSureCallable(h, r, appFlags)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
 }
@@ -202,7 +205,8 @@ func TestMakeSureCallable_WithSpace(t *testing.T) {
 		ID: "test-request",
 	}
 
-	cmdPath, err := makeSureCallable(h, r)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	cmdPath, err := makeSureCallable(h, r, appFlags)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
 }
@@ -309,7 +313,8 @@ func TestHandleHook_StreamOutput(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	_, err = handleHook(context.Background(), h, r, w)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	_, err = handleHook(context.Background(), h, r, w, appFlags)
 	assert.NoError(t, err)
 }
 
@@ -337,7 +342,8 @@ func TestHandleHook_CaptureOutput(t *testing.T) {
 		ID: "test-request",
 	}
 
-	output, err := handleHook(context.Background(), h, r, nil)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	output, err := handleHook(context.Background(), h, r, nil, appFlags)
 	assert.NoError(t, err)
 	assert.Contains(t, output, "test output")
 }
@@ -365,7 +371,8 @@ func TestHandleHook_Async(t *testing.T) {
 		ID: "test-request",
 	}
 
-	output, err := handleHook(context.Background(), h, r, nil)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	output, err := handleHook(context.Background(), h, r, nil, appFlags)
 	assert.NoError(t, err)
 	assert.Contains(t, output, "test output")
 }
@@ -596,8 +603,9 @@ func TestMakeSureCallable_PermissionDenied(t *testing.T) {
 		ID: "test-request",
 	}
 
-	// This should try to make it executable and retry
-	cmdPath, err := makeSureCallable(h, r)
+	// This should try to make it executable and retry (when AllowAutoChmod is enabled)
+	appFlags := flags.AppFlags{AllowAutoChmod: true}
+	cmdPath, err := makeSureCallable(h, r, appFlags)
 	// Should succeed after making it executable
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
@@ -617,7 +625,8 @@ func TestMakeSureCallable_CommandNotFound(t *testing.T) {
 		ID: "test-request",
 	}
 
-	cmdPath, err := makeSureCallable(h, r)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	cmdPath, err := makeSureCallable(h, r, appFlags)
 	// Should return error for nonexistent command
 	assert.Error(t, err)
 	assert.Empty(t, cmdPath)
@@ -645,7 +654,8 @@ func TestMakeSureCallable_CommandWithSpace(t *testing.T) {
 		ID: "test-request",
 	}
 
-	cmdPath, err := makeSureCallable(h, r)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	cmdPath, err := makeSureCallable(h, r, appFlags)
 	// Should handle command with space
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
@@ -676,7 +686,8 @@ func TestHandleHook_FileCreationError(t *testing.T) {
 	}
 
 	// Test with invalid working directory (should still work but may have file creation issues)
-	output, err := handleHook(context.Background(), h, r, nil)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	output, err := handleHook(context.Background(), h, r, nil, appFlags)
 	// Should handle file creation errors gracefully
 	assert.NoError(t, err)
 	assert.Contains(t, output, "test output")
@@ -706,7 +717,8 @@ func TestHandleHook_CommandError(t *testing.T) {
 		ID: "test-request",
 	}
 
-	output, err := handleHook(context.Background(), h, r, nil)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	output, err := handleHook(context.Background(), h, r, nil, appFlags)
 	// Should return error when command fails
 	assert.Error(t, err)
 	_ = output
@@ -1056,7 +1068,8 @@ func TestHandleHook_FileOperations(t *testing.T) {
 	}
 
 	// Test file creation and cleanup
-	output, err := handleHook(context.Background(), h, r, nil)
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	output, err := handleHook(context.Background(), h, r, nil, appFlags)
 	assert.NoError(t, err)
 	assert.Contains(t, output, "test output")
 }
@@ -1082,8 +1095,9 @@ func TestMakeSureCallable_ChmodError(t *testing.T) {
 		ID: "test-request",
 	}
 
-	// This should try to make it executable
-	cmdPath, err := makeSureCallable(h, r)
+	// This should try to make it executable (when AllowAutoChmod is enabled)
+	appFlags := flags.AppFlags{AllowAutoChmod: true}
+	cmdPath, err := makeSureCallable(h, r, appFlags)
 	// Should succeed after making it executable
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)

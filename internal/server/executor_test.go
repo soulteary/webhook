@@ -65,9 +65,14 @@ func TestNewHookExecutor_DefaultValues(t *testing.T) {
 		},
 	}
 
+	// Mock executor function for testing
+	mockExecutorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+		return "", nil
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			executor := NewHookExecutor(tt.maxConcurrent, tt.defaultTimeout)
+			executor := NewHookExecutorWithFunc(tt.maxConcurrent, tt.defaultTimeout, mockExecutorFunc)
 			assert.Equal(t, tt.expectedMax, executor.GetMaxConcurrent())
 			assert.Equal(t, tt.expectedTimeout, executor.GetDefaultTimeout())
 		})
@@ -76,7 +81,6 @@ func TestNewHookExecutor_DefaultValues(t *testing.T) {
 
 func TestHookExecutor_Execute_ConcurrencyControl(t *testing.T) {
 	maxConcurrent := 2
-	executor := NewHookExecutor(maxConcurrent, 5*time.Second)
 
 	// Mock executor function that simulates work
 	var mu sync.Mutex
@@ -101,7 +105,7 @@ func TestHookExecutor_Execute_ConcurrencyControl(t *testing.T) {
 		return "done", nil
 	}
 
-	executor.executorFunc = mockExecutorFunc
+	executor := NewHookExecutorWithFunc(maxConcurrent, 5*time.Second, mockExecutorFunc)
 
 	// Launch more goroutines than maxConcurrent
 	numGoroutines := 5
@@ -130,8 +134,6 @@ func TestHookExecutor_Execute_ConcurrencyControl(t *testing.T) {
 }
 
 func TestHookExecutor_Execute_ExecutionTimeout(t *testing.T) {
-	executor := NewHookExecutor(1, 100*time.Millisecond)
-
 	// Mock executor function that takes longer than timeout
 	mockExecutorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
 		// Wait for context to be cancelled
@@ -139,7 +141,7 @@ func TestHookExecutor_Execute_ExecutionTimeout(t *testing.T) {
 		return "", ctx.Err()
 	}
 
-	executor.executorFunc = mockExecutorFunc
+	executor := NewHookExecutorWithFunc(1, 100*time.Millisecond, mockExecutorFunc)
 
 	ctx := context.Background()
 	h := &hook.Hook{ID: "test"}
@@ -154,9 +156,6 @@ func TestHookExecutor_Execute_ExecutionTimeout(t *testing.T) {
 }
 
 func TestHookExecutor_Execute_AcquisitionTimeout(t *testing.T) {
-	// Create executor with maxConcurrent = 1
-	executor := NewHookExecutor(1, 5*time.Second)
-
 	// Mock executor function that blocks
 	mockExecutorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
 		// Block until context is cancelled
@@ -164,7 +163,8 @@ func TestHookExecutor_Execute_AcquisitionTimeout(t *testing.T) {
 		return "", ctx.Err()
 	}
 
-	executor.executorFunc = mockExecutorFunc
+	// Create executor with maxConcurrent = 1
+	executor := NewHookExecutorWithFunc(1, 5*time.Second, mockExecutorFunc)
 
 	ctx := context.Background()
 	h := &hook.Hook{ID: "test"}
@@ -189,15 +189,13 @@ func TestHookExecutor_Execute_AcquisitionTimeout(t *testing.T) {
 }
 
 func TestHookExecutor_Execute_ContextCancellation(t *testing.T) {
-	executor := NewHookExecutor(1, 5*time.Second)
-
 	// Mock executor function that respects context
 	mockExecutorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
 		<-ctx.Done()
 		return "", ctx.Err()
 	}
 
-	executor.executorFunc = mockExecutorFunc
+	executor := NewHookExecutorWithFunc(1, 5*time.Second, mockExecutorFunc)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	h := &hook.Hook{ID: "test"}
@@ -218,14 +216,12 @@ func TestHookExecutor_Execute_ContextCancellation(t *testing.T) {
 }
 
 func TestHookExecutor_Execute_Success(t *testing.T) {
-	executor := NewHookExecutor(1, 5*time.Second)
-
 	expectedOutput := "test output"
 	mockExecutorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
 		return expectedOutput, nil
 	}
 
-	executor.executorFunc = mockExecutorFunc
+	executor := NewHookExecutorWithFunc(1, 5*time.Second, mockExecutorFunc)
 
 	ctx := context.Background()
 	h := &hook.Hook{ID: "test"}
@@ -238,15 +234,13 @@ func TestHookExecutor_Execute_Success(t *testing.T) {
 }
 
 func TestHookExecutor_Execute_WithResponseWriter(t *testing.T) {
-	executor := NewHookExecutor(1, 5*time.Second)
-
 	var receivedWriter http.ResponseWriter
 	mockExecutorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
 		receivedWriter = w
 		return "done", nil
 	}
 
-	executor.executorFunc = mockExecutorFunc
+	executor := NewHookExecutorWithFunc(1, 5*time.Second, mockExecutorFunc)
 
 	ctx := context.Background()
 	h := &hook.Hook{ID: "test"}
@@ -262,8 +256,6 @@ func TestHookExecutor_Execute_WithResponseWriter(t *testing.T) {
 
 func TestHookExecutor_Execute_MultipleConcurrent(t *testing.T) {
 	maxConcurrent := 3
-	executor := NewHookExecutor(maxConcurrent, 5*time.Second)
-
 	var wg sync.WaitGroup
 	numExecutions := 10
 	successCount := 0
@@ -274,7 +266,7 @@ func TestHookExecutor_Execute_MultipleConcurrent(t *testing.T) {
 		return "success", nil
 	}
 
-	executor.executorFunc = mockExecutorFunc
+	executor := NewHookExecutorWithFunc(maxConcurrent, 5*time.Second, mockExecutorFunc)
 
 	for i := 0; i < numExecutions; i++ {
 		wg.Add(1)
@@ -299,13 +291,19 @@ func TestHookExecutor_Execute_MultipleConcurrent(t *testing.T) {
 }
 
 func TestHookExecutor_GetMaxConcurrent(t *testing.T) {
-	executor := NewHookExecutor(5, 10*time.Second)
+	mockExecutorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+		return "", nil
+	}
+	executor := NewHookExecutorWithFunc(5, 10*time.Second, mockExecutorFunc)
 	assert.Equal(t, 5, executor.GetMaxConcurrent())
 }
 
 func TestHookExecutor_GetDefaultTimeout(t *testing.T) {
 	timeout := 15 * time.Second
-	executor := NewHookExecutor(1, timeout)
+	mockExecutorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+		return "", nil
+	}
+	executor := NewHookExecutorWithFunc(1, timeout, mockExecutorFunc)
 	assert.Equal(t, timeout, executor.GetDefaultTimeout())
 }
 

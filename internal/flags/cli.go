@@ -32,6 +32,7 @@ func ParseCLI(flags AppFlags) AppFlags {
 		HookTimeoutSeconds   = flag.Int("hook-timeout-seconds", DEFAULT_HOOK_TIMEOUT_SECONDS, "default timeout in seconds for hook execution (default 30)")
 		MaxConcurrentHooks   = flag.Int("max-concurrent-hooks", DEFAULT_MAX_CONCURRENT_HOOKS, "maximum number of concurrent hook executions (default 10)")
 		HookExecutionTimeout = flag.Int("hook-execution-timeout", DEFAULT_HOOK_EXECUTION_TIMEOUT, "timeout in seconds for acquiring execution slot when max concurrent hooks reached (default 5)")
+		AllowAutoChmod       = flag.Bool("allow-auto-chmod", DEFAULT_ALLOW_AUTO_CHMOD, "allow automatically modifying file permissions when permission denied (SECURITY RISK: default false)")
 
 		ShowVersion     = flag.Bool("version", false, "display webhook version and quit")
 		ResponseHeaders hook.ResponseHeaders
@@ -138,6 +139,10 @@ func ParseCLI(flags AppFlags) AppFlags {
 
 	if *HookExecutionTimeout != DEFAULT_HOOK_EXECUTION_TIMEOUT {
 		flags.HookExecutionTimeout = *HookExecutionTimeout
+	}
+
+	if *AllowAutoChmod != DEFAULT_ALLOW_AUTO_CHMOD {
+		flags.AllowAutoChmod = *AllowAutoChmod
 	}
 
 	return flags

@@ -29,6 +29,8 @@ const (
 	DEFAULT_HOOK_TIMEOUT_SECONDS   = 30
 	DEFAULT_MAX_CONCURRENT_HOOKS   = 10
 	DEFAULT_HOOK_EXECUTION_TIMEOUT = 5
+
+	DEFAULT_ALLOW_AUTO_CHMOD = false
 )
 
 const (
@@ -58,6 +60,7 @@ const (
 	ENV_KEY_HOOK_TIMEOUT_SECONDS   = "HOOK_TIMEOUT_SECONDS"
 	ENV_KEY_MAX_CONCURRENT_HOOKS   = "MAX_CONCURRENT_HOOKS"
 	ENV_KEY_HOOK_EXECUTION_TIMEOUT = "HOOK_EXECUTION_TIMEOUT"
+	ENV_KEY_ALLOW_AUTO_CHMOD       = "ALLOW_AUTO_CHMOD"
 )
 
 type AppFlags struct {
@@ -88,4 +91,5 @@ type AppFlags struct {
 	HookTimeoutSeconds   int
 	MaxConcurrentHooks   int
 	HookExecutionTimeout int
+	AllowAutoChmod       bool
 }

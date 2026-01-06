@@ -26,20 +26,10 @@ type HookExecutor struct {
 	executorFunc   func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error)
 }
 
-// NewHookExecutor 创建新的 HookExecutor 实例
+// NewHookExecutor 已废弃，请使用 NewHookExecutorWithFunc
+// 此函数会 panic，因为现在 handleHook 需要 appFlags 参数
 func NewHookExecutor(maxConcurrent int, defaultTimeout time.Duration) *HookExecutor {
-	if maxConcurrent <= 0 {
-		maxConcurrent = DefaultMaxConcurrentHooks
-	}
-	if defaultTimeout <= 0 {
-		defaultTimeout = DefaultHookTimeout
-	}
-	return &HookExecutor{
-		sem:            make(chan struct{}, maxConcurrent),
-		maxConcurrent:  maxConcurrent,
-		defaultTimeout: defaultTimeout,
-		executorFunc:   handleHook,
-	}
+	panic("NewHookExecutor is deprecated. Use NewHookExecutorWithFunc instead, passing a function that wraps handleHook with appFlags")
 }
 
 // NewHookExecutorWithFunc 创建新的 HookExecutor 实例，允许自定义执行函数（主要用于测试）

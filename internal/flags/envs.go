@@ -35,6 +35,7 @@ func ParseEnvs() AppFlags {
 	flags.HookTimeoutSeconds = fn.GetEnvInt(ENV_KEY_HOOK_TIMEOUT_SECONDS, DEFAULT_HOOK_TIMEOUT_SECONDS)
 	flags.MaxConcurrentHooks = fn.GetEnvInt(ENV_KEY_MAX_CONCURRENT_HOOKS, DEFAULT_MAX_CONCURRENT_HOOKS)
 	flags.HookExecutionTimeout = fn.GetEnvInt(ENV_KEY_HOOK_EXECUTION_TIMEOUT, DEFAULT_HOOK_EXECUTION_TIMEOUT)
+	flags.AllowAutoChmod = fn.GetEnvBool(ENV_KEY_ALLOW_AUTO_CHMOD, DEFAULT_ALLOW_AUTO_CHMOD)
 
 	hooks := strings.Split(fn.GetEnvStr(ENV_KEY_HOOKS, ""), ",")
 	var hooksFiles hook.HooksFiles
