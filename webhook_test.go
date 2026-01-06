@@ -21,6 +21,11 @@ import (
 )
 
 func TestWebhook(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// Skip tests that require Unix-specific features on Windows
+		// Some tests will be skipped individually
+	}
+
 	hookecho, cleanupHookecho := buildHookecho(t)
 	defer cleanupHookecho()
 
@@ -33,8 +38,36 @@ func TestWebhook(t *testing.T) {
 
 		for _, tt := range hookHandlerTests {
 			t.Run(tt.desc+"@"+hookTmpl, func(t *testing.T) {
+				// Special handling for static-params-name-space test
+				var testConfigPath string
+				var testCleanupFn func()
+				if tt.id == "static-params-name-space" {
+					if runtime.GOOS == "windows" {
+						t.Skip("Skipping on Windows")
+					}
+					// Create a temporary script with space in filename
+					// Use hookecho to ensure output and verify argument passing
+					tempDir := t.TempDir()
+					scriptPath := filepath.Join(tempDir, "with space")
+					// Create a wrapper script that calls hookecho with arguments
+					scriptContent := fmt.Sprintf("#!/bin/sh\n%s \"$@\"\n", hookecho)
+					if err := os.WriteFile(scriptPath, []byte(scriptContent), 0o755); err != nil {
+						t.Fatalf("Failed to create script: %v", err)
+					}
+
+					// Generate config with the script path
+					extraData := map[string]string{
+						"ScriptWithSpace": scriptPath,
+						"TempDir":         tempDir,
+					}
+					testConfigPath, testCleanupFn = genConfigWithData(t, hookecho, hookTmpl, extraData)
+					defer testCleanupFn()
+				} else {
+					testConfigPath = configPath
+				}
+
 				ip, port := serverAddress(t)
-				args := []string{fmt.Sprintf("-hooks=%s", configPath), fmt.Sprintf("-ip=%s", ip), fmt.Sprintf("-port=%s", port), "-debug"}
+				args := []string{fmt.Sprintf("-hooks=%s", testConfigPath), fmt.Sprintf("-ip=%s", ip), fmt.Sprintf("-port=%s", port), "-debug"}
 
 				if len(tt.cliMethods) != 0 {
 					args = append(args, "-http-methods="+strings.Join(tt.cliMethods, ","))
@@ -142,6 +175,10 @@ func buildHookecho(t *testing.T) (binPath string, cleanupFn func()) {
 }
 
 func genConfig(t *testing.T, bin, hookTemplate string) (configPath string, cleanupFn func()) {
+	return genConfigWithData(t, bin, hookTemplate, nil)
+}
+
+func genConfigWithData(t *testing.T, bin, hookTemplate string, extraData map[string]string) (configPath string, cleanupFn func()) {
 	tmpl := template.Must(template.ParseFiles(hookTemplate))
 
 	tmp, err := os.MkdirTemp("", "webhook-config-")
@@ -163,11 +200,28 @@ func genConfig(t *testing.T, bin, hookTemplate string) (configPath string, clean
 	}
 	defer file.Close()
 
-	data := struct{ Hookecho string }{filepath.FromSlash(bin)}
+	data := struct {
+		Hookecho        string
+		ScriptWithSpace string
+		TempDir         string
+	}{
+		Hookecho: filepath.FromSlash(bin),
+	}
 	if runtime.GOOS == "windows" {
 		// Simulate escaped backslashes on Windows.
 		data.Hookecho = strings.Replace(data.Hookecho, `\`, `\\`, -1)
 	}
+
+	// Add extra data if provided
+	if extraData != nil {
+		if scriptPath, ok := extraData["ScriptWithSpace"]; ok {
+			data.ScriptWithSpace = scriptPath
+		}
+		if tempDir, ok := extraData["TempDir"]; ok {
+			data.TempDir = tempDir
+		}
+	}
+
 	if err := tmpl.Execute(file, data); err != nil {
 		t.Fatalf("Executing template: %v", err)
 	}
@@ -1114,6 +1168,7 @@ env: HOOK_head_commit.timestamp=2013-03-12T08:14:29-07:00
 	{"static params should pass", "static-params-ok", nil, "POST", nil, "application/json", `{}`, false, http.StatusOK, "arg: passed\n", `(?s)command output: arg: passed`},
 	{"command with space logs warning", "warn-on-space", nil, "POST", nil, "application/json", `{}`, false, http.StatusInternalServerError, "Error occurred while executing the hook's command. Please check your logs for more details.", `(?s)error in exec:.*use 'pass[-]arguments[-]to[-]command' to specify args`},
 	{"unsupported content type error", "github", nil, "POST", map[string]string{"Content-Type": "nonexistent/format"}, "application/json", `{}`, false, http.StatusBadRequest, `Hook rules were not satisfied.`, `(?s)error parsing body payload due to unsupported content type header:`},
+	{"static params with space in filename", "static-params-name-space", nil, "POST", nil, "application/json", `{}`, false, http.StatusOK, "arg: passed\n", `(?s)command output: .*static-params-name-space`},
 }
 
 // buffer provides a concurrency-safe bytes.Buffer to tests above.

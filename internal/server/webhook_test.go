@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -17,74 +16,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
-	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestStaticParams(t *testing.T) {
-	// FIXME(moorereason): incorporate this test into TestWebhook.
-	//   Need to be able to execute a binary with a space in the filename.
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping on Windows")
-	}
-
-	spHeaders := make(map[string]interface{})
-	spHeaders["User-Agent"] = "curl/7.54.0"
-	spHeaders["Accept"] = "*/*"
-
-	// case 2: binary with spaces in its name
-	d1 := []byte("#!/bin/sh\n/bin/echo\n")
-	err := os.WriteFile("/tmp/with space", d1, 0o755)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer os.Remove("/tmp/with space")
-
-	spHook := &hook.Hook{
-		ID:                      "static-params-name-space",
-		ExecuteCommand:          "/tmp/with space",
-		CommandWorkingDirectory: "/tmp",
-		ResponseMessage:         "success",
-		CaptureCommandOutput:    true,
-		PassArgumentsToCommand: []hook.Argument{
-			{Source: "string", Name: "passed"},
-		},
-	}
-
-	b := &bytes.Buffer{}
-	// 初始化日志系统，将输出重定向到 buffer（用于测试）
-	// verbose=true, debug=true 以确保所有日志级别都被输出
-	err = logger.InitWithWriter(b, true, true, false)
-	if err != nil {
-		t.Fatalf("Failed to initialize logger: %v", err)
-	}
-	// 验证 logger 已正确初始化
-	if logger.DefaultLogger == nil {
-		t.Fatalf("Logger was not initialized")
-	}
-	defer func() {
-		// 测试结束后恢复默认日志配置
-		logger.Init(true, true, "", false)
-	}()
-
-	r := &hook.Request{
-		ID:      "test",
-		Headers: spHeaders,
-	}
-	appFlags := flags.AppFlags{AllowAutoChmod: false}
-	_, err = handleHook(context.Background(), spHook, r, nil, appFlags)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v\n", err)
-	}
-
-	// 获取 buffer 内容
-	logOutput := b.String()
-	matched, _ := regexp.MatchString("(?s)command output: .*static-params-name-space", logOutput)
-	if !matched {
-		t.Fatalf("Unexpected log output:\n%q\nBuffer length: %d\n", logOutput, b.Len())
-	}
-}
 
 func TestWriteHttpResponseCode(t *testing.T) {
 	tests := []struct {
