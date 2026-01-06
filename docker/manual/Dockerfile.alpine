@@ -1,17 +1,26 @@
-FROM golang:1.23-alpine3.19 as builder
+FROM golang:1.25-alpine3.23 as builder
 RUN apk --update add ca-certificates upx
 ENV GOPROXY=https://goproxy.cn
 ENV CGO_ENABLED=0
 WORKDIR /app
-COPY . .
+# 先复制依赖文件以利用构建缓存
+COPY go.mod go.sum ./
 RUN go mod download -x
+# 再复制源代码
+COPY . .
 RUN go build -ldflags "-w -s" -o webhook .
 RUN upx -9 -o webhook.minify webhook && \
     chmod +x webhook.minify
 
-FROM alpine:3.19
+FROM alpine:3.23
 LABEL maintainer "soulteary <soulteary@gmail.com>"
+# 安装 CA 证书
+RUN apk --no-cache add ca-certificates
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY webhook.minify /usr/bin/webhook
+# 修复：从 builder stage 复制文件
+COPY --from=builder /app/webhook.minify /usr/bin/webhook
+# 创建非 root 用户
+RUN addgroup -S webhook && adduser -S -G webhook webhook
+USER webhook
 EXPOSE 9000/tcp
-CMD webhook
+CMD ["webhook"]
