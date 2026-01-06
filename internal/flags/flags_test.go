@@ -104,8 +104,16 @@ func TestParseEnvs(t *testing.T) {
 }
 
 func TestParseCLI(t *testing.T) {
-	// Reset flag.CommandLine to avoid conflicts
-	flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
+	// Save original os.Args
+	originalArgs := os.Args
+	defer func() {
+		os.Args = originalArgs
+		// Reset flag.CommandLine to allow it to be reinitialized
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	}()
+
+	// Set minimal args to avoid parsing command line arguments
+	os.Args = []string{"test"}
 
 	// Test with default values
 	flags := AppFlags{
@@ -136,8 +144,16 @@ func TestParseCLI(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	// This test is tricky because Parse() calls flag.Parse() which expects command line args
-	// We'll test it with minimal setup
-	flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
+	// Save original os.Args
+	originalArgs := os.Args
+	defer func() {
+		os.Args = originalArgs
+		// Reset flag.CommandLine to allow it to be reinitialized
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	}()
+
+	// Set minimal args to avoid parsing command line arguments
+	os.Args = []string{"test"}
 
 	// Test that Parse doesn't panic
 	flags := Parse()

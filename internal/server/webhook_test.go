@@ -233,7 +233,7 @@ func TestCreateHookHandler_HookNotFound(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("GET", "/hooks/test-hook", nil)
 	w := httptest.NewRecorder()
@@ -259,7 +259,7 @@ func TestCreateHookHandler_MethodNotAllowed(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("GET", "/hooks/test-hook", nil)
 	w := httptest.NewRecorder()
@@ -286,7 +286,7 @@ func TestCreateHookHandler_AppFlagsHttpMethods(t *testing.T) {
 		HttpMethods: "POST,PUT",
 	}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	// Test with allowed method
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
@@ -455,7 +455,7 @@ func TestCreateHookHandler_JSONContentType(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{"key":"value"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -482,7 +482,7 @@ func TestCreateHookHandler_XMLContentType(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`<root><key>value</key></root>`))
 	req.Header.Set("Content-Type", "application/xml")
@@ -509,7 +509,7 @@ func TestCreateHookHandler_FormUrlEncodedContentType(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`key=value`))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -536,7 +536,7 @@ func TestCreateHookHandler_UnsupportedContentType(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`some data`))
 	req.Header.Set("Content-Type", "text/plain")
@@ -564,7 +564,7 @@ func TestCreateHookHandler_WithTriggerRule(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
 	w := httptest.NewRecorder()
@@ -593,7 +593,7 @@ func TestCreateHookHandler_WithResponseHeaders(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
 	w := httptest.NewRecorder()
@@ -764,7 +764,7 @@ func TestCreateHookHandler_MultipartForm(t *testing.T) {
 		MaxMultipartMem: 1024 * 1024,
 	}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	// Create multipart form data
 	body := &bytes.Buffer{}
@@ -802,7 +802,7 @@ func TestCreateHookHandler_MultipartFormWithFile(t *testing.T) {
 		MaxMultipartMem: 1024 * 1024,
 	}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	// Create multipart form with JSON file
 	body := &bytes.Buffer{}
@@ -840,7 +840,7 @@ func TestCreateHookHandler_MultipartFormError(t *testing.T) {
 		MaxMultipartMem: 1, // Very small limit to force error
 	}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	// Create multipart form data that exceeds limit
 	body := &bytes.Buffer{}
@@ -878,7 +878,7 @@ func TestCreateHookHandler_ReadBodyError(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	// Create a request with a body that will cause read error
 	req := httptest.NewRequest("POST", "/hooks/test-hook", &errorReader{})
@@ -913,7 +913,7 @@ func TestCreateHookHandler_TriggerRuleError(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -953,7 +953,7 @@ func TestCreateHookHandler_StreamCommandOutputError(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -994,7 +994,7 @@ func TestCreateHookHandler_CaptureOutputOnError(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -1031,7 +1031,7 @@ func TestCreateHookHandler_TriggerRuleMismatchHttpResponseCode(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -1061,7 +1061,7 @@ func TestCreateHookHandler_SuccessHttpResponseCode(t *testing.T) {
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{}
 
-	handler := createHookHandler(appFlags)
+	handler := createHookHandler(appFlags, nil)
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{}`))
 	req.Header.Set("Content-Type", "application/json")

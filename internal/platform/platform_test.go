@@ -167,7 +167,7 @@ func TestSignalHandler(t *testing.T) {
 	var testPidFile *pidfile.PIDFile
 
 	// Start the signal handler in a goroutine
-	go handler.watchForSignals(signals, reloadFn, testPidFile)
+	go handler.watchForSignals(signals, reloadFn, nil, testPidFile)
 	time.Sleep(50 * time.Millisecond)
 
 	// Test SIGHUP
@@ -343,7 +343,7 @@ func TestWatchForSignals_WithPidFile_RemoveError(t *testing.T) {
 	signals := make(chan os.Signal, 1)
 
 	// Start the signal handler in a goroutine
-	go handler.watchForSignals(signals, reloadFn, testPidFile)
+	go handler.watchForSignals(signals, reloadFn, nil, testPidFile)
 	time.Sleep(50 * time.Millisecond)
 
 	// Test SIGTERM (should trigger exit even if pidFile.Remove() fails)
@@ -386,7 +386,7 @@ func TestWatchForSignals_WithPidFile_Success(t *testing.T) {
 	signals := make(chan os.Signal, 1)
 
 	// Start the signal handler in a goroutine
-	go handler.watchForSignals(signals, reloadFn, testPidFile)
+	go handler.watchForSignals(signals, reloadFn, nil, testPidFile)
 	time.Sleep(50 * time.Millisecond)
 
 	// Test SIGTERM (should trigger exit and successfully remove pidFile)
@@ -422,7 +422,7 @@ func TestWatchForSignals_WithNilPidFile(t *testing.T) {
 	var testPidFile *pidfile.PIDFile // nil
 
 	// Start the signal handler in a goroutine
-	go handler.watchForSignals(signals, reloadFn, testPidFile)
+	go handler.watchForSignals(signals, reloadFn, nil, testPidFile)
 	time.Sleep(50 * time.Millisecond)
 
 	// Test SIGTERM (should trigger exit even if pidFile is nil)

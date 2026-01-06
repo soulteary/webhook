@@ -27,6 +27,11 @@ import (
 // asyncHookWaitGroup 跟踪所有异步执行的 hook goroutine，用于防止 goroutine 泄漏
 var asyncHookWaitGroup sync.WaitGroup
 
+// GetAsyncHookWaitGroup 返回异步 hook 的 WaitGroup，用于优雅关闭
+func GetAsyncHookWaitGroup() *sync.WaitGroup {
+	return &asyncHookWaitGroup
+}
+
 type flushWriter struct {
 	f http.Flusher
 	w io.Writer
@@ -411,7 +416,7 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 	fmt.Fprint(w, matchedHook.ResponseMessage)
 }
 
-func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *http.Request) {
+func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.ResponseWriter, r *http.Request) {
 	// 从配置中获取超时和并发设置，如果未配置则使用默认值
 	maxConcurrent := appFlags.MaxConcurrentHooks
 	if maxConcurrent <= 0 {
@@ -436,6 +441,16 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 	executor := NewHookExecutorWithFunc(maxConcurrent, hookTimeout, executorFunc)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		// 检查服务器是否正在关闭，如果是则拒绝新请求
+		if srv != nil && srv.IsShuttingDown() {
+			requestID := middleware.GetReqID(r.Context())
+			logger.Warnf("[%s] server is shutting down, rejecting new request", requestID)
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprint(w, "Server is shutting down. Please try again later.")
+			return
+		}
+
 		requestID := middleware.GetReqID(r.Context())
 		req := &hook.Request{
 			ID:         requestID,

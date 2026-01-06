@@ -1,10 +1,12 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -15,7 +17,16 @@ import (
 	"github.com/soulteary/webhook/internal/middleware"
 )
 
-func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) {
+// Server 管理 HTTP 服务器和优雅关闭
+type Server struct {
+	server   *http.Server
+	listener net.Listener
+	mu       sync.Mutex
+	shutdown bool
+}
+
+// Launch 启动 HTTP 服务器并返回 Server 实例
+func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	r := mux.NewRouter()
 
 	r.Use(middleware.RequestID(
@@ -40,9 +51,6 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) {
 		fmt.Fprint(w, "OK")
 	})
 
-	hookHandler := createHookHandler(appFlags)
-	r.HandleFunc(hooksURL, hookHandler)
-
 	// Create common HTTP server settings
 	svr := &http.Server{
 		Addr:              addr,
@@ -51,7 +59,67 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) {
 		ReadTimeout:       5 * time.Second,
 	}
 
-	// Serve HTTP
-	logger.Infof("serving hooks on http://%s%s", addr, link.MakeHumanPattern(&appFlags.HooksURLPrefix))
-	logger.Error(fmt.Sprintf("%v", svr.Serve(ln)))
+	s := &Server{
+		server:   svr,
+		listener: ln,
+	}
+
+	hookHandler := createHookHandler(appFlags, s)
+	r.HandleFunc(hooksURL, hookHandler)
+
+	// Serve HTTP in a goroutine
+	go func() {
+		logger.Infof("serving hooks on http://%s%s", addr, link.MakeHumanPattern(&appFlags.HooksURLPrefix))
+		if err := svr.Serve(ln); err != nil && err != http.ErrServerClosed {
+			logger.Error(fmt.Sprintf("server error: %v", err))
+		}
+	}()
+
+	return s
+}
+
+// Shutdown 优雅关闭服务器
+// 1. 停止接受新请求
+// 2. 等待正在执行的 hook 完成
+// 3. 设置最大等待时间
+func (s *Server) Shutdown(ctx context.Context) error {
+	s.mu.Lock()
+	if s.shutdown {
+		s.mu.Unlock()
+		return nil
+	}
+	s.shutdown = true
+	s.mu.Unlock()
+
+	// 停止接受新请求
+	s.server.SetKeepAlivesEnabled(false)
+
+	// 等待正在执行的 hook 完成
+	done := make(chan error, 1)
+	go func() {
+		// 等待所有异步执行的 hook goroutine 完成
+		GetAsyncHookWaitGroup().Wait()
+		// 关闭 HTTP 服务器
+		done <- s.server.Shutdown(ctx)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			logger.Errorf("error during server shutdown: %v", err)
+		} else {
+			logger.Info("server shutdown completed gracefully")
+		}
+		return err
+	case <-ctx.Done():
+		logger.Warnf("server shutdown timeout: %v", ctx.Err())
+		return ctx.Err()
+	}
+}
+
+// IsShuttingDown 检查服务器是否正在关闭
+func (s *Server) IsShuttingDown() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.shutdown
 }

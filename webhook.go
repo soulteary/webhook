@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/i18n"
@@ -18,8 +20,9 @@ import (
 )
 
 var (
-	signals chan os.Signal
-	pidFile *pidfile.PIDFile
+	signals    chan os.Signal
+	pidFile    *pidfile.PIDFile
+	httpServer *server.Server
 )
 
 //go:embed locales/*.toml
@@ -136,13 +139,6 @@ func main() {
 
 	logger.Info(i18n.Sprintf(i18n.MSG_SERVER_IS_STARTING, version.Version))
 
-	// set os signal watcher
-	if appFlags.AsTemplate {
-		signals = platform.SetupSignals(signals, rules.ReloadAllHooksAsTemplate, pidFile)
-	} else {
-		signals = platform.SetupSignals(signals, rules.ReloadAllHooksNotAsTemplate, pidFile)
-	}
-
 	// load and parse hooks
 	rules.ParseAndLoadHooks(appFlags.AsTemplate)
 
@@ -154,5 +150,28 @@ func main() {
 		monitor.ApplyWatcher(appFlags)
 	}
 
-	server.Launch(appFlags, addr, *ln)
+	// 启动服务器
+	httpServer = server.Launch(appFlags, addr, *ln)
+
+	// 设置优雅关闭回调
+	shutdownFn := func() {
+		if httpServer != nil {
+			// 设置最大等待时间为 30 秒
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := httpServer.Shutdown(ctx); err != nil {
+				logger.Errorf("error during graceful shutdown: %v", err)
+			}
+		}
+	}
+
+	// set os signal watcher with shutdown callback
+	if appFlags.AsTemplate {
+		signals = platform.SetupSignalsWithShutdown(signals, rules.ReloadAllHooksAsTemplate, shutdownFn, pidFile, nil)
+	} else {
+		signals = platform.SetupSignalsWithShutdown(signals, rules.ReloadAllHooksNotAsTemplate, shutdownFn, pidFile, nil)
+	}
+
+	// 等待服务器关闭
+	select {}
 }
