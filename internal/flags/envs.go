@@ -45,6 +45,11 @@ func ParseEnvs() AppFlags {
 	flags.MaxArgsCount = fn.GetEnvInt(ENV_KEY_MAX_ARGS_COUNT, DEFAULT_MAX_ARGS_COUNT)
 	flags.StrictMode = fn.GetEnvBool(ENV_KEY_STRICT_MODE, DEFAULT_STRICT_MODE)
 
+	// Rate limiting settings
+	flags.RateLimitEnabled = fn.GetEnvBool(ENV_KEY_RATE_LIMIT_ENABLED, DEFAULT_RATE_LIMIT_ENABLED)
+	flags.RateLimitRPS = fn.GetEnvInt(ENV_KEY_RATE_LIMIT_RPS, DEFAULT_RATE_LIMIT_RPS)
+	flags.RateLimitBurst = fn.GetEnvInt(ENV_KEY_RATE_LIMIT_BURST, DEFAULT_RATE_LIMIT_BURST)
+
 	hooks := strings.Split(fn.GetEnvStr(ENV_KEY_HOOKS, ""), ",")
 	var hooksFiles hook.HooksFiles
 	for _, hook := range hooks {

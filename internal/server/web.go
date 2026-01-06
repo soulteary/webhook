@@ -36,6 +36,17 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	r.Use(middleware.NewLogger())
 	r.Use(chimiddleware.Recoverer)
 
+	// 添加限流中间件（如果启用）
+	if appFlags.RateLimitEnabled {
+		rateLimitConfig := middleware.RateLimitConfig{
+			Enabled: appFlags.RateLimitEnabled,
+			RPS:     appFlags.RateLimitRPS,
+			Burst:   appFlags.RateLimitBurst,
+		}
+		r.Use(middleware.NewRateLimitMiddleware(rateLimitConfig))
+		logger.Infof("rate limiting enabled: %d RPS, burst: %d", appFlags.RateLimitRPS, appFlags.RateLimitBurst)
+	}
+
 	if appFlags.Debug {
 		r.Use(middleware.Dumper(logger.Writer()))
 	}

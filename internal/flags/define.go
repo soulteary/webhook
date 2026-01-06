@@ -39,6 +39,11 @@ const (
 	DEFAULT_MAX_TOTAL_ARGS_LENGTH = 10 * 1024 * 1024 // 10MB
 	DEFAULT_MAX_ARGS_COUNT        = 1000
 	DEFAULT_STRICT_MODE           = false
+
+	// Rate limiting defaults
+	DEFAULT_RATE_LIMIT_ENABLED = false
+	DEFAULT_RATE_LIMIT_RPS     = 100 // requests per second
+	DEFAULT_RATE_LIMIT_BURST   = 10  // burst size
 )
 
 const (
@@ -77,6 +82,11 @@ const (
 	ENV_KEY_MAX_TOTAL_ARGS_LENGTH = "MAX_TOTAL_ARGS_LENGTH"
 	ENV_KEY_MAX_ARGS_COUNT        = "MAX_ARGS_COUNT"
 	ENV_KEY_STRICT_MODE           = "STRICT_MODE"
+
+	// Rate limiting environment keys
+	ENV_KEY_RATE_LIMIT_ENABLED = "RATE_LIMIT_ENABLED"
+	ENV_KEY_RATE_LIMIT_RPS     = "RATE_LIMIT_RPS"
+	ENV_KEY_RATE_LIMIT_BURST   = "RATE_LIMIT_BURST"
 )
 
 type AppFlags struct {
@@ -116,4 +126,9 @@ type AppFlags struct {
 	MaxTotalArgsLength  int    // 所有参数总长度限制
 	MaxArgsCount        int    // 最大参数数量
 	StrictMode          bool   // 严格模式：禁止危险字符
+
+	// Rate limiting settings
+	RateLimitEnabled bool // 是否启用限流
+	RateLimitRPS     int  // 每秒请求数限制
+	RateLimitBurst   int  // 突发请求数限制
 }

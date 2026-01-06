@@ -42,6 +42,11 @@ func ParseCLI(flags AppFlags) AppFlags {
 		MaxArgsCount        = flag.Int("max-args-count", DEFAULT_MAX_ARGS_COUNT, "maximum number of command arguments (default 1000)")
 		StrictMode          = flag.Bool("strict-mode", DEFAULT_STRICT_MODE, "strict mode: reject arguments containing potentially dangerous characters (default false)")
 
+		// Rate limiting flags
+		RateLimitEnabled = flag.Bool("rate-limit-enabled", DEFAULT_RATE_LIMIT_ENABLED, "enable rate limiting (default false)")
+		RateLimitRPS     = flag.Int("rate-limit-rps", DEFAULT_RATE_LIMIT_RPS, "rate limit requests per second (default 100)")
+		RateLimitBurst   = flag.Int("rate-limit-burst", DEFAULT_RATE_LIMIT_BURST, "rate limit burst size (default 10)")
+
 		ShowVersion     = flag.Bool("version", false, "display webhook version and quit")
 		ResponseHeaders hook.ResponseHeaders
 	)
@@ -180,6 +185,17 @@ func ParseCLI(flags AppFlags) AppFlags {
 	}
 	if *StrictMode != DEFAULT_STRICT_MODE {
 		flags.StrictMode = *StrictMode
+	}
+
+	// Rate limiting settings
+	if *RateLimitEnabled != DEFAULT_RATE_LIMIT_ENABLED {
+		flags.RateLimitEnabled = *RateLimitEnabled
+	}
+	if *RateLimitRPS != DEFAULT_RATE_LIMIT_RPS {
+		flags.RateLimitRPS = *RateLimitRPS
+	}
+	if *RateLimitBurst != DEFAULT_RATE_LIMIT_BURST {
+		flags.RateLimitBurst = *RateLimitBurst
 	}
 
 	return flags
