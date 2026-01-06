@@ -87,11 +87,10 @@ func (trw *trackingResponseWriter) Flush() {
 // 优先级：hook 的 HTTPMethods > appFlags.HttpMethods > 默认允许所有方法
 func isMethodAllowed(method string, h *hook.Hook, appFlags flags.AppFlags) bool {
 	// 如果 hook 配置了允许的方法，优先使用 hook 的配置
+	// HTTP 方法已在配置加载时清理和验证，直接比较即可
 	if len(h.HTTPMethods) != 0 {
 		for i := range h.HTTPMethods {
-			// TODO(moorereason): refactor config loading and reloading to
-			// sanitize these methods once at load time.
-			if method == strings.ToUpper(strings.TrimSpace(h.HTTPMethods[i])) {
+			if method == h.HTTPMethods[i] {
 				return true
 			}
 		}
@@ -195,17 +194,23 @@ func handleMultipartForm(w http.ResponseWriter, r *http.Request, req *hook.Reque
 	}
 
 	for k, v := range r.MultipartForm.Value {
-		logger.Debugf("[%s] found multipart form value %q", requestID, k)
+		logger.Debugf("[%s] found multipart form value %q with %d value(s)", requestID, k, len(v))
 
 		if req.Payload == nil {
 			req.Payload = make(map[string]interface{})
 		}
 
-		// TODO(moorereason): support duplicate, named values
-		req.Payload[k] = v[0]
+		// 支持重复字段名：如果有多个值，存储为数组；如果只有一个值，直接存储字符串
+		if len(v) > 1 {
+			req.Payload[k] = v
+		} else {
+			req.Payload[k] = v[0]
+		}
 	}
 
 	for k, v := range r.MultipartForm.File {
+		logger.Debugf("[%s] found multipart form file %q with %d file(s)", requestID, k, len(v))
+
 		// Force parsing as JSON regardless of Content-Type.
 		var parseAsJSON bool
 		for _, j := range matchedHook.JSONStringParameters {
@@ -215,47 +220,62 @@ func handleMultipartForm(w http.ResponseWriter, r *http.Request, req *hook.Reque
 			}
 		}
 
-		// TODO(moorereason): we need to support multiple parts
-		// with the same name instead of just processing the first
-		// one. Will need #215 resolved first.
+		// 支持多个同名文件部分
+		var parts []interface{}
+		for i, fileHeader := range v {
+			// 检查 Content-Type 头（MIME encoding 可能包含重复的 headers）
+			if !parseAsJSON && len(fileHeader.Header["Content-Type"]) > 0 {
+				for _, contentType := range fileHeader.Header["Content-Type"] {
+					if contentType == "application/json" {
+						parseAsJSON = true
+						break
+					}
+				}
+			}
 
-		// MIME encoding can contain duplicate headers, so check them
-		// all.
-		if !parseAsJSON && len(v[0].Header["Content-Type"]) > 0 {
-			for _, j := range v[0].Header["Content-Type"] {
-				if j == "application/json" {
-					parseAsJSON = true
-					break
+			if parseAsJSON {
+				logger.Debugf("[%s] parsing multipart form file %q[%d] as JSON", requestID, k, i)
+
+				f, err := fileHeader.Open()
+				if err != nil {
+					logger.Warnf("[%s] error opening multipart form file %q[%d] for hook %s: %v", requestID, k, i, hookID, err)
+					// 继续处理其他文件，不中断整个流程
+					continue
+				}
+
+				decoder := json.NewDecoder(f)
+				decoder.UseNumber()
+
+				var part map[string]interface{}
+				err = decoder.Decode(&part)
+				f.Close() // 立即关闭文件句柄
+
+				if err != nil {
+					logger.Warnf("[%s] error parsing JSON payload file %q[%d] for hook %s: %v", requestID, k, i, hookID, err)
+					// 跳过这个文件，不添加到 payload，避免使用无效数据
+					continue
+				}
+
+				// 如果有多个文件，收集到数组中；如果只有一个文件，直接存储
+				if len(v) > 1 {
+					parts = append(parts, part)
+				} else {
+					if req.Payload == nil {
+						req.Payload = make(map[string]interface{})
+					}
+					req.Payload[k] = part
 				}
 			}
 		}
 
-		if parseAsJSON {
-			logger.Debugf("[%s] parsing multipart form file %q as JSON", requestID, k)
-
-			f, err := v[0].Open()
-			if err != nil {
-				HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
-					"Error occurred while parsing multipart form file.", err), requestID, hookID)
-				return err
-			}
-			defer f.Close()
-
-			decoder := json.NewDecoder(f)
-			decoder.UseNumber()
-
-			var part map[string]interface{}
-			err = decoder.Decode(&part)
-			if err != nil {
-				logger.Warnf("[%s] error parsing JSON payload file %q for hook %s: %v", requestID, k, hookID, err)
-				// 跳过这个文件，不添加到 payload，避免使用无效数据
-				continue
-			}
-
+		// 如果有多个 JSON 文件部分，将它们存储为数组
+		if len(parts) > 0 {
 			if req.Payload == nil {
 				req.Payload = make(map[string]interface{})
 			}
-			req.Payload[k] = part
+			if len(v) > 1 {
+				req.Payload[k] = parts
+			}
 		}
 	}
 

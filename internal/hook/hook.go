@@ -812,7 +812,64 @@ func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
 		file = buf.Bytes()
 	}
 
-	return yaml.Unmarshal(file, h)
+	err := yaml.Unmarshal(file, h)
+	if err != nil {
+		return err
+	}
+
+	// 清理和验证所有 hook 的 HTTP 方法
+	for i := range *h {
+		(*h)[i].SanitizeHTTPMethods()
+	}
+
+	return nil
+}
+
+// SanitizeHTTPMethods 清理和验证 HTTP 方法，移除空白字符并转换为大写
+// 同时移除重复的方法和无效的方法
+func (h *Hook) SanitizeHTTPMethods() {
+	if len(h.HTTPMethods) == 0 {
+		return
+	}
+
+	// 有效的 HTTP 方法列表
+	validMethods := map[string]bool{
+		"GET":     true,
+		"POST":    true,
+		"PUT":     true,
+		"PATCH":   true,
+		"DELETE":  true,
+		"HEAD":    true,
+		"OPTIONS": true,
+		"CONNECT": true,
+		"TRACE":   true,
+	}
+
+	// 使用 map 去重并清理
+	seen := make(map[string]bool)
+	sanitized := make([]string, 0, len(h.HTTPMethods))
+
+	for _, method := range h.HTTPMethods {
+		// 清理：去除空白字符并转换为大写
+		cleaned := strings.ToUpper(strings.TrimSpace(method))
+		if cleaned == "" {
+			continue
+		}
+
+		// 验证方法是否有效
+		if !validMethods[cleaned] {
+			logger.Warnf("invalid HTTP method '%s' for hook %s, ignoring", method, h.ID)
+			continue
+		}
+
+		// 去重
+		if !seen[cleaned] {
+			seen[cleaned] = true
+			sanitized = append(sanitized, cleaned)
+		}
+	}
+
+	h.HTTPMethods = sanitized
 }
 
 // Append appends hooks unless the new hooks contain a hook with an ID that already exists
