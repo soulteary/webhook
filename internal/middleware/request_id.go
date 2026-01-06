@@ -39,10 +39,10 @@ func RequestID(options ...RequestIDOption) func(http.Handler) http.Handler {
 			}
 
 			ctx = context.WithValue(ctx, RequestIDKey, id)
-			
+
 			// 将请求 ID 添加到响应头，支持追踪上下文传播
 			w.Header().Set("X-Request-Id", id)
-			
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
