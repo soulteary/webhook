@@ -19,6 +19,7 @@ import (
 	"github.com/soulteary/webhook/internal/fn"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/logger"
+	"github.com/soulteary/webhook/internal/metrics"
 	"github.com/soulteary/webhook/internal/middleware"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/soulteary/webhook/internal/security"
@@ -43,6 +44,17 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 		fw.f.Flush()
 	}
 	return
+}
+
+// statusCodeResponseWriter 用于捕获 HTTP 响应状态码
+type statusCodeResponseWriter struct {
+	http.ResponseWriter
+	statusCode *int
+}
+
+func (scrw *statusCodeResponseWriter) WriteHeader(code int) {
+	*scrw.statusCode = code
+	scrw.ResponseWriter.WriteHeader(code)
 }
 
 // trackingResponseWriter 用于跟踪是否已经写入响应，以便在错误时设置状态码
@@ -329,21 +341,41 @@ func executeHookWithResponse(w http.ResponseWriter, r *http.Request, matchedHook
 		executionTimeout = HookExecutionTimeout
 	}
 
+	// 记录并发 hook 开始
+	metrics.IncrementConcurrentHooks(hookID)
+	startTime := time.Now()
+
+	// 使用 defer 确保在函数返回时记录指标
+	defer func() {
+		metrics.DecrementConcurrentHooks(hookID)
+	}()
+
 	if matchedHook.StreamCommandOutput {
-		executeStreamingHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID)
+		executeStreamingHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID, startTime)
 	} else if matchedHook.CaptureCommandOutput {
-		executeCapturingHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID)
+		executeCapturingHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID, startTime)
 	} else {
-		executeAsyncHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID)
+		executeAsyncHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID, startTime)
 	}
 }
 
 // executeStreamingHook 执行流式输出的 hook
-func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string) {
+func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string, startTime time.Time) {
 	// 使用 trackingResponseWriter 来跟踪是否已经写入响应
 	trw := &trackingResponseWriter{ResponseWriter: w}
 	_, err := executor.Execute(ctx, matchedHook, req, trw, executionTimeout)
+	duration := time.Since(startTime)
+	
 	if err != nil {
+		// 记录失败的 hook 执行
+		status := "error"
+		if errors.Is(err, context.DeadlineExceeded) {
+			status = "timeout"
+		} else if errors.Is(err, context.Canceled) {
+			status = "cancelled"
+		}
+		metrics.RecordHookExecution(hookID, status, duration)
+		
 		// 如果还没有写入响应，可以设置错误状态码
 		if !trw.HasWritten() {
 			// 为了保持向后兼容性，使用特定的错误消息
@@ -372,14 +404,27 @@ func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 				f.Flush()
 			}
 		}
+	} else {
+		// 记录成功的 hook 执行
+		metrics.RecordHookExecution(hookID, "success", duration)
 	}
 }
 
 // executeCapturingHook 执行捕获输出的 hook
-func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string) {
+func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string, startTime time.Time) {
 	response, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
+	duration := time.Since(startTime)
 
 	if err != nil {
+		// 记录失败的 hook 执行
+		status := "error"
+		if errors.Is(err, context.DeadlineExceeded) {
+			status = "timeout"
+		} else if errors.Is(err, context.Canceled) {
+			status = "cancelled"
+		}
+		metrics.RecordHookExecution(hookID, status, duration)
+		
 		// 如果配置了在错误时捕获输出，则返回输出内容
 		if matchedHook.CaptureCommandOutputOnError {
 			// 记录错误但不使用 ClassifyError，保持原有的日志格式
@@ -401,6 +446,9 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 			fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
 		}
 	} else {
+		// 记录成功的 hook 执行
+		metrics.RecordHookExecution(hookID, "success", duration)
+		
 		// Check if a success return code is configured for the hook
 		if matchedHook.SuccessHttpResponseCode != 0 {
 			writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
@@ -410,21 +458,31 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 }
 
 // executeAsyncHook 执行异步 hook
-func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string) {
+func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string, startTime time.Time) {
 	// 异步执行，但仍需要并发控制和超时
 	// 使用 WaitGroup 跟踪 goroutine，防止泄漏
 	asyncHookWaitGroup.Add(1)
 	go func() {
 		defer asyncHookWaitGroup.Done()
 		_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
+		duration := time.Since(startTime)
+		
 		if err != nil {
+			// 记录失败的 hook 执行
+			status := "error"
 			if errors.Is(err, context.DeadlineExceeded) {
+				status = "timeout"
 				logger.Errorf("[%s] async hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
 			} else if errors.Is(err, context.Canceled) {
+				status = "cancelled"
 				logger.Warnf("[%s] async hook %s execution cancelled due to request context (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 			} else {
 				logger.Errorf("[%s] error executing async hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 			}
+			metrics.RecordHookExecution(hookID, status, duration)
+		} else {
+			// 记录成功的 hook 执行
+			metrics.RecordHookExecution(hookID, "success", duration)
 		}
 	}()
 
@@ -461,12 +519,34 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 	executor := NewHookExecutorWithFunc(maxConcurrent, hookTimeout, executorFunc)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		// 记录请求开始时间
+		startTime := time.Now()
+		
+		// 创建一个包装的 ResponseWriter 来捕获状态码
+		statusCode := http.StatusOK
+		wrappedWriter := &statusCodeResponseWriter{
+			ResponseWriter: w,
+			statusCode:     &statusCode,
+		}
+		
+		// 使用 defer 确保在函数返回时记录 HTTP 请求指标
+		defer func() {
+			duration := time.Since(startTime)
+			path := r.URL.Path
+			// 简化路径，移除 hook ID 以保持指标一致性
+			if strings.Contains(path, "/hooks/") {
+				path = "/hooks/{id}"
+			}
+			metrics.RecordHTTPRequest(r.Method, fmt.Sprintf("%d", statusCode), path, duration)
+		}()
+
 		// 检查服务器是否正在关闭，如果是则拒绝新请求
 		if srv != nil && srv.IsShuttingDown() {
 			requestID := middleware.GetReqID(r.Context())
 			logger.Warnf("[%s] server is shutting down, rejecting new request", requestID)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusServiceUnavailable)
+			statusCode = http.StatusServiceUnavailable
+			wrappedWriter.WriteHeader(statusCode)
 			fmt.Fprint(w, "Server is shutting down. Please try again later.")
 			return
 		}
@@ -484,7 +564,9 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 
 		matchedHook := rules.MatchLoadedHook(hookID)
 		if matchedHook == nil {
-			HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusNotFound, "Hook not found.", nil), requestID, hookID)
+			err := NewHTTPError(ErrorTypeClient, http.StatusNotFound, "Hook not found.", nil)
+			statusCode = err.Status
+			HandleErrorPlain(wrappedWriter, err, requestID, hookID)
 			return
 		}
 
@@ -492,47 +574,49 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 		if !isMethodAllowed(r.Method, matchedHook, appFlags) {
 			err := NewHTTPError(ErrorTypeClient, http.StatusMethodNotAllowed,
 				fmt.Sprintf("HTTP %s method not allowed for hook %q", r.Method, hookID), nil)
-			HandleErrorPlain(w, err, requestID, hookID)
+			statusCode = err.Status
+			HandleErrorPlain(wrappedWriter, err, requestID, hookID)
 			return
 		}
 
 		logger.Infof("[%s] %s got matched", requestID, hookID)
 
-		setResponseHeaders(w, appFlags.ResponseHeaders)
+		setResponseHeaders(wrappedWriter, appFlags.ResponseHeaders)
 
 		// 解析请求体
-		err := parseRequestBody(w, r, req, matchedHook, appFlags, requestID, hookID)
+		err := parseRequestBody(wrappedWriter, r, req, matchedHook, appFlags, requestID, hookID)
 		if err != nil {
-			// parseRequestBody 已经处理了错误响应
+			// parseRequestBody 已经处理了错误响应，statusCode 已通过 statusCodeResponseWriter 设置
 			return
 		}
 
 		// 评估触发规则
-		ok, err := evaluateTriggerRules(w, matchedHook, req, requestID, hookID)
+		ok, err := evaluateTriggerRules(wrappedWriter, matchedHook, req, requestID, hookID)
 		if err != nil {
-			// evaluateTriggerRules 已经处理了错误响应
+			// evaluateTriggerRules 已经处理了错误响应，statusCode 已通过 statusCodeResponseWriter 设置
 			return
 		}
 
 		if ok {
 			logger.Infof("[%s] %s hook triggered successfully", requestID, matchedHook.ID)
 
-			setResponseHeaders(w, matchedHook.ResponseHeaders)
+			setResponseHeaders(wrappedWriter, matchedHook.ResponseHeaders)
 
 			// 执行 hook 并处理响应
-			executeHookWithResponse(w, r, matchedHook, req, executor, appFlags, requestID, hookID)
+			executeHookWithResponse(wrappedWriter, r, matchedHook, req, executor, appFlags, requestID, hookID)
 			return
 		}
 
 		// Check if a return code is configured for the hook
 		if matchedHook.TriggerRuleMismatchHttpResponseCode != 0 {
-			writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.TriggerRuleMismatchHttpResponseCode)
+			statusCode = matchedHook.TriggerRuleMismatchHttpResponseCode
+			writeHttpResponseCode(wrappedWriter, requestID, matchedHook.ID, matchedHook.TriggerRuleMismatchHttpResponseCode)
 		}
 
 		// if none of the hooks got triggered
 		logger.Debugf("[%s] %s got matched, but didn't get triggered because the trigger rules were not satisfied", requestID, matchedHook.ID)
 
-		fmt.Fprint(w, "Hook rules were not satisfied.")
+		fmt.Fprint(wrappedWriter, "Hook rules were not satisfied.")
 	}
 }
 

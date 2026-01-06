@@ -14,7 +14,9 @@ import (
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/link"
 	"github.com/soulteary/webhook/internal/logger"
+	"github.com/soulteary/webhook/internal/metrics"
 	"github.com/soulteary/webhook/internal/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Server 管理 HTTP 服务器和优雅关闭
@@ -59,9 +61,31 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 
 	hooksURL := link.MakeRoutePattern(&appFlags.HooksURLPrefix)
 
-	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		setResponseHeaders(w, appFlags.ResponseHeaders)
+	// 健康检查端点
+	r.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
+		startTime := time.Now()
+		defer func() {
+			duration := time.Since(startTime)
+			metrics.RecordHTTPRequest(req.Method, "200", "/health", duration)
+		}()
+		
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"status":"ok"}`)
+	})
 
+	// Prometheus metrics 端点
+	r.Handle("/metrics", promhttp.Handler())
+
+	// 根路径
+	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		startTime := time.Now()
+		defer func() {
+			duration := time.Since(startTime)
+			metrics.RecordHTTPRequest(req.Method, "200", "/", duration)
+		}()
+		
+		setResponseHeaders(w, appFlags.ResponseHeaders)
 		fmt.Fprint(w, "OK")
 	})
 
@@ -81,9 +105,14 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	hookHandler := createHookHandler(appFlags, s)
 	r.HandleFunc(hooksURL, hookHandler)
 
+	// 启动系统指标收集器（每 10 秒更新一次）
+	metrics.StartSystemMetricsCollector(10 * time.Second)
+
 	// Serve HTTP in a goroutine
 	go func() {
 		logger.Infof("serving hooks on http://%s%s", addr, link.MakeHumanPattern(&appFlags.HooksURLPrefix))
+		logger.Infof("health check endpoint: http://%s/health", addr)
+		logger.Infof("metrics endpoint: http://%s/metrics", addr)
 		if err := svr.Serve(ln); err != nil && err != http.ErrServerClosed {
 			logger.Error(fmt.Sprintf("server error: %v", err))
 		}
