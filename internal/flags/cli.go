@@ -9,22 +9,23 @@ import (
 
 func ParseCLI(flags AppFlags) AppFlags {
 	var (
-		Host            = flag.String("ip", DEFAULT_HOST, "ip the webhook should serve hooks on")
-		Port            = flag.Int("port", DEFAULT_PORT, "port the webhook should serve hooks on")
-		Verbose         = flag.Bool("verbose", DEFAULT_ENABLE_VERBOSE, "show verbose output")
-		LogPath         = flag.String("logfile", DEFAULT_LOG_PATH, "send log output to a file; implicitly enables verbose logging")
-		Debug           = flag.Bool("debug", DEFAULT_ENABLE_DEBUG, "show debug output")
-		NoPanic         = flag.Bool("nopanic", DEFAULT_ENABLE_NO_PANIC, "do not panic if hooks cannot be loaded when webhook is not running in verbose mode")
-		HotReload       = flag.Bool("hotreload", DEFAULT_ENABLE_HOT_RELOAD, "watch hooks file for changes and reload them automatically")
-		HooksURLPrefix  = flag.String("urlprefix", DEFAULT_URL_PREFIX, "url prefix to use for served hooks (protocol://yourserver:port/PREFIX/:hook-id)")
-		AsTemplate      = flag.Bool("template", DEFAULT_ENABLE_PARSE_TEMPLATE, "parse hooks file as a Go template")
-		UseXRequestID   = flag.Bool("x-request-id", DEFAULT_ENABLE_X_REQUEST_ID, "use X-Request-Id header, if present, as request ID")
-		XRequestIDLimit = flag.Int("x-request-id-limit", DEFAULT_X_REQUEST_ID_LIMIT, "truncate X-Request-Id header to limit; default no limit")
-		MaxMultipartMem = flag.Int64("max-multipart-mem", DEFAULT_MAX_MPART_MEM, "maximum memory in bytes for parsing multipart form data before disk caching")
-		SetGID          = flag.Int("setgid", DEFAULT_GID, "set group ID after opening listening port; must be used with setuid")
-		SetUID          = flag.Int("setuid", DEFAULT_UID, "set user ID after opening listening port; must be used with setgid")
-		HttpMethods     = flag.String("http-methods", DEFAULT_HTTP_METHODS, `set default allowed HTTP methods (ie. "POST"); separate methods with comma`)
-		PidPath         = flag.String("pidfile", DEFAULT_PID_FILE, "create PID file at the given path")
+		Host               = flag.String("ip", DEFAULT_HOST, "ip the webhook should serve hooks on")
+		Port               = flag.Int("port", DEFAULT_PORT, "port the webhook should serve hooks on")
+		Verbose            = flag.Bool("verbose", DEFAULT_ENABLE_VERBOSE, "show verbose output")
+		LogPath            = flag.String("logfile", DEFAULT_LOG_PATH, "send log output to a file; implicitly enables verbose logging")
+		Debug              = flag.Bool("debug", DEFAULT_ENABLE_DEBUG, "show debug output")
+		NoPanic            = flag.Bool("nopanic", DEFAULT_ENABLE_NO_PANIC, "do not panic if hooks cannot be loaded when webhook is not running in verbose mode")
+		HotReload          = flag.Bool("hotreload", DEFAULT_ENABLE_HOT_RELOAD, "watch hooks file for changes and reload them automatically")
+		HooksURLPrefix     = flag.String("urlprefix", DEFAULT_URL_PREFIX, "url prefix to use for served hooks (protocol://yourserver:port/PREFIX/:hook-id)")
+		AsTemplate         = flag.Bool("template", DEFAULT_ENABLE_PARSE_TEMPLATE, "parse hooks file as a Go template")
+		UseXRequestID      = flag.Bool("x-request-id", DEFAULT_ENABLE_X_REQUEST_ID, "use X-Request-Id header, if present, as request ID")
+		XRequestIDLimit    = flag.Int("x-request-id-limit", DEFAULT_X_REQUEST_ID_LIMIT, "truncate X-Request-Id header to limit; default no limit")
+		MaxMultipartMem    = flag.Int64("max-multipart-mem", DEFAULT_MAX_MPART_MEM, "maximum memory in bytes for parsing multipart form data before disk caching")
+		MaxRequestBodySize = flag.Int64("max-request-body-size", DEFAULT_MAX_REQUEST_BODY_SIZE, "maximum size in bytes for request body (default 10MB)")
+		SetGID             = flag.Int("setgid", DEFAULT_GID, "set group ID after opening listening port; must be used with setuid")
+		SetUID             = flag.Int("setuid", DEFAULT_UID, "set user ID after opening listening port; must be used with setgid")
+		HttpMethods        = flag.String("http-methods", DEFAULT_HTTP_METHODS, `set default allowed HTTP methods (ie. "POST"); separate methods with comma`)
+		PidPath            = flag.String("pidfile", DEFAULT_PID_FILE, "create PID file at the given path")
 
 		Lang    = flag.String("lang", DEFAULT_LANG, "set the language code for the webhook")
 		I18nDir = flag.String("lang-dir", DEFAULT_I18N_DIR, "set the directory for the i18n files")
@@ -102,6 +103,10 @@ func ParseCLI(flags AppFlags) AppFlags {
 
 	if *MaxMultipartMem != DEFAULT_MAX_MPART_MEM {
 		flags.MaxMultipartMem = *MaxMultipartMem
+	}
+
+	if *MaxRequestBodySize != DEFAULT_MAX_REQUEST_BODY_SIZE {
+		flags.MaxRequestBodySize = *MaxRequestBodySize
 	}
 
 	if *SetGID != DEFAULT_GID {

@@ -22,6 +22,7 @@ func ParseEnvs() AppFlags {
 	flags.UseXRequestID = fn.GetEnvBool(ENV_KEY_X_REQUEST_ID, DEFAULT_ENABLE_X_REQUEST_ID)
 	flags.XRequestIDLimit = fn.GetEnvInt(ENV_KEY_X_REQUEST_ID, DEFAULT_X_REQUEST_ID_LIMIT)
 	flags.MaxMultipartMem = int64(fn.GetEnvInt(ENV_KEY_MAX_MPART_MEM, DEFAULT_MAX_MPART_MEM))
+	flags.MaxRequestBodySize = int64(fn.GetEnvInt(ENV_KEY_MAX_REQUEST_BODY_SIZE, DEFAULT_MAX_REQUEST_BODY_SIZE))
 	flags.SetGID = fn.GetEnvInt(ENV_KEY_GID, DEFAULT_GID)
 	flags.SetUID = fn.GetEnvInt(ENV_KEY_UID, DEFAULT_UID)
 	flags.HttpMethods = fn.GetEnvStr(ENV_KEY_HTTP_METHODS, DEFAULT_HTTP_METHODS)
