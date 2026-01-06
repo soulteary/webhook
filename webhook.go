@@ -35,6 +35,30 @@ func NeedEchoVersionInfo(appFlags flags.AppFlags) {
 	}
 }
 
+func NeedValidateConfig(appFlags flags.AppFlags) {
+	if appFlags.ValidateConfig {
+		// 加锁检查和更新 HooksFiles（与 main 函数中的逻辑一致）
+		rules.LockHooksFiles()
+		if len(rules.HooksFiles) == 0 {
+			rules.HooksFiles = append(rules.HooksFiles, "hooks.json")
+		}
+		rules.UnlockHooksFiles()
+
+		// 验证配置
+		validationResult := flags.Validate(appFlags)
+		if validationResult.HasErrors() {
+			fmt.Fprintf(os.Stderr, "%s\n", i18n.Sprintf(i18n.MSG_CONFIG_VALIDATION_FAILED, len(validationResult.Errors)))
+			for _, err := range validationResult.Errors {
+				fmt.Fprintf(os.Stderr, "  - %s\n", err.Error())
+			}
+			os.Exit(1)
+		}
+
+		fmt.Println(i18n.Sprintf(i18n.MSG_CONFIG_VALIDATION_PASSED))
+		os.Exit(0)
+	}
+}
+
 func CheckPrivilegesParamsCorrect(appFlags flags.AppFlags) {
 	if (appFlags.SetUID != 0 || appFlags.SetGID != 0) && (appFlags.SetUID == 0 || appFlags.SetGID == 0) {
 		i18n.Println(i18n.MSG_SETUID_OR_SETGID_ERROR)
@@ -79,6 +103,8 @@ func main() {
 
 	// check if we need to echo version info and quit app
 	NeedEchoVersionInfo(appFlags)
+	// check if we need to validate config and quit app
+	NeedValidateConfig(appFlags)
 	// check if the privileges params are correct, or exit(1)
 	CheckPrivilegesParamsCorrect(appFlags)
 
@@ -92,6 +118,16 @@ func main() {
 		rules.HooksFiles = append(rules.HooksFiles, "hooks.json")
 	}
 	rules.UnlockHooksFiles()
+
+	// 验证配置
+	validationResult := flags.Validate(appFlags)
+	if validationResult.HasErrors() {
+		fmt.Fprintf(os.Stderr, "%s\n", i18n.Sprintf(i18n.MSG_CONFIG_VALIDATION_FAILED, len(validationResult.Errors)))
+		for _, err := range validationResult.Errors {
+			fmt.Fprintf(os.Stderr, "  - %s\n", err.Error())
+		}
+		os.Exit(1)
+	}
 
 	// logQueue is a queue for log messages encountered during startup. We need
 	// to queue the messages so that we can handle any privilege dropping and
