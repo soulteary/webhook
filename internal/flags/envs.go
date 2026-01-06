@@ -53,6 +53,13 @@ func ParseEnvs() AppFlags {
 	// Logging settings
 	flags.LogRequestBody = fn.GetEnvBool(ENV_KEY_LOG_REQUEST_BODY, DEFAULT_LOG_REQUEST_BODY)
 
+	// HTTP server timeout settings
+	flags.ReadHeaderTimeoutSeconds = fn.GetEnvInt(ENV_KEY_READ_HEADER_TIMEOUT_SECONDS, DEFAULT_READ_HEADER_TIMEOUT_SECONDS)
+	flags.ReadTimeoutSeconds = fn.GetEnvInt(ENV_KEY_READ_TIMEOUT_SECONDS, DEFAULT_READ_TIMEOUT_SECONDS)
+	flags.WriteTimeoutSeconds = fn.GetEnvInt(ENV_KEY_WRITE_TIMEOUT_SECONDS, DEFAULT_WRITE_TIMEOUT_SECONDS)
+	flags.IdleTimeoutSeconds = fn.GetEnvInt(ENV_KEY_IDLE_TIMEOUT_SECONDS, DEFAULT_IDLE_TIMEOUT_SECONDS)
+	flags.MaxHeaderBytes = fn.GetEnvInt(ENV_KEY_MAX_HEADER_BYTES, DEFAULT_MAX_HEADER_BYTES)
+
 	hooks := strings.Split(fn.GetEnvStr(ENV_KEY_HOOKS, ""), ",")
 	var hooksFiles hook.HooksFiles
 	for _, hook := range hooks {

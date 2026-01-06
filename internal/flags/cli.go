@@ -50,6 +50,13 @@ func ParseCLI(flags AppFlags) AppFlags {
 		// Logging flags
 		LogRequestBody = flag.Bool("log-request-body", DEFAULT_LOG_REQUEST_BODY, "log request body in debug mode (default false, SECURITY: may expose sensitive data)")
 
+		// HTTP server timeout flags
+		ReadHeaderTimeoutSeconds = flag.Int("read-header-timeout-seconds", DEFAULT_READ_HEADER_TIMEOUT_SECONDS, "timeout in seconds for reading request headers (default 5)")
+		ReadTimeoutSeconds       = flag.Int("read-timeout-seconds", DEFAULT_READ_TIMEOUT_SECONDS, "timeout in seconds for reading request body (default 10)")
+		WriteTimeoutSeconds      = flag.Int("write-timeout-seconds", DEFAULT_WRITE_TIMEOUT_SECONDS, "timeout in seconds for writing response (default 30)")
+		IdleTimeoutSeconds       = flag.Int("idle-timeout-seconds", DEFAULT_IDLE_TIMEOUT_SECONDS, "timeout in seconds for idle connections (default 90)")
+		MaxHeaderBytes           = flag.Int("max-header-bytes", DEFAULT_MAX_HEADER_BYTES, "maximum size in bytes for request headers (default 1MB)")
+
 		ShowVersion     = flag.Bool("version", false, "display webhook version and quit")
 		ResponseHeaders hook.ResponseHeaders
 	)
@@ -204,6 +211,23 @@ func ParseCLI(flags AppFlags) AppFlags {
 	// Logging settings
 	if *LogRequestBody != DEFAULT_LOG_REQUEST_BODY {
 		flags.LogRequestBody = *LogRequestBody
+	}
+
+	// HTTP server timeout settings
+	if *ReadHeaderTimeoutSeconds != DEFAULT_READ_HEADER_TIMEOUT_SECONDS {
+		flags.ReadHeaderTimeoutSeconds = *ReadHeaderTimeoutSeconds
+	}
+	if *ReadTimeoutSeconds != DEFAULT_READ_TIMEOUT_SECONDS {
+		flags.ReadTimeoutSeconds = *ReadTimeoutSeconds
+	}
+	if *WriteTimeoutSeconds != DEFAULT_WRITE_TIMEOUT_SECONDS {
+		flags.WriteTimeoutSeconds = *WriteTimeoutSeconds
+	}
+	if *IdleTimeoutSeconds != DEFAULT_IDLE_TIMEOUT_SECONDS {
+		flags.IdleTimeoutSeconds = *IdleTimeoutSeconds
+	}
+	if *MaxHeaderBytes != DEFAULT_MAX_HEADER_BYTES {
+		flags.MaxHeaderBytes = *MaxHeaderBytes
 	}
 
 	return flags
