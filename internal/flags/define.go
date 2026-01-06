@@ -31,6 +31,13 @@ const (
 	DEFAULT_HOOK_EXECUTION_TIMEOUT = 5
 
 	DEFAULT_ALLOW_AUTO_CHMOD = false
+
+	// Security defaults
+	DEFAULT_ALLOWED_COMMAND_PATHS = ""
+	DEFAULT_MAX_ARG_LENGTH        = 1024 * 1024      // 1MB
+	DEFAULT_MAX_TOTAL_ARGS_LENGTH = 10 * 1024 * 1024 // 10MB
+	DEFAULT_MAX_ARGS_COUNT        = 1000
+	DEFAULT_STRICT_MODE           = false
 )
 
 const (
@@ -61,6 +68,13 @@ const (
 	ENV_KEY_MAX_CONCURRENT_HOOKS   = "MAX_CONCURRENT_HOOKS"
 	ENV_KEY_HOOK_EXECUTION_TIMEOUT = "HOOK_EXECUTION_TIMEOUT"
 	ENV_KEY_ALLOW_AUTO_CHMOD       = "ALLOW_AUTO_CHMOD"
+
+	// Security environment keys
+	ENV_KEY_ALLOWED_COMMAND_PATHS = "ALLOWED_COMMAND_PATHS"
+	ENV_KEY_MAX_ARG_LENGTH        = "MAX_ARG_LENGTH"
+	ENV_KEY_MAX_TOTAL_ARGS_LENGTH = "MAX_TOTAL_ARGS_LENGTH"
+	ENV_KEY_MAX_ARGS_COUNT        = "MAX_ARGS_COUNT"
+	ENV_KEY_STRICT_MODE           = "STRICT_MODE"
 )
 
 type AppFlags struct {
@@ -92,4 +106,11 @@ type AppFlags struct {
 	MaxConcurrentHooks   int
 	HookExecutionTimeout int
 	AllowAutoChmod       bool
+
+	// Security settings
+	AllowedCommandPaths string // 逗号分隔的允许的命令路径列表
+	MaxArgLength        int    // 单个参数最大长度
+	MaxTotalArgsLength  int    // 所有参数总长度限制
+	MaxArgsCount        int    // 最大参数数量
+	StrictMode          bool   // 严格模式：禁止危险字符
 }

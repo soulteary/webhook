@@ -20,6 +20,7 @@ import (
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/middleware"
 	"github.com/soulteary/webhook/internal/rules"
+	"github.com/soulteary/webhook/internal/security"
 )
 
 type flushWriter struct {
@@ -412,7 +413,38 @@ func createHookHandler(appFlags flags.AppFlags) func(w http.ResponseWriter, r *h
 	}
 }
 
-func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags) (string, error) {
+// createCommandValidator 根据配置创建命令验证器
+func createCommandValidator(appFlags flags.AppFlags) *security.CommandValidator {
+	validator := security.NewCommandValidator()
+
+	// 设置参数限制
+	if appFlags.MaxArgLength > 0 {
+		validator.MaxArgLength = appFlags.MaxArgLength
+	}
+	if appFlags.MaxTotalArgsLength > 0 {
+		validator.MaxTotalArgsLength = appFlags.MaxTotalArgsLength
+	}
+	if appFlags.MaxArgsCount > 0 {
+		validator.MaxArgsCount = appFlags.MaxArgsCount
+	}
+	validator.StrictMode = appFlags.StrictMode
+
+	// 解析允许的命令路径白名单
+	if appFlags.AllowedCommandPaths != "" {
+		paths := strings.Split(appFlags.AllowedCommandPaths, ",")
+		validator.AllowedPaths = make([]string, 0, len(paths))
+		for _, path := range paths {
+			path = strings.TrimSpace(path)
+			if path != "" {
+				validator.AllowedPaths = append(validator.AllowedPaths, path)
+			}
+		}
+	}
+
+	return validator
+}
+
+func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, validator *security.CommandValidator) (string, error) {
 	// check the command exists
 	var lookpath string
 	if filepath.IsAbs(h.ExecuteCommand) || h.CommandWorkingDirectory == "" {
@@ -443,7 +475,7 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags) (s
 
 			log.Printf("[%s] make command script executable success", r.ID)
 			// retry
-			return makeSureCallable(h, r, appFlags)
+			return makeSureCallable(h, r, appFlags, validator)
 		}
 
 		// check if parameters specified in execute-command by mistake
@@ -455,13 +487,24 @@ func makeSureCallable(h *hook.Hook, r *hook.Request, appFlags flags.AppFlags) (s
 		return "", err
 	}
 
+	// 验证命令路径是否在白名单中
+	if validator != nil {
+		if err := validator.ValidateCommandPath(cmdPath); err != nil {
+			log.Printf("[%s] SECURITY ERROR: Command path validation failed: %v", r.ID, err)
+			return "", fmt.Errorf("command path validation failed: %w", err)
+		}
+	}
+
 	return cmdPath, nil
 }
 
 func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter, appFlags flags.AppFlags) (string, error) {
 	var errs []error
 
-	cmdPath, err := makeSureCallable(h, r, appFlags)
+	// 创建命令验证器
+	validator := createCommandValidator(appFlags)
+
+	cmdPath, err := makeSureCallable(h, r, appFlags, validator)
 	if err != nil {
 		return "", err
 	}
@@ -473,6 +516,14 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 	cmd.Args, errs = h.ExtractCommandArguments(r)
 	for _, err := range errs {
 		log.Printf("[%s] error extracting command arguments: %s\n", r.ID, err)
+	}
+
+	// 验证命令参数
+	if validator != nil {
+		if err := validator.ValidateArgs(cmd.Args); err != nil {
+			log.Printf("[%s] SECURITY ERROR: Command arguments validation failed: %v", r.ID, err)
+			return "", fmt.Errorf("command arguments validation failed: %w", err)
+		}
 	}
 
 	var envs []string
@@ -569,8 +620,14 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 
 	cmd.Env = append(os.Environ(), envs...)
 
-	logsContent := fmt.Sprintf("[%s] executing %s (%s) with arguments %q and environment %s using %s as cwd\n", r.ID, h.ExecuteCommand, cmd.Path, cmd.Args, envs, cmd.Dir)
-	log.Println(fn.RemoveNewlinesAndTabs(logsContent))
+	// 使用安全验证器记录命令执行（脱敏处理）
+	if validator != nil {
+		validator.LogCommandExecution(r.ID, h.ID, cmdPath, cmd.Args, envs)
+	} else {
+		// 如果没有验证器，使用原始日志（向后兼容）
+		logsContent := fmt.Sprintf("[%s] executing %s (%s) with arguments %q and environment %s using %s as cwd\n", r.ID, h.ExecuteCommand, cmd.Path, cmd.Args, envs, cmd.Dir)
+		log.Println(fn.RemoveNewlinesAndTabs(logsContent))
+	}
 
 	var out []byte
 	if w != nil {

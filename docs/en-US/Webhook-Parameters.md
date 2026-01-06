@@ -49,9 +49,51 @@ Usage of webhook:
     	maximum number of concurrent hook executions (default 10)
   -hook-execution-timeout int
     	timeout in seconds for acquiring execution slot when max concurrent hooks reached (default 5)
+  -allow-auto-chmod
+    	allow automatically modifying file permissions when permission denied (SECURITY RISK: default false)
+  -allowed-command-paths string
+    	comma-separated list of allowed command paths (directories or files) for command execution whitelist; empty means no whitelist check
+  -max-arg-length int
+    	maximum length for a single command argument in bytes (default 1048576, 1MB)
+  -max-total-args-length int
+    	maximum total length for all command arguments in bytes (default 10485760, 10MB)
+  -max-args-count int
+    	maximum number of command arguments (default 1000)
+  -strict-mode
+    	strict mode: reject arguments containing potentially dangerous characters (default false)
 ```
 
 Use any of the above specified flags to override their default behavior.
+
+## Security Configuration
+
+The following security-related flags help prevent command injection attacks:
+
+- **`-allowed-command-paths`**: Specify a whitelist of allowed command paths. When configured, only commands from the whitelist can be executed. You can specify directories (e.g., `/usr/bin`) or specific file paths.
+
+  Example:
+  ```bash
+  # Allow commands from /usr/bin and /opt/scripts directories
+  -allowed-command-paths="/usr/bin,/opt/scripts"
+  
+  # Allow specific files
+  -allowed-command-paths="/usr/bin/git,/opt/scripts/deploy.sh"
+  ```
+
+- **`-max-arg-length`**: Maximum length for a single command argument (default: 1MB). Prevents memory issues from overly long arguments.
+
+- **`-max-total-args-length`**: Maximum total length for all command arguments (default: 10MB). Limits the total size of all arguments to prevent memory exhaustion.
+
+- **`-max-args-count`**: Maximum number of command arguments (default: 1000). Limits the number of arguments to prevent performance issues.
+
+- **`-strict-mode`**: When enabled, rejects arguments containing potentially dangerous characters such as shell special characters (`;`, `|`, `&`, `` ` ``, `$`, `()`, `{}`, etc.).
+
+**Note**: All security-related flags can also be set via environment variables:
+- `ALLOWED_COMMAND_PATHS`
+- `MAX_ARG_LENGTH`
+- `MAX_TOTAL_ARGS_LENGTH`
+- `MAX_ARGS_COUNT`
+- `STRICT_MODE`
 
 # Live reloading hooks
 If you are running an OS that supports the HUP or USR1 signal, you can use it to trigger hooks reload from hooks file, without restarting the webhook instance.
