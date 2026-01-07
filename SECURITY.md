@@ -35,6 +35,26 @@ Webhook includes several security features to help prevent command injection att
 
 For more details, see the [Configuration Parameters documentation](docs/zh-CN/CLI-ENV.md) or [Webhook Parameters](docs/en-US/Webhook-Parameters.md).
 
+## Comprehensive Security Guide
+
+For a complete guide on securing your Webhook deployment, including network security, authentication, configuration security, and deployment best practices, see:
+
+- **[Security Best Practices (English)](docs/en-US/Security-Best-Practices.md)** - Comprehensive security guide
+- **[安全最佳实践 (中文)](docs/zh-CN/Security-Best-Practices.md)** - 全面的安全指南
+
 ## Reporting a Vulnerability
 
-If you find or encounter security-related issues, you are welcome to raise them in [Issues](https://github.com/soulteary/webhook/issues).
+If you discover a security vulnerability, please report it responsibly:
+
+1. **Do not** open a public issue
+2. Report security concerns through one of the following methods:
+   - Open a [Security Advisory](https://github.com/soulteary/webhook/security/advisories/new) on GitHub
+   - Contact the maintainers through GitHub (if available)
+3. Provide detailed information about the vulnerability, including:
+   - Description of the vulnerability
+   - Steps to reproduce (if applicable)
+   - Potential impact
+   - Suggested fix (if you have one)
+4. Allow time for the issue to be addressed before public disclosure
+
+For more comprehensive security guidance, see the [Security Best Practices documentation](docs/en-US/Security-Best-Practices.md).
