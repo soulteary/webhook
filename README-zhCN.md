@@ -4,65 +4,82 @@
 
  <img src="./docs/logo/logo-600x600.jpg" alt="Webhook" align="left" width="180" />
  
- 歪脖虎克（[WebHook][w]）是一个用 Go 语言编写的轻量可配置的实用工具，它允许你轻松、快速的创建 HTTP 服务（钩子）。你可以使用它来执行配置好的命令。并且还能够将 HTTP 请求中的数据（如请求头内容、请求体以及请求参数）灵活的传递给你配置好的命令、程序。当然，它也允许根据具体的条件规则来便触发钩子。
+ **WebHook（歪脖虎克）** 是一个用 Go 语言编写的轻量、安全、高度可配置的 HTTP Webhook 服务器。它允许你创建 HTTP 端点来触发自定义命令或脚本，非常适合自动化部署、CI/CD 流水线以及各种服务集成。
 
-举个例子，如果你使用的是 GitHub 或 Gitea，可以使用歪脖虎克设置一个钩子，在每次你推送更改到项目的某个分支时，这个钩子会在你运行服务的设备上运行一个“更新程序部署内容”的脚本。
+## ✨ 核心特性
 
-如果你使用飞书、钉钉、企业微信或者 Slack，你也可以设置一个“传出 Webhook 集成”或“斜杠命令”，来在你的服务器上运行各种命令。我们可以通过聊天工具的“传入 Webhook 集成”功能处理接口的响应内容，直接向你或你的 IM 会话或频道报告执行结果。
+- 🔒 **安全优先**：命令路径白名单、参数验证、严格模式和安全日志记录
+- ⚡ **高性能**：可配置并发、速率限制和优化的请求处理
+- 🎯 **灵活配置**：支持 JSON 和 YAML 配置文件，支持 Go 模板
+- 🔐 **高级认证**：多种触发规则类型，包括 HMAC 签名验证、IP 白名单和自定义规则
+- 📊 **可观测性**：内置 Prometheus 指标、健康检查端点和全面的日志记录
+- 🐳 **容器就绪**：官方 Docker 镜像，提供多个变体
+- 🌍 **国际化**：完整的中英文文档支持
+- 🔄 **热重载**：无需重启服务器即可更新钩子配置
 
-歪脖虎克（[WebHook][w]）的项目目标非常简单，**只做它应该做的事情**：
+## 🚀 使用场景
 
-- 接收请求，
-- 解析请求头、请求体和请求参数，
-- 检查钩子指定的运行规则是否得到满足，
-- 最后，通过命令行参数或环境变量将指定的参数传递给指定的命令。
+- **CI/CD 自动化**：当代码推送到特定分支时自动部署应用
+- **服务集成**：连接 GitHub、GitLab、Gitea 等服务到你的基础设施
+- **ChatOps**：与 Slack、飞书、钉钉等聊天平台集成，通过聊天运行命令
+- **监控告警**：触发对系统事件和告警的自动化响应
+- **自定义工作流**：构建适合你需求的自定义自动化工作流
 
-至于具体的命令，从处理数据、存储数据到用远程命令打开空调、关闭电脑，一些都由你做主，你可以实现任何你想要的事情，它只负责在合适的时间点，接受执行指令。
+## 🎯 工作原理
 
-# 快速上手
+WebHook 遵循简单、专注的方法：
 
-如何下载和获得执行程序、如何快速启动程序，开始连接各种应用。
+1. **接收** HTTP 请求（GET、POST 等）
+2. **解析** 请求头、请求体和参数
+3. **验证** 触发规则和条件
+4. **执行** 配置的命令，将请求数据作为参数或环境变量传递
 
-## 软件安装：下载预构建程序
+你执行的命令完全由你决定——从简单脚本到复杂的自动化工作流。
+
+# 🚀 快速开始
+
+几分钟内即可上手使用 WebHook。
+
+## 安装
+
+### 方式一：预编译二进制文件
 
 [![](.github/release.png)](https://github.com/soulteary/webhook/releases)
 
-不同架构的预编译二进制文件可在 [GitHub 发布](https://github.com/soulteary/webhook/releases) 页面获取。
+从 [发布页面](https://github.com/soulteary/webhook/releases) 下载适用于 Linux、macOS 和 Windows 的预编译二进制文件。
 
-## 软件安装：Docker
+### 方式二：Docker
 
 ![](.github/dockerhub.png)
 
-你可以使用下面的任一命令来下载本仓库自动构建的可执行程序镜像：
-
 ```bash
+# 最新稳定版本
 docker pull soulteary/webhook:latest
+
+# 特定版本
 docker pull soulteary/webhook:3.6.3
-```
 
-如果你希望镜像中有一些方便调试的工具，可以使用下面的命令，获取扩展版的镜像：
-
-```bash
+# 包含调试工具的扩展版本
 docker pull soulteary/webhook:extend-3.6.3
 ```
 
-然后我们可以基于这个镜像来构建和完善我们命令所需要的运行环境。
+### 方式三：从源码构建
 
-# 程序配置
+```bash
+git clone https://github.com/soulteary/webhook.git
+cd webhook
+go build
+```
 
-**建议阅读完整文档，来了解程序的具体能力，[中文文档](./docs/zh-CN/)，[英文文档](./docs/en-US/)。**
+## 配置
 
----
+**📚 完整文档请查看 [中文文档](./docs/zh-CN/) 或 [英文文档](./docs/en-US/)**
 
-我们可以来定义一些你希望 [webhook][w] 提供 HTTP 服务使用的钩子。
+### 基础示例
 
-[webhook][w] 支持 JSON 或 YAML 配置文件，我们先来看看如何实现 JSON 配置。
+创建一个 `hooks.json` 文件（或使用 `hooks.yaml` 作为 YAML 格式）来定义你的 webhook：
 
-首先，创建一个名为 hooks.json 的空文件。这个文件将包含 [webhook][w] 将要启动为 HTTP 服务的钩子的数组。查看 [钩子定义](docs/zh-CN/Hook-Definition.md)文档，可以了解钩子可以包含哪些属性，以及如何使用它们的详细描述。
-
-让我们定义一个简单的名为 redeploy-webhook 的钩子，它将运行位于 `/var/scripts/redeploy.sh` 的重新部署脚本。确保你的 bash 脚本在顶部有 `#!/bin/sh`。
-
-我们的 hooks.json 文件将如下所示：
+**示例：简单的部署钩子**
 
 ```json
 [
@@ -82,55 +99,59 @@ docker pull soulteary/webhook:extend-3.6.3
   command-working-directory: "/var/webhook"
 ```
 
-接下来，你可以通过下面的命令来执行 [webhook][w]：
+### 运行 WebHook
 
 ```bash
-$ /path/to/webhook -hooks hooks.json -verbose
+./webhook -hooks hooks.json -verbose
 ```
 
-程序将在默认的 9000 端口启动，并提供一个公开可访问的 HTTP 服务地址：
+服务器将在默认的 9000 端口启动。你的钩子将在以下地址可用：
 
-```bash
+```
 http://yourserver:9000/hooks/redeploy-webhook
 ```
 
-查看 [配置参数](docs/zh-CN/CLI-ENV.md) 文档，可以了解如何在启动 [webhook][w] 时设置 IP、端口以及其它设置，例如钩子的热重载，详细输出等。
+### 保护你的钩子
 
-当有任何 HTTP GET 或 POST 请求访问到服务地址后，你设置的重新部署脚本将被执行。
+**重要提示**：上面的示例没有身份验证。在生产环境中请始终使用触发规则！
 
-不过，像这样定义的钩子可能会对你的系统构成安全威胁，因为任何知道你端点的人都可以发送请求并执行命令。为了防止这种情况，你可以使用钩子的 "trigger-rule" 属性来指定触发钩子的确切条件。例如，你可以使用它们添加一个秘密参数，必须提供这个参数才能成功触发钩子。请查看 [钩子匹配规则](docs/zh-CN/Hook-Rules.md)文档，来获取可用规则及其使用方法的详细列表。
+**示例：带密钥令牌的安全钩子**
 
-此外，WebHook 还提供了命令注入防护功能，包括命令路径白名单、参数验证和严格模式等安全特性。更多详情请参阅 [安全策略](SECURITY.md) 和 [配置参数](docs/zh-CN/CLI-ENV.md) 文档。
+```json
+[
+  {
+    "id": "secure-deploy",
+    "execute-command": "/var/scripts/deploy.sh",
+    "trigger-rule": {
+      "match": {
+        "type": "value",
+        "value": "your-secret-token",
+        "parameter": {
+          "source": "url",
+          "name": "token"
+        }
+      }
+    }
+  }
+]
+```
 
-## 表单数据
+现在钩子只能通过以下方式触发：`http://yourserver:9000/hooks/secure-deploy?token=your-secret-token`
 
-[webhook][w] 提供了对表单数据的有限解析支持。
+更多安全选项，请查看：
+- [安全最佳实践](docs/zh-CN/Security-Best-Practices.md) - 全面的安全指南
+- [钩子匹配规则](docs/zh-CN/Hook-Rules.md) - 所有可用的触发规则
+- [安全策略](SECURITY.md) - 内置安全功能
 
-表单数据通常可以包含两种类型的部分：值和文件。
-所有表单 _值_ 会自动添加到 `payload` 范围内。
-使用 `parse-parameters-as-json` 设置将给定值解析为 JSON。
-除非符合以下标准之一，否则所有文件都会被忽略：
+## 其他功能
 
-1.  `Content-Type` 标头是 `application/json`。
-2.  部分在 `parse-parameters-as-json` 设置中被命名。
+- **表单数据支持**：解析 multipart 表单数据和文件上传 - 查看 [表单数据](docs/zh-CN/Request-Values.md)
+- **模板支持**：使用 `-template` 标志在配置文件中使用 Go 模板 - 查看 [配置模版](docs/zh-CN/Templates.md)
+- **HTTPS**：使用反向代理（nginx、Traefik、Caddy）提供 HTTPS 支持
+- **CORS**：使用 `-header name=value` 设置自定义响应头，包括 CORS 响应头
+- **热重载**：使用 `-hotreload` 或 `kill -USR1` 无需重启即可更新配置
 
-在任一情况下，给定的文件部分将被解析为 JSON 并添加到 payload 映射中。
-
-## 模版
-
-当使用 `-template` [命令行参数](docs/zh-CN/CLI-ENV.md)时，[webhook][w] 可以将钩子配置文件解析为 Go 模板。有关模板使用的更多详情，请查看[配置模版](docs/zh-CN/Templates.md)。
-
-## 使用 HTTPS
-
-[webhook][w] 默认使用 http 提供服务。如果你希望 [webhook][w] 使用 https 提供 HTTPS 服务，更简单的方案是使用反向代理或者使用 traefik 等服务来提供 HTTPS 服务。
-
-## 跨域 CORS 请求头
-
-如果你想设置 CORS 头，可以在启动 [webhook][w] 时使用 `-header name=value` 标志来设置将随每个响应返回的适当 CORS 头。
-
-## 使用示例
-
-查看 [钩子示例](docs/zh-CN/Hook-Examples.md) 来了解各种使用方法。
+更多示例和用例，请查看 [钩子示例](docs/zh-CN/Hook-Examples.md)。
 
 ## 文档
 
@@ -152,14 +173,19 @@ http://yourserver:9000/hooks/redeploy-webhook
 ### 安全
 - [安全策略](SECURITY.md) - 安全功能和漏洞报告
 
-# 为什么要作一个开源软件的分叉
+## 关于此 Fork
 
-主要有两个原因：
+本项目是原始 [webhook](https://github.com/adnanh/webhook) 项目的维护分支，专注于：
 
-1. 原作者维护的 `webhook` 程序版本，是从比较陈旧的 Go 程序版本慢慢升级上来的。
-  - 其中，包含了许多不再被需要的内容，以及非常多的安全问题亟待修正。
+- **安全性**：定期安全更新、漏洞修复和增强的安全功能
+- **维护性**：积极开发、依赖更新和错误修复
+- **功能**：社区驱动的改进和新功能
+- **文档**：完整的中英文文档
 
-2. 我在几年前曾经提交过一个[改进版本的 PR](https://github.com/adnanh/webhook/pull/570)，但是因为种种原因被作者忽略，**与其继续使用明知道不可靠的程序，不如将它变的可靠。**
-  - 这样，除了更容易从社区合并未被原始仓库作者合并的社区功能外，还可以快速对有安全风险的依赖作更新。除此之外，我希望这个程序接下来能够中文更加友好，包括文档。
+我们的目标是为社区提供一个可靠、安全且维护良好的 webhook 服务器。
+
+几年前，我曾经提交过一个[改进版本的 PR](https://github.com/adnanh/webhook/pull/570)，但是因为种种原因被作者忽略，目前原始项目的版本和维护也一直停留在 2024 年，**与其继续使用明知道不可靠的程序，不如将它变的可靠。**
+
+除了更容易从社区合并未被原始仓库作者合并的社区功能外，还可以快速对有安全风险的依赖作更新，并且文档友好、利于调试，能够快速上手。
 
 [w]: https://github.com/soulteary/webhook

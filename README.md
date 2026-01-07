@@ -4,63 +4,82 @@
 
  <img src="./docs/logo/logo-600x600.jpg" alt="Webhook" align="left" width="180" />
  
- [WebHook][w] is a lightweight and customizable tool written in Go that enables you to effortlessly create HTTP WebHook services. With WebHook, you can execute predefined commands and flexibly pass data from HTTP requests (including headers, body, and parameters) to your configured commands or programs. It also supports triggering hooks based on specific conditions.
+ **WebHook** is a lightweight, secure, and highly configurable HTTP webhook server written in Go. It enables you to create HTTP endpoints that trigger custom commands or scripts based on incoming requests, making it perfect for automating deployments, CI/CD pipelines, and integrating with various services.
 
-For example, if you're using GitHub or Gitea, you can set up a hook with WebHook to automatically update your deployed program whenever you push changes to a specific branch of your project.
+## ✨ Key Features
 
-If you use Discord, Slack, or other messaging platforms, you can create an "Outgoing Webhook Integration" or "Slash Command" to run various commands on your server. You can then use the "Incoming Webhook Integration" feature of your messaging tool to report the execution results directly to you or your conversation channel.
+- 🔒 **Security First**: Command path whitelisting, argument validation, strict mode, and secure logging
+- ⚡ **High Performance**: Configurable concurrency, rate limiting, and optimized request handling
+- 🎯 **Flexible Configuration**: Support for JSON and YAML configuration files with Go template support
+- 🔐 **Advanced Authentication**: Multiple trigger rule types including HMAC signature validation, IP whitelisting, and custom rules
+- 📊 **Observability**: Built-in Prometheus metrics, health check endpoint, and comprehensive logging
+- 🐳 **Container Ready**: Official Docker images with multiple variants
+- 🌍 **Internationalization**: Full support for English and Chinese documentation
+- 🔄 **Hot Reload**: Update hook configurations without restarting the server
 
-The [WebHook][w] project has a straightforward goal: **to do exactly what it's designed for.**
+## 🚀 Use Cases
 
-- Receive requests
-- Parse request headers, body, and parameters
-- Verify if the hook's execution rules are met
-- Pass specified parameters to the designated command via command-line arguments or environment variables
+- **CI/CD Automation**: Automatically deploy applications when code is pushed to specific branches
+- **Service Integration**: Connect GitHub, GitLab, Gitea, and other services to your infrastructure
+- **ChatOps**: Integrate with Slack, Discord, or other messaging platforms to run commands via chat
+- **Monitoring & Alerts**: Trigger automated responses to system events and alerts
+- **Custom Workflows**: Build custom automation workflows tailored to your needs
 
-The specific commands - whether processing data, storing information, or controlling devices - are entirely up to you. WebHook's role is to accept and execute instructions at the appropriate time.
+## 🎯 How It Works
 
-# Getting Started
+WebHook follows a simple, focused approach:
 
-Let's explore how to download the executable program and quickly set it up to connect various applications.
+1. **Receive** HTTP requests (GET, POST, etc.)
+2. **Parse** request headers, body, and parameters
+3. **Validate** trigger rules and conditions
+4. **Execute** configured commands with request data passed as arguments or environment variables
 
-## Software Installation: Downloading Pre-built Programs
+The commands you execute are entirely up to you - from simple scripts to complex automation workflows.
+
+# 🚀 Quick Start
+
+Get up and running with WebHook in minutes.
+
+## Installation
+
+### Option 1: Pre-built Binaries
 
 [![](.github/release.png)](https://github.com/soulteary/webhook/releases)
 
-WebHook offers pre-built executable programs for various operating systems and architectures. You can download the version suitable for your platform from the [Releases page on GitHub](https://github.com/soulteary/webhook/releases).
+Download pre-built binaries for Linux, macOS, and Windows from the [Releases page](https://github.com/soulteary/webhook/releases).
 
-## Software Installation: Docker
+### Option 2: Docker
 
 ![](.github/dockerhub.png)
 
-You can use any of the following commands to download the automatically built executable program image:
-
 ```bash
+# Latest stable version
 docker pull soulteary/webhook:latest
+
+# Specific version
 docker pull soulteary/webhook:3.6.3
-```
 
-For an extended version of the image that includes debugging tools, use:
-
-```bash
+# Extended version with debugging tools
 docker pull soulteary/webhook:extend-3.6.3
 ```
 
-You can then build and refine the runtime environment required for your commands based on this image.
+### Option 3: Build from Source
 
-## Program Configuration
+```bash
+git clone https://github.com/soulteary/webhook.git
+cd webhook
+go build
+```
 
-**We recommend reading the complete documentation to fully understand the program's capabilities. [English Documentation](./docs/en-US/), [Chinese Documentation](./docs/zh-CN/)**
+## Configuration
 
----
+**📚 For complete documentation, see [English Documentation](./docs/en-US/) or [Chinese Documentation](./docs/zh-CN/)**
 
-Let's define some hooks for [webhook][w] to provide HTTP services.
+### Basic Example
 
-[webhook][w] supports both JSON and YAML configuration files. We'll start with JSON configuration.
+Create a `hooks.json` file (or `hooks.yaml` for YAML format) to define your webhooks:
 
-Create an empty file named `hooks.json`. This file will contain an array of hooks that [webhook][w] will start as HTTP services. For detailed information on hook properties and usage, please refer to the [Hook Definition page](docs/en-US/Hook-Definition.md).
-
-Here's a simple hook named `redeploy-webhook` that runs a redeployment script located at `/var/scripts/redeploy.sh`:
+**Example: Simple Deployment Hook**
 
 ```json
 [
@@ -80,45 +99,59 @@ If you prefer YAML, the equivalent `hooks.yaml` file would look like this:
   command-working-directory: "/var/webhook"
 ```
 
-To run [webhook][w], use the following command:
+### Running WebHook
 
 ```bash
-$ /path/to/webhook -hooks hooks.json -verbose
+./webhook -hooks hooks.json -verbose
 ```
 
-The program will start on the default port `9000` and provide a publicly accessible HTTP service address:
+The server will start on port `9000` by default. Your hook will be available at:
 
-```bash
+```
 http://yourserver:9000/hooks/redeploy-webhook
 ```
 
-To learn how to customize IP, port, and other settings when starting [webhook][w], check out the [webhook parameters](docs/en-US/Webhook-Parameters.md) documentation.
+### Securing Your Hooks
 
-Any HTTP `GET` or `POST` request to the service address will trigger the redeploy script.
+**Important**: The example above has no authentication. Always use trigger rules in production!
 
-To enhance security and prevent unauthorized access, you can use the "trigger-rule" property to specify exact conditions for hook triggering. For a detailed list of available rules and their usage, please refer to [Hook Rules](docs/en-US/Hook-Rules.md).
+**Example: Secure Hook with Secret Token**
 
-For additional security, WebHook includes command injection protection features such as command path whitelisting, argument validation, and strict mode. See the [Security Policy](SECURITY.md) and [Configuration Parameters](docs/en-US/Webhook-Parameters.md) for more details.
+```json
+[
+  {
+    "id": "secure-deploy",
+    "execute-command": "/var/scripts/deploy.sh",
+    "trigger-rule": {
+      "match": {
+        "type": "value",
+        "value": "your-secret-token",
+        "parameter": {
+          "source": "url",
+          "name": "token"
+        }
+      }
+    }
+  }
+]
+```
 
-## Form Data
+Now the hook can only be triggered with: `http://yourserver:9000/hooks/secure-deploy?token=your-secret-token`
 
-[webhook][w] offers limited parsing support for form data, including both values and files. For more details on how form data is handled, please refer to the [Form Data](docs/en-US/Form-Data.md) documentation.
+For more security options, see:
+- [Security Best Practices](docs/en-US/Security-Best-Practices.md) - Comprehensive security guide
+- [Hook Rules](docs/en-US/Hook-Rules.md) - All available trigger rules
+- [Security Policy](SECURITY.md) - Built-in security features
 
-## Templates
+## Additional Features
 
-[webhook][w] supports parsing the hook configuration file as a Go template when using the `-template` [command line argument](docs/en-US/Webhook-Parameters.md). For more information on template usage, see [Templates](docs/en-US/Templates.md).
+- **Form Data Support**: Parse multipart form data and file uploads - see [Form Data](docs/en-US/Form-Data.md)
+- **Template Support**: Use Go templates in configuration files with `-template` flag - see [Templates](docs/en-US/Templates.md)
+- **HTTPS**: Use a reverse proxy (nginx, Traefik, Caddy) for HTTPS support
+- **CORS**: Set custom headers including CORS headers with `-header name=value`
+- **Hot Reload**: Update configurations without restarting using `-hotreload` or `kill -USR1`
 
-## Using HTTPS
-
-While [webhook][w] serves using HTTP by default, we recommend using a reverse proxy or a service like Traefik to provide HTTPS service for enhanced security.
-
-## Cross-Origin CORS Request Headers
-
-To set CORS headers, use the `-header name=value` flag when starting [webhook][w]. This will ensure the appropriate CORS headers are returned with each response.
-
-## Usage Examples
-
-Explore various creative uses of WebHook in our [Hook Examples](docs/en-US/Hook-Examples.md) documentation.
+For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examples.md).
 
 ## Documentation
 
@@ -140,13 +173,15 @@ Explore various creative uses of WebHook in our [Hook Examples](docs/en-US/Hook-
 ### Security
 - [Security Policy](SECURITY.md) - Security features and vulnerability reporting
 
-# Our Motivation
+## About This Fork
 
-We decided to fork this open-source software for two main reasons:
+This project is a maintained fork of the original [webhook](https://github.com/adnanh/webhook) project, focused on:
 
-1. To address security issues and outdated dependencies in the original version.
-2. To incorporate community-contributed features and improvements that were not merged into the original repository.
+- **Security**: Regular security updates, vulnerability fixes, and enhanced security features
+- **Maintenance**: Active development, dependency updates, and bug fixes
+- **Features**: Community-driven improvements and new features
+- **Documentation**: Comprehensive documentation in both English and Chinese
 
-Our goal is to make WebHook more reliable, secure, and user-friendly, including improved documentation for our Chinese users.
+We aim to provide a reliable, secure, and well-maintained webhook server for the community.
 
 [w]: https://github.com/soulteary/webhook
