@@ -159,3 +159,143 @@ func TestParse(t *testing.T) {
 	flags := Parse()
 	assert.NotNil(t, flags)
 }
+
+func TestParseCLI_AllFlags(t *testing.T) {
+	// Save original os.Args
+	originalArgs := os.Args
+	defer func() {
+		os.Args = originalArgs
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	}()
+
+	// Test various flag combinations
+	testCases := []struct {
+		name   string
+		args   []string
+		verify func(t *testing.T, flags AppFlags)
+	}{
+		{
+			name: "set host",
+			args: []string{"test", "-ip=192.168.1.1"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.Equal(t, "192.168.1.1", flags.Host)
+			},
+		},
+		{
+			name: "set port",
+			args: []string{"test", "-port=9090"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.Equal(t, 9090, flags.Port)
+			},
+		},
+		{
+			name: "set verbose",
+			args: []string{"test", "-verbose"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.True(t, flags.Verbose)
+			},
+		},
+		{
+			name: "set debug",
+			args: []string{"test", "-debug"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.True(t, flags.Debug)
+			},
+		},
+		{
+			name: "set logfile",
+			args: []string{"test", "-logfile=/tmp/test.log"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.Equal(t, "/tmp/test.log", flags.LogPath)
+			},
+		},
+		{
+			name: "set hooks",
+			args: []string{"test", "-hooks=test1.json", "-hooks=test2.json"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.Contains(t, flags.HooksFiles, "test1.json")
+				assert.Contains(t, flags.HooksFiles, "test2.json")
+			},
+		},
+		{
+			name: "set header",
+			args: []string{"test", "-header=X-Test=value1", "-header=X-Test2=value2"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.Len(t, flags.ResponseHeaders, 2)
+			},
+		},
+		{
+			name: "set version flag",
+			args: []string{"test", "-version"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.True(t, flags.ShowVersion)
+			},
+		},
+		{
+			name: "set validate-config flag",
+			args: []string{"test", "-validate-config"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.True(t, flags.ValidateConfig)
+			},
+		},
+		{
+			name: "set rate limit flags",
+			args: []string{"test", "-rate-limit-enabled", "-rate-limit-rps=200", "-rate-limit-burst=20"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.True(t, flags.RateLimitEnabled)
+				assert.Equal(t, 200, flags.RateLimitRPS)
+				assert.Equal(t, 20, flags.RateLimitBurst)
+			},
+		},
+		{
+			name: "set security flags",
+			args: []string{"test", "-max-arg-length=2048", "-max-total-args-length=20480", "-max-args-count=500"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.Equal(t, 2048, flags.MaxArgLength)
+				assert.Equal(t, 20480, flags.MaxTotalArgsLength)
+				assert.Equal(t, 500, flags.MaxArgsCount)
+			},
+		},
+		{
+			name: "set timeout flags",
+			args: []string{"test", "-read-header-timeout-seconds=10", "-read-timeout-seconds=20", "-write-timeout-seconds=60", "-idle-timeout-seconds=120"},
+			verify: func(t *testing.T, flags AppFlags) {
+				assert.Equal(t, 10, flags.ReadHeaderTimeoutSeconds)
+				assert.Equal(t, 20, flags.ReadTimeoutSeconds)
+				assert.Equal(t, 60, flags.WriteTimeoutSeconds)
+				assert.Equal(t, 120, flags.IdleTimeoutSeconds)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			os.Args = tc.args
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+			initialFlags := AppFlags{
+				Host:            DEFAULT_HOST,
+				Port:            DEFAULT_PORT,
+				Verbose:         DEFAULT_ENABLE_VERBOSE,
+				Debug:           DEFAULT_ENABLE_DEBUG,
+				NoPanic:         DEFAULT_ENABLE_NO_PANIC,
+				HotReload:       DEFAULT_ENABLE_HOT_RELOAD,
+				LogPath:         DEFAULT_LOG_PATH,
+				HooksURLPrefix:  DEFAULT_URL_PREFIX,
+				AsTemplate:      DEFAULT_ENABLE_PARSE_TEMPLATE,
+				UseXRequestID:   DEFAULT_ENABLE_X_REQUEST_ID,
+				XRequestIDLimit: DEFAULT_X_REQUEST_ID_LIMIT,
+				MaxMultipartMem: int64(DEFAULT_MAX_MPART_MEM),
+				SetGID:          DEFAULT_GID,
+				SetUID:          DEFAULT_UID,
+				HttpMethods:     DEFAULT_HTTP_METHODS,
+				PidPath:         DEFAULT_PID_FILE,
+				Lang:            DEFAULT_LANG,
+				I18nDir:         DEFAULT_I18N_DIR,
+			}
+
+			result := ParseCLI(initialFlags)
+			tc.verify(t, result)
+		})
+	}
+}

@@ -5,6 +5,7 @@ package platform
 
 import (
 	"os"
+	"os/signal"
 	"sync"
 	"syscall"
 	"testing"
@@ -27,7 +28,13 @@ func TestSetupSignals(t *testing.T) {
 	var signals chan os.Signal
 
 	// Setup signals - SetupSignals creates a new channel internally
-	_ = SetupSignals(signals, reloadFn, testPidFile)
+	signals = SetupSignals(signals, reloadFn, testPidFile)
+
+	// Ensure signals are stopped and channel is closed when test completes
+	t.Cleanup(func() {
+		signal.Stop(signals)
+		close(signals)
+	})
 
 	// Wait a bit for the goroutine to start
 	time.Sleep(200 * time.Millisecond)
@@ -91,6 +98,12 @@ func TestSetupSignalsWithHandler(t *testing.T) {
 
 	// Setup signals with mock exit function
 	signals = SetupSignalsWithHandler(signals, reloadFn, testPidFile, mockExit)
+
+	// Ensure signals are stopped and channel is closed when test completes
+	t.Cleanup(func() {
+		signal.Stop(signals)
+		close(signals)
+	})
 
 	// Wait a bit for the goroutine to start
 	time.Sleep(200 * time.Millisecond)
@@ -165,6 +178,11 @@ func TestSignalHandler(t *testing.T) {
 	handler := NewSignalHandler(mockExit)
 	signals := make(chan os.Signal, 1)
 	var testPidFile *pidfile.PIDFile
+
+	// Ensure channel is closed when test completes to stop the goroutine
+	t.Cleanup(func() {
+		close(signals)
+	})
 
 	// Start the signal handler in a goroutine
 	go handler.watchForSignals(signals, reloadFn, nil, testPidFile)
@@ -267,6 +285,12 @@ func TestSetupSignalsWithHandler_WithNilSignals(t *testing.T) {
 	signals = SetupSignalsWithHandler(signals, reloadFn, testPidFile, mockExit)
 	assert.NotNil(t, signals, "SetupSignalsWithHandler should create a new channel when signals is nil")
 
+	// Ensure signals are stopped and channel is closed when test completes
+	t.Cleanup(func() {
+		signal.Stop(signals)
+		close(signals)
+	})
+
 	// Wait a bit for the goroutine to start
 	time.Sleep(200 * time.Millisecond)
 
@@ -298,6 +322,12 @@ func TestSetupSignalsWithHandler_WithNilExitFunc(t *testing.T) {
 	// Setup signals with nil exitFunc - should use os.Exit
 	signals = SetupSignalsWithHandler(signals, reloadFn, testPidFile, nil)
 	assert.NotNil(t, signals, "SetupSignalsWithHandler should return a valid channel")
+
+	// Ensure signals are stopped and channel is closed when test completes
+	t.Cleanup(func() {
+		signal.Stop(signals)
+		close(signals)
+	})
 
 	// Wait a bit for the goroutine to start
 	time.Sleep(200 * time.Millisecond)
@@ -342,6 +372,11 @@ func TestWatchForSignals_WithPidFile_RemoveError(t *testing.T) {
 	handler := NewSignalHandler(mockExit)
 	signals := make(chan os.Signal, 1)
 
+	// Ensure channel is closed when test completes to stop the goroutine
+	t.Cleanup(func() {
+		close(signals)
+	})
+
 	// Start the signal handler in a goroutine
 	go handler.watchForSignals(signals, reloadFn, nil, testPidFile)
 	time.Sleep(50 * time.Millisecond)
@@ -385,6 +420,11 @@ func TestWatchForSignals_WithPidFile_Success(t *testing.T) {
 	handler := NewSignalHandler(mockExit)
 	signals := make(chan os.Signal, 1)
 
+	// Ensure channel is closed when test completes to stop the goroutine
+	t.Cleanup(func() {
+		close(signals)
+	})
+
 	// Start the signal handler in a goroutine
 	go handler.watchForSignals(signals, reloadFn, nil, testPidFile)
 	time.Sleep(50 * time.Millisecond)
@@ -420,6 +460,11 @@ func TestWatchForSignals_WithNilPidFile(t *testing.T) {
 	handler := NewSignalHandler(mockExit)
 	signals := make(chan os.Signal, 1)
 	var testPidFile *pidfile.PIDFile // nil
+
+	// Ensure channel is closed when test completes to stop the goroutine
+	t.Cleanup(func() {
+		close(signals)
+	})
 
 	// Start the signal handler in a goroutine
 	go handler.watchForSignals(signals, reloadFn, nil, testPidFile)
