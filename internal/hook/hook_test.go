@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGetParameter(t *testing.T) {
@@ -973,5 +974,248 @@ func TestHook_ExtractCommandArgumentsForFile(t *testing.T) {
 	}
 	if string(args[1].Data) != "base64 content" {
 		t.Errorf("expected 'base64 content', got %q", string(args[1].Data))
+	}
+}
+
+func TestHook_SanitizeHTTPMethods(t *testing.T) {
+	tests := []struct {
+		name            string
+		methods         []string
+		expectedLength  int
+		expectedMethods []string
+	}{
+		{
+			name:            "Valid methods",
+			methods:         []string{"GET", "POST", "PUT"},
+			expectedLength:  3,
+			expectedMethods: []string{"GET", "POST", "PUT"},
+		},
+		{
+			name:            "Lowercase methods",
+			methods:         []string{"get", "post"},
+			expectedLength:  2,
+			expectedMethods: []string{"GET", "POST"},
+		},
+		{
+			name:            "Methods with whitespace",
+			methods:         []string{" GET ", " POST "},
+			expectedLength:  2,
+			expectedMethods: []string{"GET", "POST"},
+		},
+		{
+			name:            "Invalid methods",
+			methods:         []string{"INVALID", "GET"},
+			expectedLength:  1,
+			expectedMethods: []string{"GET"},
+		},
+		{
+			name:            "Duplicate methods",
+			methods:         []string{"GET", "POST", "GET"},
+			expectedLength:  2,
+			expectedMethods: []string{"GET", "POST"},
+		},
+		{
+			name:            "Empty methods",
+			methods:         []string{},
+			expectedLength:  0,
+			expectedMethods: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hook := &Hook{
+				ID:         "test-hook",
+				HTTPMethods: tt.methods,
+			}
+			hook.SanitizeHTTPMethods()
+
+			if len(hook.HTTPMethods) != tt.expectedLength {
+				t.Errorf("SanitizeHTTPMethods() length = %d, want %d", len(hook.HTTPMethods), tt.expectedLength)
+			}
+
+			if tt.expectedMethods != nil {
+				for i, expected := range tt.expectedMethods {
+					if hook.HTTPMethods[i] != expected {
+						t.Errorf("SanitizeHTTPMethods()[%d] = %s, want %s", i, hook.HTTPMethods[i], expected)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestGetCompiledRegex(t *testing.T) {
+	// Test valid regex
+	re, err := getCompiledRegex("^test$")
+	if err != nil {
+		t.Errorf("getCompiledRegex() error = %v", err)
+	}
+	if re == nil {
+		t.Error("getCompiledRegex() returned nil regex")
+	}
+
+	// Test invalid regex
+	_, err = getCompiledRegex("[invalid")
+	if err == nil {
+		t.Error("getCompiledRegex() should return error for invalid regex")
+	}
+
+	// Test empty pattern
+	_, err = getCompiledRegex("")
+	if err == nil {
+		t.Error("getCompiledRegex() should return error for empty pattern")
+	}
+
+	// Test caching (same pattern should return same instance)
+	re1, _ := getCompiledRegex("^cached$")
+	re2, _ := getCompiledRegex("^cached$")
+	if re1 != re2 {
+		t.Error("getCompiledRegex() should return cached regex for same pattern")
+	}
+}
+
+func TestCheckScalrSignature_WithDateCheck(t *testing.T) {
+	// Test with date check enabled
+	headers := map[string]interface{}{
+		"Date":        time.Now().Format("Mon 02 Jan 2006 15:04:05 MST"),
+		"X-Signature": "test-signature",
+	}
+	req := &Request{
+		Headers: headers,
+		Body:    []byte(`{"test": "data"}`),
+	}
+
+	valid, err := CheckScalrSignature(req, "secret", true)
+	// May be false due to signature mismatch, but should not error on date parsing
+	if err != nil && !strings.Contains(err.Error(), "signature") {
+		t.Errorf("CheckScalrSignature() unexpected error: %v", err)
+	}
+	_ = valid
+}
+
+func TestCheckScalrSignature_InvalidDate(t *testing.T) {
+	headers := map[string]interface{}{
+		"Date":        "Invalid Date Format",
+		"X-Signature": "test-signature",
+	}
+	req := &Request{
+		Headers: headers,
+		Body:    []byte(`{"test": "data"}`),
+	}
+
+	valid, err := CheckScalrSignature(req, "secret", true)
+	if err == nil {
+		t.Error("CheckScalrSignature() should return error for invalid date format")
+	}
+	if valid {
+		t.Error("CheckScalrSignature() should return false for invalid date")
+	}
+}
+
+func TestCheckScalrSignature_OutdatedDate(t *testing.T) {
+	// Test with date more than 5 minutes old
+	oldDate := time.Now().Add(-10 * time.Minute).Format("Mon 02 Jan 2006 15:04:05 MST")
+	headers := map[string]interface{}{
+		"Date":        oldDate,
+		"X-Signature": "test-signature",
+	}
+	req := &Request{
+		Headers: headers,
+		Body:    []byte(`{"test": "data"}`),
+	}
+
+	valid, err := CheckScalrSignature(req, "secret", true)
+	if err == nil {
+		t.Error("CheckScalrSignature() should return error for outdated date")
+	}
+	if valid {
+		t.Error("CheckScalrSignature() should return false for outdated date")
+	}
+}
+
+func TestArgument_Get_EntireSources(t *testing.T) {
+	req := &Request{
+		Headers: map[string]interface{}{"Header1": "value1"},
+		Query:   map[string]interface{}{"param1": "value1"},
+		Payload: map[string]interface{}{"key1": "value1"},
+	}
+
+	// Test entire-payload
+	arg := Argument{Source: SourceEntirePayload}
+	value, err := arg.Get(req)
+	if err != nil {
+		t.Errorf("Argument.Get() error = %v", err)
+	}
+	if !strings.Contains(value, "key1") {
+		t.Error("Argument.Get() should return entire payload as JSON")
+	}
+
+	// Test entire-query
+	arg = Argument{Source: SourceEntireQuery}
+	value, err = arg.Get(req)
+	if err != nil {
+		t.Errorf("Argument.Get() error = %v", err)
+	}
+	if !strings.Contains(value, "param1") {
+		t.Error("Argument.Get() should return entire query as JSON")
+	}
+
+	// Test entire-headers
+	arg = Argument{Source: SourceEntireHeaders}
+	value, err = arg.Get(req)
+	if err != nil {
+		t.Errorf("Argument.Get() error = %v", err)
+	}
+	if !strings.Contains(value, "Header1") {
+		t.Error("Argument.Get() should return entire headers as JSON")
+	}
+}
+
+func TestArgument_Get_RequestSource(t *testing.T) {
+	req := &Request{
+		RawRequest: &http.Request{
+			Method:     "POST",
+			RemoteAddr: "192.168.1.1:8080",
+		},
+	}
+
+	// Test method
+	arg := Argument{Source: SourceRequest, Name: "method"}
+	value, err := arg.Get(req)
+	if err != nil {
+		t.Errorf("Argument.Get() error = %v", err)
+	}
+	if value != "POST" {
+		t.Errorf("Argument.Get() = %s, want POST", value)
+	}
+
+	// Test remote-addr
+	arg = Argument{Source: SourceRequest, Name: "remote-addr"}
+	value, err = arg.Get(req)
+	if err != nil {
+		t.Errorf("Argument.Get() error = %v", err)
+	}
+	if value != "192.168.1.1:8080" {
+		t.Errorf("Argument.Get() = %s, want 192.168.1.1:8080", value)
+	}
+
+	// Test unsupported key
+	arg = Argument{Source: SourceRequest, Name: "unsupported"}
+	_, err = arg.Get(req)
+	if err == nil {
+		t.Error("Argument.Get() should return error for unsupported request key")
+	}
+}
+
+func TestArgument_Get_NilRequest(t *testing.T) {
+	req := &Request{
+		RawRequest: nil,
+	}
+
+	arg := Argument{Source: SourceRequest, Name: "method"}
+	_, err := arg.Get(req)
+	if err == nil {
+		t.Error("Argument.Get() should return error for nil request")
 	}
 }

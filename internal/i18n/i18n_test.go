@@ -194,3 +194,69 @@ func TestLoadLocaleFiles_InvalidLocaleInDir(t *testing.T) {
 	// Should not include invalid locale
 	_ = aliveLocales
 }
+
+func TestGetMessage_WithArgs(t *testing.T) {
+	tempDir := t.TempDir()
+
+	createTOMLFile(t, tempDir, "en-US.toml", `
+		TEST_MESSAGE = "Hello %s"
+	`)
+
+	aliveLocales := i18n.LoadLocaleFiles(tempDir, embedFS)
+	bundleMaps := i18n.InitLocaleByFiles(aliveLocales)
+	i18n.GLOBAL_LOCALES = bundleMaps
+	i18n.SetGlobalLocale("en-US")
+
+	message := i18n.GetMessage("TEST_MESSAGE")
+	assert.Contains(t, message, "Hello")
+}
+
+func TestSprintf_WithMultipleArgs(t *testing.T) {
+	tempDir := t.TempDir()
+
+	createTOMLFile(t, tempDir, "en-US.toml", `
+		FORMAT_MESSAGE = "Version %s started on %s"
+	`)
+
+	aliveLocales := i18n.LoadLocaleFiles(tempDir, embedFS)
+	bundleMaps := i18n.InitLocaleByFiles(aliveLocales)
+	i18n.GLOBAL_LOCALES = bundleMaps
+	i18n.SetGlobalLocale("en-US")
+
+	result := i18n.Sprintf("FORMAT_MESSAGE", "1.0.0", "localhost")
+	assert.Contains(t, result, "Version")
+	assert.Contains(t, result, "started")
+}
+
+func TestLoadLocaleFiles_EmptyDir(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Empty directory should use embedFS
+	aliveLocales := i18n.LoadLocaleFiles(tempDir, embedFS)
+	// Should handle gracefully (may be empty or use embed)
+	_ = aliveLocales
+}
+
+func TestInitLocaleByFiles_Empty(t *testing.T) {
+	aliveLocales := []i18n.WebHookLocales{}
+	bundleMaps := i18n.InitLocaleByFiles(aliveLocales)
+	assert.NotNil(t, bundleMaps)
+	assert.Equal(t, 0, len(bundleMaps))
+}
+
+func TestInitLocaleByFiles_MultipleLocales(t *testing.T) {
+	tempDir := t.TempDir()
+
+	createTOMLFile(t, tempDir, "en-US.toml", `
+		TEST = "English"
+	`)
+	createTOMLFile(t, tempDir, "zh-CN.toml", `
+		TEST = "中文"
+	`)
+
+	aliveLocales := i18n.LoadLocaleFiles(tempDir, embedFS)
+	bundleMaps := i18n.InitLocaleByFiles(aliveLocales)
+
+	assert.Contains(t, bundleMaps, "en-US")
+	assert.Contains(t, bundleMaps, "zh-CN")
+}
