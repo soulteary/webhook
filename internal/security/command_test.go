@@ -51,6 +51,14 @@ func TestValidateCommandPath(t *testing.T) {
 		}
 	})
 
+	t.Run("with whitelist - directory with trailing separator", func(t *testing.T) {
+		cv.AllowedPaths = []string{"/usr/bin/"}
+		err := cv.ValidateCommandPath("/usr/bin/ls")
+		if err != nil {
+			t.Errorf("ValidateCommandPath() should allow path in whitelist directory with trailing separator, got error: %v", err)
+		}
+	})
+
 	t.Run("with whitelist - exact file", func(t *testing.T) {
 		cv.AllowedPaths = []string{"/usr/bin/ls"}
 		err := cv.ValidateCommandPath("/usr/bin/ls")
@@ -72,6 +80,22 @@ func TestValidateCommandPath(t *testing.T) {
 		err := cv.ValidateCommandPath("ls")
 		if err == nil {
 			t.Error("ValidateCommandPath() should reject relative path when whitelist is set")
+		}
+	})
+
+	t.Run("with invalid whitelist path", func(t *testing.T) {
+		cv.AllowedPaths = []string{"/nonexistent/path/that/does/not/exist"}
+		// 应该允许，因为无效路径会被警告但继续处理
+		err := cv.ValidateCommandPath("/usr/bin/ls")
+		// 由于无效路径会被跳过，这个测试主要确保不会 panic
+		_ = err
+	})
+
+	t.Run("with multiple whitelist paths", func(t *testing.T) {
+		cv.AllowedPaths = []string{"/usr/bin", "/bin"}
+		err := cv.ValidateCommandPath("/bin/sh")
+		if err != nil {
+			t.Errorf("ValidateCommandPath() should allow path in any whitelist directory, got error: %v", err)
 		}
 	})
 }
@@ -134,6 +158,63 @@ func TestValidateArgs(t *testing.T) {
 			t.Errorf("ValidateArgs() in strict mode should allow safe args, got error: %v", err)
 		}
 	})
+
+	t.Run("strict mode - shell special characters", func(t *testing.T) {
+		cv.StrictMode = true
+		dangerousArgs := []string{
+			"arg;rm -rf /",
+			"arg|cat /etc/passwd",
+			"arg&background",
+			"arg`command`",
+			"arg$VAR",
+			"arg$(command)",
+			"arg{command}",
+			"arg<file",
+			"arg>file",
+			"arg\nnewline",
+		}
+		for _, arg := range dangerousArgs {
+			err := cv.ValidateArgs([]string{arg})
+			if err == nil {
+				t.Errorf("ValidateArgs() in strict mode should reject dangerous arg: %s", arg)
+			}
+		}
+	})
+
+	t.Run("strict mode - variable expansion", func(t *testing.T) {
+		cv.StrictMode = true
+		args := []string{"arg${VAR}"}
+		err := cv.ValidateArgs(args)
+		if err == nil {
+			t.Error("ValidateArgs() in strict mode should reject variable expansion")
+		}
+	})
+
+	t.Run("empty args", func(t *testing.T) {
+		args := []string{}
+		err := cv.ValidateArgs(args)
+		if err != nil {
+			t.Errorf("ValidateArgs() with empty args should not return error, got: %v", err)
+		}
+	})
+
+	t.Run("single arg at max length", func(t *testing.T) {
+		cv.MaxArgLength = 10
+		args := []string{"1234567890"} // exactly 10 chars
+		err := cv.ValidateArgs(args)
+		if err != nil {
+			t.Errorf("ValidateArgs() with arg at max length should not return error, got: %v", err)
+		}
+	})
+
+	t.Run("total length exactly at max", func(t *testing.T) {
+		cv.MaxTotalArgsLength = 10
+		args := []string{"12345", "67890"} // total exactly 10 chars
+		err := cv.ValidateArgs(args)
+		if err != nil {
+			t.Errorf("ValidateArgs() with total length at max should not return error, got: %v", err)
+		}
+	})
 }
 
 func TestSanitizeForLog(t *testing.T) {
@@ -182,8 +263,35 @@ func TestSanitizeForLog(t *testing.T) {
 func TestLogCommandExecution(t *testing.T) {
 	cv := NewCommandValidator()
 
-	// 这个测试主要确保函数不会 panic
-	cv.LogCommandExecution("req-123", "hook-456", "/usr/bin/ls", []string{"-l"}, []string{"PATH=/usr/bin"})
+	t.Run("normal execution", func(t *testing.T) {
+		// 这个测试主要确保函数不会 panic
+		cv.LogCommandExecution("req-123", "hook-456", "/usr/bin/ls", []string{"-l"}, []string{"PATH=/usr/bin"})
+	})
+
+	t.Run("with sensitive environment variables", func(t *testing.T) {
+		envs := []string{
+			"PATH=/usr/bin",
+			"PASSWORD=secret123",
+			"SECRET_KEY=abc123",
+			"API_TOKEN=xyz789",
+			"AUTH_KEY=def456",
+		}
+		cv.LogCommandExecution("req-123", "hook-456", "/usr/bin/ls", []string{"-l"}, envs)
+	})
+
+	t.Run("with empty environment variables", func(t *testing.T) {
+		cv.LogCommandExecution("req-123", "hook-456", "/usr/bin/ls", []string{"-l"}, []string{})
+	})
+
+	t.Run("with malformed environment variable", func(t *testing.T) {
+		envs := []string{"MALFORMED"}
+		cv.LogCommandExecution("req-123", "hook-456", "/usr/bin/ls", []string{"-l"}, envs)
+	})
+
+	t.Run("with environment variable without value", func(t *testing.T) {
+		envs := []string{"KEY="}
+		cv.LogCommandExecution("req-123", "hook-456", "/usr/bin/ls", []string{"-l"}, envs)
+	})
 }
 
 func TestValidateCommand(t *testing.T) {
@@ -290,11 +398,58 @@ func TestSanitizeArg(t *testing.T) {
 		}
 	})
 
-	t.Run("sensitive arg", func(t *testing.T) {
+	t.Run("sensitive arg - password", func(t *testing.T) {
 		args := []string{"password=secret123"}
 		result := cv.sanitizeArg(args[0])
 		if !contains(result, "***") {
 			t.Errorf("sanitizeArg() should sanitize sensitive args, got: %s", result)
+		}
+	})
+
+	t.Run("sensitive arg - token", func(t *testing.T) {
+		result := cv.sanitizeArg("token=abc123")
+		if !contains(result, "***") {
+			t.Errorf("sanitizeArg() should sanitize token, got: %s", result)
+		}
+	})
+
+	t.Run("sensitive arg - bearer token", func(t *testing.T) {
+		result := cv.sanitizeArg("Bearer abc123def456")
+		if !contains(result, "***") {
+			t.Errorf("sanitizeArg() should sanitize bearer token, got: %s", result)
+		}
+	})
+
+	t.Run("sensitive arg - api key", func(t *testing.T) {
+		result := cv.sanitizeArg("api_key=secret123")
+		if !contains(result, "***") {
+			t.Errorf("sanitizeArg() should sanitize api key, got: %s", result)
+		}
+	})
+
+	t.Run("sensitive arg - auth token", func(t *testing.T) {
+		result := cv.sanitizeArg("auth_token=secret123")
+		if !contains(result, "***") {
+			t.Errorf("sanitizeArg() should sanitize auth token, got: %s", result)
+		}
+	})
+
+	t.Run("exactly 200 chars", func(t *testing.T) {
+		arg := string(make([]byte, 200))
+		result := cv.sanitizeArg(arg)
+		if len(result) != 200 {
+			t.Errorf("sanitizeArg() with exactly 200 chars should not truncate, got length: %d", len(result))
+		}
+	})
+
+	t.Run("exactly 201 chars", func(t *testing.T) {
+		arg := string(make([]byte, 201))
+		result := cv.sanitizeArg(arg)
+		if len(result) <= 200 {
+			t.Error("sanitizeArg() with 201 chars should truncate")
+		}
+		if !contains(result, "[truncated]") {
+			t.Error("sanitizeArg() should append [truncated] for args longer than 200 chars")
 		}
 	})
 }

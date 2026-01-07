@@ -4,34 +4,51 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 )
 
-func main() {
-	if len(os.Args) > 1 {
-		fmt.Printf("arg: %s\n", strings.Join(os.Args[1:], " "))
+// RunHookecho 执行 hookecho 的主要逻辑
+// 这个函数可以被测试，而 main 函数只是调用它
+// writer 用于输出，如果为 nil 则使用 os.Stdout
+func RunHookecho(args []string, environ []string, writer io.Writer) (shouldExit bool, exitCode int) {
+	if writer == nil {
+		writer = os.Stdout
+	}
+
+	if len(args) > 1 {
+		fmt.Fprintf(writer, "arg: %s\n", strings.Join(args[1:], " "))
 	}
 
 	var env []string
-	for _, v := range os.Environ() {
+	for _, v := range environ {
 		if strings.HasPrefix(v, "HOOK_") {
 			env = append(env, v)
 		}
 	}
 
 	if len(env) > 0 {
-		fmt.Printf("env: %s\n", strings.Join(env, " "))
+		fmt.Fprintf(writer, "env: %s\n", strings.Join(env, " "))
 	}
 
-	if (len(os.Args) > 1) && (strings.HasPrefix(os.Args[1], "exit=")) {
-		exit_code_str := os.Args[1][5:]
+	if (len(args) > 1) && (strings.HasPrefix(args[1], "exit=")) {
+		exit_code_str := args[1][5:]
 		exit_code, err := strconv.Atoi(exit_code_str)
 		if err != nil {
-			fmt.Printf("Exit code %s not an int!", exit_code_str)
-			os.Exit(-1)
+			fmt.Fprintf(writer, "Exit code %s not an int!", exit_code_str)
+			return true, -1
 		}
-		os.Exit(exit_code)
+		return true, exit_code
+	}
+
+	return false, 0
+}
+
+func main() {
+	shouldExit, exitCode := RunHookecho(os.Args, os.Environ(), nil)
+	if shouldExit {
+		os.Exit(exitCode)
 	}
 }
