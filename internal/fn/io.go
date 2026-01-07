@@ -12,7 +12,7 @@ func ScanDirByExt(filePath string, fileExt string) []string {
 		return nil
 	}
 
-	var result []string
+	result := []string{}
 	ext := "." + strings.ReplaceAll(strings.ToLower(fileExt), ".", "")
 	err = filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {

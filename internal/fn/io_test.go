@@ -51,3 +51,33 @@ func TestScanDirByExt(t *testing.T) {
 	txtFiles4 := fn.ScanDirByExt(tempDir, ".txt")
 	assert.Contains(t, txtFiles4, testFile4)
 }
+
+func TestScanDirByExt_ErrorHandling(t *testing.T) {
+	// Test with non-existent directory
+	result := fn.ScanDirByExt("/non/existent/path", ".txt")
+	assert.Nil(t, result)
+
+	// Test with empty extension
+	tempDir := t.TempDir()
+	result = fn.ScanDirByExt(tempDir, "")
+	assert.NotNil(t, result)
+	assert.Equal(t, 0, len(result))
+}
+
+func TestScanDirByExt_CaseInsensitive(t *testing.T) {
+	tempDir := t.TempDir()
+	testFile1 := filepath.Join(tempDir, "test1.TXT")
+	testFile2 := filepath.Join(tempDir, "test2.txt")
+	testFile3 := filepath.Join(tempDir, "test3.Txt")
+
+	os.Create(testFile1)
+	os.Create(testFile2)
+	os.Create(testFile3)
+
+	defer os.Remove(testFile1)
+	defer os.Remove(testFile2)
+	defer os.Remove(testFile3)
+
+	txtFiles := fn.ScanDirByExt(tempDir, ".txt")
+	assert.Len(t, txtFiles, 3)
+}

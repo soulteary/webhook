@@ -29,6 +29,31 @@ func TestGetVerifiedLocalCode(t *testing.T) {
 			input:        "",
 			expectedCode: "",
 		},
+		{
+			name:         "Valid zh-CN",
+			input:        "zh-CN",
+			expectedCode: "zh-CN",
+		},
+		{
+			name:         "Valid fr",
+			input:        "fr",
+			expectedCode: "fr",
+		},
+		{
+			name:         "Case mismatch",
+			input:        "EN-US",
+			expectedCode: "",
+		},
+		{
+			name:         "Invalid format",
+			input:        "123",
+			expectedCode: "",
+		},
+		{
+			name:         "Special characters",
+			input:        "en_US",
+			expectedCode: "",
+		},
 	}
 
 	for _, tc := range testCases {

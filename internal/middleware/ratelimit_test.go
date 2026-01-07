@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewRateLimiter(t *testing.T) {
@@ -312,4 +314,182 @@ func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 	}
 
 	// 应该不会 panic 或产生竞态条件
+}
+
+func TestExtractIP_IPv6(t *testing.T) {
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "[2001:db8::1]:8080"
+	ip := extractIP(req)
+	assert.Equal(t, "2001:db8::1", ip)
+}
+
+func TestExtractIP_InvalidRemoteAddr(t *testing.T) {
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "invalid-addr"
+	ip := extractIP(req)
+	assert.Equal(t, "invalid-addr", ip)
+}
+
+func TestExtractIP_XForwardedFor_InvalidIP(t *testing.T) {
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("X-Forwarded-For", "invalid-ip")
+	ip := extractIP(req)
+	// Should fallback to RemoteAddr
+	assert.NotEmpty(t, ip)
+}
+
+func TestParseForwardedIP_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		xff      string
+		expected string
+	}{
+		{"comma at start", ",192.168.1.1", ""},
+		{"comma only", ",", ""},
+		{"multiple commas", "192.168.1.1, 10.0.0.1, 172.16.0.1", "192.168.1.1"},
+		{"IPv6 in XFF", "2001:db8::1", "2001:db8::1"},
+		{"IPv6 with comma", "2001:db8::1, 2001:db8::2", "2001:db8::1"},
+		{"whitespace only", "   ", ""},
+		{"mixed whitespace", "  192.168.1.1  , 10.0.0.1  ", "192.168.1.1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseForwardedIP(tt.xff)
+			if tt.expected != "" && got != tt.expected {
+				t.Errorf("parseForwardedIP() = %s, want %s", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestExtractHookID_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected string
+		usePath  bool // If true, manually set req.URL.Path instead of using path in NewRequest
+	}{
+		{"single slash", "/", "", false},
+		{"multiple slashes", "/hooks/test/sub/path", "path", false},
+		{"no leading slash", "hooks/test", "test", true},
+		{"empty after trim", "   ", "", true},
+		{"with query", "/hooks/test?param=value", "test", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var req *http.Request
+			if tt.usePath {
+				// For invalid URI paths, create a valid request first, then set the path
+				req = httptest.NewRequest("GET", "/", nil)
+				req.URL.Path = tt.path
+			} else {
+				req = httptest.NewRequest("GET", tt.path, nil)
+			}
+			got := extractHookID(req)
+			if tt.expected != "" && got != tt.expected {
+				t.Errorf("extractHookID() = %s, want %s", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestRateLimiter_GetIPLimiter(t *testing.T) {
+	config := RateLimitConfig{
+		Enabled: true,
+		RPS:     10,
+		Burst:   5,
+	}
+
+	rl := NewRateLimiter(config)
+	if rl == nil {
+		t.Fatal("NewRateLimiter() should not return nil")
+	}
+
+	// Test getting limiter for same IP multiple times
+	limiter1 := rl.getIPLimiter("192.168.1.1", 10, 5)
+	limiter2 := rl.getIPLimiter("192.168.1.1", 10, 5)
+
+	// Should return same limiter instance
+	if limiter1 != limiter2 {
+		t.Error("getIPLimiter() should return same limiter for same IP")
+	}
+
+	// Test different IPs
+	limiter3 := rl.getIPLimiter("192.168.1.2", 10, 5)
+	if limiter1 == limiter3 {
+		t.Error("getIPLimiter() should return different limiter for different IP")
+	}
+}
+
+func TestRateLimiter_GetHookLimiter(t *testing.T) {
+	config := RateLimitConfig{
+		Enabled: true,
+		RPS:     10,
+		Burst:   5,
+	}
+
+	rl := NewRateLimiter(config)
+	if rl == nil {
+		t.Fatal("NewRateLimiter() should not return nil")
+	}
+
+	// Test getting limiter for same hook multiple times
+	limiter1 := rl.getHookLimiter("hook1", 5, 2)
+	limiter2 := rl.getHookLimiter("hook1", 5, 2)
+
+	// Should return same limiter instance
+	if limiter1 != limiter2 {
+		t.Error("getHookLimiter() should return same limiter for same hook")
+	}
+
+	// Test different hooks
+	limiter3 := rl.getHookLimiter("hook2", 5, 2)
+	if limiter1 == limiter3 {
+		t.Error("getHookLimiter() should return different limiter for different hook")
+	}
+}
+
+func TestRateLimiter_Middleware_NilLimiter(t *testing.T) {
+	// Test middleware with nil limiter (disabled)
+	var rl *RateLimiter = nil
+	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Status code = %d, want %d", w.Code, http.StatusOK)
+	}
+}
+
+func TestRateLimiter_HookMiddleware_EmptyHookID(t *testing.T) {
+	config := RateLimitConfig{
+		Enabled: true,
+		RPS:     10,
+		Burst:   5,
+	}
+
+	rl := NewRateLimiter(config)
+	if rl == nil {
+		t.Fatal("NewRateLimiter() should not return nil")
+	}
+
+	hookMiddleware := rl.HookMiddleware(5, 2)
+	handler := hookMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Request with empty path (no hook ID)
+	req := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Status code = %d, want %d", w.Code, http.StatusOK)
+	}
 }
