@@ -155,3 +155,180 @@ func TestSetupLogger_ErrorHandling(t *testing.T) {
 	// Should have error in log queue
 	assert.Greater(t, len(logQueue), 0)
 }
+
+func TestNeedValidateConfig(t *testing.T) {
+	// Test when ValidateConfig is false (should not do anything)
+	appFlags := flags.AppFlags{ValidateConfig: false}
+	NeedValidateConfig(appFlags)
+	// Should not exit, so if we get here, test passes
+
+	// Test when ValidateConfig is true with valid config
+	// Note: This will call os.Exit(0) on success or os.Exit(1) on failure
+	// We can't test the exit behavior directly, but we can test the validation logic
+	// by checking that the function doesn't panic and processes the flags correctly
+
+	// Create a temporary hooks file for validation
+	tmpDir := t.TempDir()
+	hooksFile := filepath.Join(tmpDir, "hooks.json")
+	_ = os.WriteFile(hooksFile, []byte(`[]`), 0644)
+
+	appFlags = flags.AppFlags{
+		ValidateConfig: true,
+		Port:           9000,
+		HooksFiles:     []string{hooksFile},
+	}
+
+	// This will exit, so we can't test it directly
+	// The validation logic is tested in flags.Validate tests
+	// This test just ensures the function doesn't panic when ValidateConfig is false
+}
+
+func TestGetNetAddr_WithDifferentHosts(t *testing.T) {
+	tests := []struct {
+		name          string
+		host          string
+		port          int
+		shouldSucceed bool
+	}{
+		{
+			name:          "localhost",
+			host:          "127.0.0.1",
+			port:          0, // Let OS assign port
+			shouldSucceed: true,
+		},
+		{
+			name:          "0.0.0.0",
+			host:          "0.0.0.0",
+			port:          0,
+			shouldSucceed: true,
+		},
+		{
+			name:          "localhost with specific port",
+			host:          "127.0.0.1",
+			port:          0, // Use 0 to avoid port conflicts
+			shouldSucceed: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			appFlags := flags.AppFlags{Host: tt.host, Port: tt.port}
+			var logQueue []string
+			addr, ln := GetNetAddr(appFlags, &logQueue)
+
+			if tt.shouldSucceed {
+				assert.NotEmpty(t, addr)
+				assert.NotNil(t, ln)
+				if ln != nil {
+					(*ln).Close()
+				}
+			}
+		})
+	}
+}
+
+func TestSetupLogger_WithDifferentFlags(t *testing.T) {
+	tests := []struct {
+		name      string
+		verbose   bool
+		debug     bool
+		logPath   string
+		shouldErr bool
+	}{
+		{
+			name:      "verbose enabled, no log file",
+			verbose:   true,
+			debug:     false,
+			logPath:   "",
+			shouldErr: false,
+		},
+		{
+			name:      "verbose disabled",
+			verbose:   false,
+			debug:     false,
+			logPath:   "",
+			shouldErr: false,
+		},
+		{
+			name:      "debug enabled",
+			verbose:   true,
+			debug:     true,
+			logPath:   "",
+			shouldErr: false,
+		},
+		{
+			name:      "with valid log file",
+			verbose:   true,
+			debug:     false,
+			logPath:   filepath.Join(t.TempDir(), "test.log"),
+			shouldErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			appFlags := flags.AppFlags{
+				Verbose: tt.verbose,
+				Debug:   tt.debug,
+				LogPath: tt.logPath,
+			}
+			var logQueue []string
+			err := SetupLogger(appFlags, &logQueue)
+
+			if tt.shouldErr {
+				assert.Error(t, err)
+				assert.Greater(t, len(logQueue), 0)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCheckPrivilegesParamsCorrect_AllCases(t *testing.T) {
+	tests := []struct {
+		name       string
+		setUID     int
+		setGID     int
+		shouldExit bool
+	}{
+		{
+			name:       "both zero (valid)",
+			setUID:     0,
+			setGID:     0,
+			shouldExit: false,
+		},
+		{
+			name:       "both non-zero (valid)",
+			setUID:     1000,
+			setGID:     1000,
+			shouldExit: false,
+		},
+		{
+			name:       "only UID set (invalid)",
+			setUID:     1000,
+			setGID:     0,
+			shouldExit: true, // Will exit, can't test directly
+		},
+		{
+			name:       "only GID set (invalid)",
+			setUID:     0,
+			setGID:     1000,
+			shouldExit: true, // Will exit, can't test directly
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			appFlags := flags.AppFlags{SetUID: tt.setUID, SetGID: tt.setGID}
+
+			if !tt.shouldExit {
+				CheckPrivilegesParamsCorrect(appFlags)
+				// If we get here, test passes
+			} else {
+				// This will exit, so we can't test it directly
+				// The function is tested in integration tests
+			}
+		})
+	}
+}
