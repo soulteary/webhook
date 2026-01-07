@@ -57,7 +57,7 @@ func TestGetNetAddr(t *testing.T) {
 	assert.NotEmpty(t, addr)
 	assert.NotNil(t, ln)
 	assert.Equal(t, 0, len(logQueue))
-	if ln != nil {
+	if ln != nil && *ln != nil {
 		(*ln).Close()
 	}
 
@@ -129,7 +129,7 @@ func TestGetNetAddr_ErrorHandling(t *testing.T) {
 	assert.NotEmpty(t, addr)
 	// Port 0 should succeed (OS assigns a port)
 	assert.NotNil(t, ln)
-	if ln != nil {
+	if ln != nil && *ln != nil {
 		(*ln).Close()
 	}
 }
@@ -227,7 +227,7 @@ func TestGetNetAddr_WithPortZero(t *testing.T) {
 	assert.NotEmpty(t, addr)
 	assert.NotNil(t, ln)
 	assert.Equal(t, 0, len(logQueue))
-	if ln != nil {
+	if ln != nil && *ln != nil {
 		(*ln).Close()
 	}
 }
@@ -240,7 +240,8 @@ func TestGetNetAddr_WithIPv6(t *testing.T) {
 
 	assert.NotEmpty(t, addr)
 	assert.NotNil(t, ln)
-	if ln != nil {
+	// Check if the listener is actually valid (not nil)
+	if ln != nil && *ln != nil {
 		(*ln).Close()
 	}
 }
@@ -253,7 +254,7 @@ func TestGetNetAddr_AddressFormat(t *testing.T) {
 
 	assert.Contains(t, addr, "127.0.0.1")
 	assert.Contains(t, addr, "8080")
-	if ln != nil {
+	if ln != nil && *ln != nil {
 		(*ln).Close()
 	}
 }
@@ -388,7 +389,7 @@ func TestGetNetAddr_LogQueueAppend(t *testing.T) {
 	assert.NotEmpty(t, addr)
 	// Should have error in log queue
 	assert.Greater(t, len(logQueue), 0, "Should have error in log queue for invalid address")
-	if ln != nil {
+	if ln != nil && *ln != nil {
 		(*ln).Close()
 	}
 }
@@ -463,7 +464,7 @@ func TestGetNetAddr_ReturnValueTypes(t *testing.T) {
 	// Verify return types
 	assert.IsType(t, "", addr, "addr should be string")
 	assert.NotNil(t, ln, "ln should not be nil")
-	if ln != nil {
+	if ln != nil && *ln != nil {
 		assert.IsType(t, (*net.Listener)(nil), ln, "ln should be *net.Listener")
 		(*ln).Close()
 	}
@@ -499,14 +500,14 @@ func TestSetupLogger_ReturnError(t *testing.T) {
 func TestGetNetAddr_ConcurrentAccess(t *testing.T) {
 	// Test that GetNetAddr can be called concurrently
 	appFlags := flags.AppFlags{Host: "127.0.0.1", Port: 0}
-	
+
 	done := make(chan bool, 10)
 	for i := 0; i < 10; i++ {
 		go func() {
 			var logQueue []string
 			addr, ln := GetNetAddr(appFlags, &logQueue)
 			assert.NotEmpty(t, addr)
-			if ln != nil {
+			if ln != nil && *ln != nil {
 				(*ln).Close()
 			}
 			done <- true
@@ -596,7 +597,7 @@ func TestGetNetAddr_WithDifferentHosts(t *testing.T) {
 			if tt.shouldSucceed {
 				assert.NotEmpty(t, addr)
 				assert.NotNil(t, ln)
-				if ln != nil {
+				if ln != nil && *ln != nil {
 					(*ln).Close()
 				}
 			}
