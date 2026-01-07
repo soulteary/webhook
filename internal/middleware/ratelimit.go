@@ -171,10 +171,10 @@ func parseForwardedIP(xff string) string {
 
 // extractHookID 从请求中提取 hook ID
 // 注意：这个函数需要在路由匹配之后调用才能获取到 hook ID
-// 在中间件中，我们无法直接访问 mux.Vars，所以这个函数主要用于 HookMiddleware
+// 在中间件中，我们无法直接访问 chi.URLParam，所以这个函数主要用于 HookMiddleware
 func extractHookID(r *http.Request) string {
 	// 尝试从 URL 路径中提取
-	// 实际使用中，hook ID 应该在 handler 中通过 mux.Vars(r)["id"] 获取
+	// 实际使用中，hook ID 应该在 handler 中通过 chi.URLParam(r, "id") 获取
 	// 这里提供一个简单的实现作为后备
 	path := r.URL.Path
 	if path == "" || path == "/" {

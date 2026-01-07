@@ -14,10 +14,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/fn"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/link"
 	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/metrics"
 	"github.com/soulteary/webhook/internal/middleware"
@@ -559,7 +560,26 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 
 		logger.Debugf("[%s] incoming HTTP %s request from %s", requestID, r.Method, r.RemoteAddr)
 
-		hookID := strings.TrimSpace(mux.Vars(r)["id"])
+		// Extract hook ID from URL path, supporting IDs with slashes (e.g., "sendgrid/dir")
+		// We extract directly from the path to support both simple IDs and IDs with slashes
+		// The route pattern is /{id}/*, but we need to handle cases where * might be empty
+		path := r.URL.Path
+		basePath := link.MakeBaseURL(&appFlags.HooksURLPrefix)
+		if basePath == "" {
+			basePath = "/hooks"
+		}
+		// Remove the base path prefix to get the hook ID
+		var hookID string
+		if strings.HasPrefix(path, basePath+"/") {
+			hookID = strings.TrimPrefix(path, basePath+"/")
+		} else {
+			// Fallback: try to get from URL params
+			hookID = strings.TrimSpace(chi.URLParam(r, "id"))
+			if wildcard := chi.URLParam(r, "*"); wildcard != "" {
+				hookID = hookID + "/" + wildcard
+			}
+		}
+		hookID = strings.TrimSpace(hookID)
 		hookID = fn.RemoveNewlinesAndTabs(hookID)
 
 		matchedHook := rules.MatchLoadedHook(hookID)

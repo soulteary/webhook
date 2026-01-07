@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/rules"
@@ -173,8 +173,10 @@ func TestCreateHookHandler_HookNotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Create a router and add the handler
-	r := mux.NewRouter()
+	// Register both routes to support simple IDs and IDs with slashes
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
@@ -199,8 +201,10 @@ func TestCreateHookHandler_MethodNotAllowed(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Create a router and add the handler
-	r := mux.NewRouter()
+	// Register both routes to support simple IDs and IDs with slashes
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
@@ -226,8 +230,9 @@ func TestCreateHookHandler_AppFlagsHttpMethods(t *testing.T) {
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should not return MethodNotAllowed for POST
@@ -395,8 +400,8 @@ func TestCreateHookHandler_JSONContentType(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
-	r.HandleFunc("/hooks/{id}", handler)
+	r := chi.NewRouter()
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should not return error for valid JSON
@@ -422,8 +427,8 @@ func TestCreateHookHandler_XMLContentType(t *testing.T) {
 	req.Header.Set("Content-Type", "application/xml")
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
-	r.HandleFunc("/hooks/{id}", handler)
+	r := chi.NewRouter()
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should not return error for valid XML
@@ -449,8 +454,8 @@ func TestCreateHookHandler_FormUrlEncodedContentType(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
-	r.HandleFunc("/hooks/{id}", handler)
+	r := chi.NewRouter()
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should not return error for valid form data
@@ -476,8 +481,9 @@ func TestCreateHookHandler_UnsupportedContentType(t *testing.T) {
 	req.Header.Set("Content-Type", "text/plain")
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should handle unsupported content type gracefully
@@ -503,8 +509,9 @@ func TestCreateHookHandler_WithTriggerRule(t *testing.T) {
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should trigger successfully when no trigger rule
@@ -532,8 +539,9 @@ func TestCreateHookHandler_WithResponseHeaders(t *testing.T) {
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should set response headers
@@ -710,8 +718,8 @@ func TestCreateHookHandler_MultipartForm(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
-	r.HandleFunc("/hooks/{id}", handler)
+	r := chi.NewRouter()
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should handle multipart form successfully
@@ -751,8 +759,8 @@ func TestCreateHookHandler_MultipartFormWithFile(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
-	r.HandleFunc("/hooks/{id}", handler)
+	r := chi.NewRouter()
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should handle multipart form with file successfully
@@ -788,8 +796,8 @@ func TestCreateHookHandler_MultipartFormError(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
-	r.HandleFunc("/hooks/{id}", handler)
+	r := chi.NewRouter()
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should return error for multipart form parsing failure
@@ -819,8 +827,8 @@ func TestCreateHookHandler_ReadBodyError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
-	r.HandleFunc("/hooks/{id}", handler)
+	r := chi.NewRouter()
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should handle read error gracefully
@@ -853,8 +861,8 @@ func TestCreateHookHandler_TriggerRuleError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
-	r.HandleFunc("/hooks/{id}", handler)
+	r := chi.NewRouter()
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should handle trigger rule evaluation
@@ -893,8 +901,9 @@ func TestCreateHookHandler_StreamCommandOutputError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should handle stream command output error
@@ -934,8 +943,9 @@ func TestCreateHookHandler_CaptureOutputOnError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should capture output on error
@@ -972,8 +982,9 @@ func TestCreateHookHandler_TriggerRuleMismatchHttpResponseCode(t *testing.T) {
 	// Don't set X-Test header, so the rule won't match
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should use custom response code when trigger rule doesn't match
@@ -1001,8 +1012,9 @@ func TestCreateHookHandler_SuccessHttpResponseCode(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	r.HandleFunc("/hooks/{id}", handler)
+	r.HandleFunc("/hooks/{id}/*", handler)
 	r.ServeHTTP(w, req)
 
 	// Should use custom success response code

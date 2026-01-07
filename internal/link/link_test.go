@@ -47,17 +47,17 @@ func TestMakeRoutePattern(t *testing.T) {
 		{
 			name:   "nil prefix route pattern",
 			prefix: nil,
-			want:   "/{id:.*}",
+			want:   "/{id}",
 		},
 		{
 			name:   "empty prefix route pattern",
 			prefix: new(string),
-			want:   "/{id:.*}",
+			want:   "/{id}",
 		},
 		{
 			name:   "non-empty prefix route pattern",
 			prefix: newString("api"),
-			want:   "/api/{id:.*}",
+			want:   "/api/{id}",
 		},
 	}
 
