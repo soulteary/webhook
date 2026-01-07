@@ -167,6 +167,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 - [API 参考](docs/zh-CN/API-Reference.md) - 完整的 API 文档，包含所有端点
 - [安全最佳实践](docs/zh-CN/Security-Best-Practices.md) - 全面的安全指南
 - [性能调优](docs/zh-CN/Performance-Tuning.md) - 性能优化指南
+- [测试指南](docs/zh-CN/Testing-Guide.md) - 如何运行测试、生成覆盖率报告以及关键测试场景
 - [故障排查](docs/zh-CN/Troubleshooting.md) - 常见问题和解决方案
 - [迁移指南](docs/zh-CN/Migration-Guide.md) - 从先前版本升级
 - [重构报告](docs/zh-CN/REFACTORING_REPORT.md) - 详细对比原始 fork（adnanh/webhook 2.8.0）与当前版本（4.9.0）的代码变更和改进

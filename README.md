@@ -167,6 +167,7 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 - [API Reference](docs/en-US/API-Reference.md) - Complete API documentation with all endpoints
 - [Security Best Practices](docs/en-US/Security-Best-Practices.md) - Comprehensive security guide
 - [Performance Tuning](docs/en-US/Performance-Tuning.md) - Performance optimization guide
+- [Testing Guide](docs/en-US/Testing-Guide.md) - How to run tests, generate coverage reports, and key testing scenarios
 - [Troubleshooting](docs/en-US/Troubleshooting.md) - Common issues and solutions
 - [Migration Guide](docs/en-US/Migration-Guide.md) - Upgrading from previous versions
 - [Refactoring Report](docs/en-US/REFACTORING_REPORT.md) - Detailed comparison between the original fork (adnanh/webhook 2.8.0) and current version (4.9.0)
