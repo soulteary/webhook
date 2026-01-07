@@ -132,6 +132,26 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 查看 [钩子示例](docs/zh-CN/Hook-Examples.md) 来了解各种使用方法。
 
+## 文档
+
+### 核心文档
+- [钩子定义](docs/zh-CN/Hook-Definition.md) - 完整的钩子配置参考
+- [钩子匹配规则](docs/zh-CN/Hook-Rules.md) - 触发规则和条件
+- [配置参数](docs/zh-CN/CLI-ENV.md) - 命令行参数和配置
+- [配置模版](docs/zh-CN/Templates.md) - 在配置中使用 Go 模板
+- [请求值引用](docs/zh-CN/Request-Values.md) - 访问请求数据
+- [钩子示例](docs/zh-CN/Hook-Examples.md) - 实用示例和用例
+
+### 高级主题
+- [API 参考](docs/zh-CN/API-Reference.md) - 完整的 API 文档，包含所有端点
+- [安全最佳实践](docs/zh-CN/Security-Best-Practices.md) - 全面的安全指南
+- [性能调优](docs/zh-CN/Performance-Tuning.md) - 性能优化指南
+- [故障排查](docs/zh-CN/Troubleshooting.md) - 常见问题和解决方案
+- [迁移指南](docs/zh-CN/Migration-Guide.md) - 从先前版本升级
+
+### 安全
+- [安全策略](SECURITY.md) - 安全功能和漏洞报告
+
 # 为什么要作一个开源软件的分叉
 
 主要有两个原因：

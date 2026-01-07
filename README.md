@@ -120,6 +120,26 @@ To set CORS headers, use the `-header name=value` flag when starting [webhook][w
 
 Explore various creative uses of WebHook in our [Hook Examples](docs/en-US/Hook-Examples.md) documentation.
 
+## Documentation
+
+### Core Documentation
+- [Hook Definition](docs/en-US/Hook-Definition.md) - Complete hook configuration reference
+- [Hook Rules](docs/en-US/Hook-Rules.md) - Trigger rules and conditions
+- [Webhook Parameters](docs/en-US/Webhook-Parameters.md) - Command-line arguments and configuration
+- [Templates](docs/en-US/Templates.md) - Using Go templates in configurations
+- [Referencing Request Values](docs/en-US/Referencing-Request-Values.md) - Accessing request data
+- [Hook Examples](docs/en-US/Hook-Examples.md) - Practical examples and use cases
+
+### Advanced Topics
+- [API Reference](docs/en-US/API-Reference.md) - Complete API documentation with all endpoints
+- [Security Best Practices](docs/en-US/Security-Best-Practices.md) - Comprehensive security guide
+- [Performance Tuning](docs/en-US/Performance-Tuning.md) - Performance optimization guide
+- [Troubleshooting](docs/en-US/Troubleshooting.md) - Common issues and solutions
+- [Migration Guide](docs/en-US/Migration-Guide.md) - Upgrading from previous versions
+
+### Security
+- [Security Policy](SECURITY.md) - Security features and vulnerability reporting
+
 # Our Motivation
 
 We decided to fork this open-source software for two main reasons:
