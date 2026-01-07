@@ -58,10 +58,10 @@ WebHook 遵循简单、专注的方法：
 docker pull soulteary/webhook:latest
 
 # 特定版本
-docker pull soulteary/webhook:4.9.0
+docker pull soulteary/webhook:5.0.0
 
 # 包含调试工具的扩展版本
-docker pull soulteary/webhook:extend-4.9.0
+docker pull soulteary/webhook:extend-5.0.0
 ```
 
 ### 方式三：从源码构建
