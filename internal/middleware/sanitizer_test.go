@@ -251,3 +251,180 @@ func TestSanitizeRequestBody(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizeRequestLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "请求行无查询参数",
+			input:    "GET /api/test HTTP/1.1",
+			expected: "GET /api/test HTTP/1.1",
+		},
+		{
+			name:     "请求行包含查询参数",
+			input:    "GET /api/test?name=value HTTP/1.1",
+			expected: "GET /api/test?name=value HTTP/1.1",
+		},
+		{
+			name:     "请求行包含敏感查询参数",
+			input:    "GET /api/test?password=secret123 HTTP/1.1",
+			expected: "GET /api/test?password=***",
+		},
+		{
+			name:     "请求行包含token参数",
+			input:    "GET /api/test?token=abc123 HTTP/1.1",
+			expected: "GET /api/test?token=***",
+		},
+		{
+			name:     "请求行包含多个查询参数",
+			input:    "GET /api/test?name=value&password=secret HTTP/1.1",
+			expected: "GET /api/test?name=value&password=***",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SanitizeRequestLine(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestSanitizeDumpRequest(t *testing.T) {
+	tests := []struct {
+		name        string
+		dump        []byte
+		includeBody bool
+		checkFunc   func(t *testing.T, result []byte)
+	}{
+		{
+			name:        "空dump",
+			dump:        []byte{},
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:        "不包含请求体",
+			dump:        []byte("GET /test HTTP/1.1\nHost: example.com\n\n"),
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "GET /test HTTP/1.1")
+				assert.Contains(t, string(result), "Host: example.com")
+			},
+		},
+		{
+			name:        "包含敏感头的请求",
+			dump:        []byte("GET /test HTTP/1.1\nAuthorization: Bearer token123\n\n"),
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "Authorization: ***")
+			},
+		},
+		{
+			name:        "包含JSON请求体",
+			dump:        []byte("POST /test HTTP/1.1\nContent-Type: application/json\n\n{\"password\":\"secret\"}"),
+			includeBody: true,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "password")
+				assert.Contains(t, string(result), "***")
+			},
+		},
+		{
+			name:        "包含表单请求体",
+			dump:        []byte("POST /test HTTP/1.1\nContent-Type: application/x-www-form-urlencoded\n\nusername=user&password=secret"),
+			includeBody: true,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "password=***")
+			},
+		},
+		{
+			name:        "包含敏感查询参数的请求行",
+			dump:        []byte("GET /test?password=secret HTTP/1.1\nHost: example.com\n\n"),
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "password=***")
+			},
+		},
+		{
+			name:        "包含多种HTTP方法的请求行",
+			dump:        []byte("POST /test HTTP/1.1\nHost: example.com\n\n"),
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "POST")
+			},
+		},
+		{
+			name:        "PUT方法",
+			dump:        []byte("PUT /test HTTP/1.1\nHost: example.com\n\n"),
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "PUT")
+			},
+		},
+		{
+			name:        "DELETE方法",
+			dump:        []byte("DELETE /test HTTP/1.1\nHost: example.com\n\n"),
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "DELETE")
+			},
+		},
+		{
+			name:        "PATCH方法",
+			dump:        []byte("PATCH /test HTTP/1.1\nHost: example.com\n\n"),
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "PATCH")
+			},
+		},
+		{
+			name:        "HEAD方法",
+			dump:        []byte("HEAD /test HTTP/1.1\nHost: example.com\n\n"),
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "HEAD")
+			},
+		},
+		{
+			name:        "OPTIONS方法",
+			dump:        []byte("OPTIONS /test HTTP/1.1\nHost: example.com\n\n"),
+			includeBody: false,
+			checkFunc: func(t *testing.T, result []byte) {
+				assert.Contains(t, string(result), "OPTIONS")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SanitizeDumpRequest(tt.dump, tt.includeBody)
+			tt.checkFunc(t, result)
+		})
+	}
+}
+
+func TestSanitizeDumpRequest_ComplexCase(t *testing.T) {
+	// Test a complex case with multiple headers and body
+	dump := []byte(`POST /api/login HTTP/1.1
+Host: example.com
+Content-Type: application/json
+Authorization: Bearer secret-token
+X-API-Key: my-api-key
+
+{"username":"user","password":"secret123","token":"abc123"}`)
+
+	result := SanitizeDumpRequest(dump, true)
+
+	resultStr := string(result)
+	// Check that sensitive headers are sanitized
+	assert.Contains(t, resultStr, "Authorization: ***")
+	assert.Contains(t, resultStr, "X-API-Key: ***")
+	// Check that sensitive body fields are sanitized
+	assert.Contains(t, resultStr, "password")
+	assert.Contains(t, resultStr, "***")
+}

@@ -350,3 +350,10 @@ func TestNewHookExecutorWithFunc(t *testing.T) {
 	assert.True(t, called)
 	assert.Equal(t, "mocked", result)
 }
+
+func TestNewHookExecutor_Panic(t *testing.T) {
+	// Test that NewHookExecutor panics as expected
+	assert.Panics(t, func() {
+		NewHookExecutor(5, 10*time.Second)
+	}, "NewHookExecutor should panic")
+}

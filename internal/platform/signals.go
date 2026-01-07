@@ -70,8 +70,7 @@ func SetupSignalsWithHandlerAndShutdown(signals chan os.Signal, reloadFn func(),
 func (h *SignalHandler) watchForSignals(signals chan os.Signal, reloadFn func(), shutdownFn func(), pidFile *pidfile.PIDFile) {
 	logger.Info("os signal watcher ready")
 
-	for {
-		sig := <-signals
+	for sig := range signals {
 		switch sig {
 		case syscall.SIGUSR1:
 			logger.Info("caught USR1 signal")

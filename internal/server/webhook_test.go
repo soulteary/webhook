@@ -1082,3 +1082,132 @@ func TestMakeSureCallable_ChmodError(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
 }
+
+func TestTrackingResponseWriter(t *testing.T) {
+	w := httptest.NewRecorder()
+	trw := &trackingResponseWriter{ResponseWriter: w}
+
+	// Initially not written
+	assert.False(t, trw.HasWritten())
+
+	// Write should set written flag and status code
+	n, err := trw.Write([]byte("test"))
+	assert.NoError(t, err)
+	assert.Equal(t, 4, n)
+	assert.True(t, trw.HasWritten())
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// WriteHeader should also set written flag
+	w2 := httptest.NewRecorder()
+	trw2 := &trackingResponseWriter{ResponseWriter: w2}
+	trw2.WriteHeader(http.StatusNotFound)
+	assert.True(t, trw2.HasWritten())
+	assert.Equal(t, http.StatusNotFound, w2.Code)
+
+	// WriteHeader after Write should not change status
+	w3 := httptest.NewRecorder()
+	trw3 := &trackingResponseWriter{ResponseWriter: w3}
+	trw3.Write([]byte("test"))
+	trw3.WriteHeader(http.StatusInternalServerError)
+	assert.Equal(t, http.StatusOK, w3.Code) // Should remain 200
+}
+
+func TestTrackingResponseWriter_Flush(t *testing.T) {
+	w := httptest.NewRecorder()
+	trw := &trackingResponseWriter{ResponseWriter: w}
+
+	// Test Flush with non-Flusher
+	trw.Flush() // Should not panic
+
+	// Test Flush with Flusher
+	flusher := &mockFlusher{ResponseWriter: httptest.NewRecorder()}
+	trw2 := &trackingResponseWriter{ResponseWriter: flusher}
+	trw2.Flush()
+	assert.True(t, flusher.flushed)
+}
+
+func TestGetAsyncHookWaitGroup(t *testing.T) {
+	wg := GetAsyncHookWaitGroup()
+	assert.NotNil(t, wg)
+	// Should return the same instance
+	wg2 := GetAsyncHookWaitGroup()
+	assert.Equal(t, wg, wg2)
+}
+
+func TestStatusCodeResponseWriter(t *testing.T) {
+	w := httptest.NewRecorder()
+	var statusCode int
+	scrw := &statusCodeResponseWriter{
+		ResponseWriter: w,
+		statusCode:     &statusCode,
+	}
+
+	scrw.WriteHeader(http.StatusNotFound)
+	assert.Equal(t, http.StatusNotFound, statusCode)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSetResponseHeaders(t *testing.T) {
+	w := httptest.NewRecorder()
+	headers := hook.ResponseHeaders{
+		{Name: "X-Test1", Value: "value1"},
+		{Name: "X-Test2", Value: "value2"},
+	}
+
+	setResponseHeaders(w, headers)
+	assert.Equal(t, "value1", w.Header().Get("X-Test1"))
+	assert.Equal(t, "value2", w.Header().Get("X-Test2"))
+}
+
+func TestIsMethodAllowed(t *testing.T) {
+	tests := []struct {
+		name     string
+		method   string
+		hook     *hook.Hook
+		appFlags flags.AppFlags
+		expected bool
+	}{
+		{
+			name:     "hook with HTTPMethods",
+			method:   "POST",
+			hook:     &hook.Hook{HTTPMethods: []string{"POST", "PUT"}},
+			appFlags: flags.AppFlags{},
+			expected: true,
+		},
+		{
+			name:     "hook with HTTPMethods not matching",
+			method:   "GET",
+			hook:     &hook.Hook{HTTPMethods: []string{"POST", "PUT"}},
+			appFlags: flags.AppFlags{},
+			expected: false,
+		},
+		{
+			name:     "appFlags with HttpMethods",
+			method:   "POST",
+			hook:     &hook.Hook{},
+			appFlags: flags.AppFlags{HttpMethods: "POST,PUT"},
+			expected: true,
+		},
+		{
+			name:     "appFlags with HttpMethods not matching",
+			method:   "GET",
+			hook:     &hook.Hook{},
+			appFlags: flags.AppFlags{HttpMethods: "POST,PUT"},
+			expected: false,
+		},
+		{
+			name:     "default allow all",
+			method:   "ANY",
+			hook:     &hook.Hook{},
+			appFlags: flags.AppFlags{},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isMethodAllowed(tt.method, tt.hook, tt.appFlags)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

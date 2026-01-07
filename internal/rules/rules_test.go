@@ -347,3 +347,95 @@ func TestReloadHooks_WithSeenHooksIds(t *testing.T) {
 	// Verify hooks are not loaded due to duplicate
 	assert.Equal(t, 0, rules.LenLoadedHooks())
 }
+
+func TestRLockHooksFiles(t *testing.T) {
+	// Test that RLockHooksFiles and RUnlockHooksFiles work correctly
+	rules.RLockHooksFiles()
+	// Should not panic
+	rules.RUnlockHooksFiles()
+}
+
+func TestLockHooksFiles(t *testing.T) {
+	// Test that LockHooksFiles and UnlockHooksFiles work correctly
+	rules.LockHooksFiles()
+	// Should not panic
+	rules.UnlockHooksFiles()
+}
+
+func TestMatchLoadedHook_IndexRebuild(t *testing.T) {
+	// Test the case where index is empty but LoadedHooksFromFiles is not
+	// Setup: Set up hooks but clear the index to simulate out-of-sync scenario
+	rules.LockHooksFiles()
+	// Save current state
+	oldHooks := rules.LoadedHooksFromFiles
+
+	// Set up test hooks
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test1.json": {{ID: "hook1"}},
+	}
+
+	// Clear the index by building it with empty data
+	// Need to unlock before calling BuildIndex() to avoid deadlock
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{}
+	rules.UnlockHooksFiles()
+	rules.BuildIndex() // This will create an empty index
+
+	// Restore the hooks - now index is empty but LoadedHooksFromFiles has data
+	rules.LockHooksFiles()
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test1.json": {{ID: "hook1"}},
+	}
+	rules.UnlockHooksFiles()
+
+	// Now the index should be empty but LoadedHooksFromFiles has data
+	// This should trigger index rebuild in MatchLoadedHook
+	match := rules.MatchLoadedHook("hook1")
+
+	// Assert - check match is not nil before accessing fields to avoid panic
+	if !assert.NotNil(t, match, "Expected to find hook after index rebuild") {
+		// Cleanup: restore original state
+		rules.LockHooksFiles()
+		rules.LoadedHooksFromFiles = oldHooks
+		rules.UnlockHooksFiles()
+		rules.BuildIndex()
+		return
+	}
+	assert.Equal(t, "hook1", match.ID)
+
+	// Cleanup: restore original state
+	rules.LockHooksFiles()
+	rules.LoadedHooksFromFiles = oldHooks
+	rules.UnlockHooksFiles()
+	rules.BuildIndex()
+}
+
+func TestMatchLoadedHook_ConcurrentRebuild(t *testing.T) {
+	// Test that concurrent rebuilds don't cause issues
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test1.json": {{ID: "hook1"}},
+	}
+
+	// Multiple goroutines trying to access at the same time
+	done := make(chan bool, 10)
+	for i := 0; i < 10; i++ {
+		go func() {
+			match := rules.MatchLoadedHook("hook1")
+			if match != nil {
+				done <- true
+			} else {
+				done <- false
+			}
+		}()
+	}
+
+	// Wait for all goroutines
+	successCount := 0
+	for i := 0; i < 10; i++ {
+		if <-done {
+			successCount++
+		}
+	}
+
+	// At least some should succeed
+	assert.Greater(t, successCount, 0)
+}

@@ -148,13 +148,26 @@ func UpdateSystemMetrics() {
 	}
 }
 
+// StopFunc 是一个用于停止后台任务的函数类型
+type StopFunc func()
+
 // StartSystemMetricsCollector 启动系统指标收集器（定期更新）
-func StartSystemMetricsCollector(interval time.Duration) {
+// 返回一个停止函数，调用它可以停止收集器
+func StartSystemMetricsCollector(interval time.Duration) StopFunc {
+	stop := make(chan struct{})
 	go func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
-		for range ticker.C {
-			UpdateSystemMetrics()
+		for {
+			select {
+			case <-ticker.C:
+				UpdateSystemMetrics()
+			case <-stop:
+				return
+			}
 		}
 	}()
+	return func() {
+		close(stop)
+	}
 }

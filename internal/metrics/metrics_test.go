@@ -59,16 +59,18 @@ func TestUpdateSystemMetrics(t *testing.T) {
 
 func TestStartSystemMetricsCollector(t *testing.T) {
 	// 启动收集器
-	StartSystemMetricsCollector(100 * time.Millisecond)
+	stop := StartSystemMetricsCollector(100 * time.Millisecond)
+
+	// 确保在测试结束时停止收集器
+	t.Cleanup(func() {
+		stop()
+	})
 
 	// 等待一段时间让收集器运行
 	time.Sleep(200 * time.Millisecond)
 
 	// 更新指标
 	UpdateSystemMetrics()
-
-	// 停止收集器（通过等待足够长的时间，goroutine 会继续运行）
-	// 在实际测试中，我们无法直接停止，但可以验证它不会 panic
 }
 
 func TestConcurrentMetrics(t *testing.T) {
