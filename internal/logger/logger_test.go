@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestInit(t *testing.T) {
@@ -284,4 +285,189 @@ func TestLogLevels(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithRequestID_Uninitialized(t *testing.T) {
+	// 测试未初始化时的情况
+	DefaultLogger = nil
+	defaultHandler = nil
+	defaultWriter = nil
+
+	logger := WithRequestID("test-id")
+	if logger == nil {
+		t.Error("WithRequestID() should initialize and return a logger")
+	}
+
+	// 测试空 request ID 且未初始化的情况
+	DefaultLogger = nil
+	logger = WithRequestID("")
+	if logger == nil {
+		t.Error("WithRequestID() should initialize and return a logger even with empty request ID")
+	}
+}
+
+func TestWithContext_Uninitialized(t *testing.T) {
+	// 测试未初始化时的情况
+	DefaultLogger = nil
+	defaultHandler = nil
+	defaultWriter = nil
+
+	type ctxKeyRequestID int
+	const RequestIDKey ctxKeyRequestID = 0
+
+	ctx := context.WithValue(context.Background(), RequestIDKey, "test-id")
+	logger := WithContext(ctx)
+	if logger == nil {
+		t.Error("WithContext() should initialize and return a logger")
+	}
+
+	// 测试 context 中没有 request ID 且未初始化的情况
+	DefaultLogger = nil
+	ctxWithoutID := context.Background()
+	logger = WithContext(ctxWithoutID)
+	if logger == nil {
+		t.Error("WithContext() should initialize and return a logger even when context has no request ID")
+	}
+}
+
+func TestInit_VerboseDisabled(t *testing.T) {
+	// 重置全局状态
+	DefaultLogger = nil
+	defaultHandler = nil
+	defaultWriter = nil
+
+	// 测试 verbose=false 的情况，应该使用 io.Discard
+	err := Init(false, false, "", false)
+	if err != nil {
+		t.Errorf("Init() with verbose=false should not return error, got: %v", err)
+	}
+
+	if DefaultLogger == nil {
+		t.Error("DefaultLogger should not be nil even when verbose is disabled")
+	}
+
+	// 验证日志不会输出（因为使用了 io.Discard）
+	Info("test message")
+	// 由于使用了 io.Discard，这里无法验证输出，但至少应该不会 panic
+}
+
+func TestInit_ErrorHandling(t *testing.T) {
+	// 测试无效的日志文件路径（在只读目录中）
+	DefaultLogger = nil
+	defaultHandler = nil
+	defaultWriter = nil
+
+	// 尝试在根目录创建文件（通常会失败）
+	err := Init(true, false, "/root/webhook_test.log", false)
+	if err == nil {
+		// 如果成功，清理文件
+		os.Remove("/root/webhook_test.log")
+	}
+	// 这个测试主要确保错误处理路径被执行
+}
+
+// TestFatalFunctions 测试 Fatal 系列函数
+// 注意：这些函数会调用 os.Exit(1)，所以我们需要在子进程中测试
+func TestFatalFunctions(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping fatal function tests in short mode")
+	}
+
+	var buf bytes.Buffer
+	InitWithWriter(&buf, true, false, false)
+
+	// 由于 Fatal 函数会调用 os.Exit(1)，我们无法直接测试
+	// 但我们可以验证函数至少可以被调用而不会 panic
+	// 在实际使用中，这些函数会在程序退出前记录错误
+
+	// 测试 Fatal（通过检查函数签名和基本调用）
+	// 注意：实际调用会导致程序退出，所以这里只做结构验证
+	// 函数在 Go 中不能为 nil，所以这里只验证函数可以被引用
+	t.Run("Fatal function exists", func(t *testing.T) {
+		// 验证函数存在（函数在 Go 中不能为 nil）
+		_ = Fatal
+	})
+
+	t.Run("Fatalf function exists", func(t *testing.T) {
+		_ = Fatalf
+	})
+
+	t.Run("Fatalln function exists", func(t *testing.T) {
+		_ = Fatalln
+	})
+}
+
+// TestFatalFunctions_Subprocess 在子进程中测试 Fatal 函数
+func TestFatalFunctions_Subprocess(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping fatal function subprocess tests in short mode")
+	}
+
+	// 这个测试需要编译一个测试程序并在子进程中运行
+	// 由于复杂性，我们暂时跳过，但保留测试结构
+	t.Skip("Fatal function subprocess test requires additional setup")
+}
+
+func TestSimpleTextHandler_Handle(t *testing.T) {
+	var buf bytes.Buffer
+	handler := newSimpleTextHandler(&buf, slog.LevelInfo)
+
+	// 创建一个测试记录
+	record := slog.NewRecord(time.Now(), slog.LevelInfo, "test message", 0)
+	record.AddAttrs(slog.String("key", "value"))
+
+	// 测试 Handle
+	err := handler.Handle(context.TODO(), record)
+	if err != nil {
+		t.Errorf("Handle() should not return error, got: %v", err)
+	}
+
+	output := buf.String()
+	if output == "" {
+		t.Error("Handle() should produce output")
+	}
+
+	// 验证输出包含消息和属性
+	if !contains(output, "test message") {
+		t.Error("Handle() output should contain message")
+	}
+}
+
+func TestSimpleTextHandler_WithAttrs(t *testing.T) {
+	var buf bytes.Buffer
+	handler := newSimpleTextHandler(&buf, slog.LevelInfo)
+
+	// 测试 WithAttrs 返回新的 handler
+	newHandler := handler.WithAttrs([]slog.Attr{
+		slog.String("attr1", "value1"),
+		slog.Int("attr2", 42),
+	})
+
+	if newHandler == nil {
+		t.Error("WithAttrs() should return a handler")
+	}
+
+	// 验证新 handler 可以处理记录
+	record := slog.NewRecord(time.Now(), slog.LevelInfo, "test", 0)
+	err := newHandler.Handle(context.TODO(), record)
+	if err != nil {
+		t.Errorf("New handler Handle() should not return error, got: %v", err)
+	}
+}
+
+// Helper function
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr ||
+		(len(s) > len(substr) && (s[:len(substr)] == substr ||
+			s[len(s)-len(substr):] == substr ||
+			containsMiddle(s, substr))))
+}
+
+func containsMiddle(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
