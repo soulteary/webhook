@@ -57,10 +57,10 @@ Download pre-built binaries for Linux, macOS, and Windows from the [Releases pag
 docker pull soulteary/webhook:latest
 
 # Specific version
-docker pull soulteary/webhook:3.6.3
+docker pull soulteary/webhook:4.9.0
 
 # Extended version with debugging tools
-docker pull soulteary/webhook:extend-3.6.3
+docker pull soulteary/webhook:extend-4.9.0
 ```
 
 ### Option 3: Build from Source
