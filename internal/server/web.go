@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/link"
@@ -29,7 +29,7 @@ type Server struct {
 
 // Launch 启动 HTTP 服务器并返回 Server 实例
 func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID(
 		middleware.UseXRequestIDHeaderOption(appFlags.UseXRequestID),
@@ -129,7 +129,11 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	}
 
 	hookHandler := createHookHandler(appFlags, s)
+	// Register both /{id} and /{id}/* routes to support:
+	// - Simple hook IDs: /hooks/github
+	// - Hook IDs with slashes: /hooks/sendgrid/dir
 	r.HandleFunc(hooksURL, hookHandler)
+	r.HandleFunc(hooksURL+"/*", hookHandler)
 
 	// 启动系统指标收集器（每 10 秒更新一次）
 	metrics.StartSystemMetricsCollector(10 * time.Second)
