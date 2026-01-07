@@ -1025,7 +1025,7 @@ func TestHook_SanitizeHTTPMethods(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := &Hook{
-				ID:         "test-hook",
+				ID:          "test-hook",
 				HTTPMethods: tt.methods,
 			}
 			hook.SanitizeHTTPMethods()
