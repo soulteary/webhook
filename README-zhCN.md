@@ -169,6 +169,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 - [性能调优](docs/zh-CN/Performance-Tuning.md) - 性能优化指南
 - [故障排查](docs/zh-CN/Troubleshooting.md) - 常见问题和解决方案
 - [迁移指南](docs/zh-CN/Migration-Guide.md) - 从先前版本升级
+- [重构报告](docs/zh-CN/REFACTORING_REPORT.md) - 详细对比原始 fork（adnanh/webhook 2.8.0）与当前版本（4.9.0）的代码变更和改进
 
 ### 安全
 - [安全策略](SECURITY.md) - 安全功能和漏洞报告
@@ -187,5 +188,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 几年前，我曾经提交过一个[改进版本的 PR](https://github.com/adnanh/webhook/pull/570)，但是因为种种原因被作者忽略，目前原始项目的版本和维护也一直停留在 2024 年，**与其继续使用明知道不可靠的程序，不如将它变的可靠。**
 
 除了更容易从社区合并未被原始仓库作者合并的社区功能外，还可以快速对有安全风险的依赖作更新，并且文档友好、利于调试，能够快速上手。
+
+- [重构报告](docs/zh-CN/REFACTORING_REPORT.md) - 详细对比原始 fork（adnanh/webhook 2.8.0）与当前版本（4.9.0）的代码变更和改进
 
 [w]: https://github.com/soulteary/webhook
