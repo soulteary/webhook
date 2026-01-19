@@ -7,7 +7,7 @@ require (
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-chi/chi/v5 v5.2.4
 	github.com/google/uuid v1.6.0
 	github.com/invopop/yaml v0.3.1
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
