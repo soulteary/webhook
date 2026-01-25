@@ -9,49 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseCLI_Basic(t *testing.T) {
-	// Save original command line args
-	oldArgs := os.Args
-	defer func() {
-		os.Args = oldArgs
-		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	}()
-
-	// Test default values - ParseCLI only updates flags when CLI args differ from defaults
-	// So we need to initialize with default values first (like ParseEnvs does)
-	os.Args = []string{"webhook"}
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	envs := ParseEnvs() // Initialize with default values
-	result := ParseCLI(envs)
-
-	// When no CLI args provided, values should remain as defaults from ParseEnvs
-	assert.Equal(t, DEFAULT_HOST, result.Host)
-	assert.Equal(t, DEFAULT_PORT, result.Port)
-	assert.Equal(t, DEFAULT_ENABLE_VERBOSE, result.Verbose)
-	assert.Equal(t, DEFAULT_LOG_PATH, result.LogPath)
-}
-
-func TestParseCLI_WithFlags(t *testing.T) {
-	// Save original command line args
-	oldArgs := os.Args
-	defer func() {
-		os.Args = oldArgs
-		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	}()
-
-	// Test with custom flags
-	os.Args = []string{"webhook", "-ip", "127.0.0.1", "-port", "8080", "-verbose"}
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	envs := AppFlags{}
-	result := ParseCLI(envs)
-
-	assert.Equal(t, "127.0.0.1", result.Host)
-	assert.Equal(t, 8080, result.Port)
-	assert.Equal(t, true, result.Verbose)
-}
-
-func TestParseCLI_ShowVersion(t *testing.T) {
-	// Save original command line args
+func TestParseConfig_ShowVersion(t *testing.T) {
 	oldArgs := os.Args
 	defer func() {
 		os.Args = oldArgs
@@ -59,15 +17,11 @@ func TestParseCLI_ShowVersion(t *testing.T) {
 	}()
 
 	os.Args = []string{"webhook", "-version"}
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	envs := AppFlags{}
-	result := ParseCLI(envs)
-
+	result := ParseConfig()
 	assert.True(t, result.ShowVersion)
 }
 
-func TestParseCLI_ValidateConfig(t *testing.T) {
-	// Save original command line args
+func TestParseConfig_ValidateConfig(t *testing.T) {
 	oldArgs := os.Args
 	defer func() {
 		os.Args = oldArgs
@@ -75,15 +29,11 @@ func TestParseCLI_ValidateConfig(t *testing.T) {
 	}()
 
 	os.Args = []string{"webhook", "-validate-config"}
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	envs := AppFlags{}
-	result := ParseCLI(envs)
-
+	result := ParseConfig()
 	assert.True(t, result.ValidateConfig)
 }
 
-func TestParseCLI_HooksFiles(t *testing.T) {
-	// Save original command line args
+func TestParseConfig_HooksFiles(t *testing.T) {
 	oldArgs := os.Args
 	defer func() {
 		os.Args = oldArgs
@@ -99,19 +49,45 @@ func TestParseCLI_HooksFiles(t *testing.T) {
 	rules.UnlockHooksFiles()
 
 	os.Args = []string{"webhook", "-hooks", "hooks1.json", "-hooks", "hooks2.json"}
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	envs := ParseEnvs() // Initialize with default values
-	// Clear HooksFiles from envs to ensure only CLI hooks are used
-	envs.HooksFiles = nil
-	result := ParseCLI(envs)
+	result := ParseConfig()
 
 	assert.Len(t, result.HooksFiles, 2)
 	assert.Contains(t, result.HooksFiles, "hooks1.json")
 	assert.Contains(t, result.HooksFiles, "hooks2.json")
 }
 
-func TestParseCLI_ResponseHeaders(t *testing.T) {
-	// Save original command line args
+func TestParseConfig_HooksFromEnv(t *testing.T) {
+	oldArgs := os.Args
+	oldHooks := os.Getenv(ENV_KEY_HOOKS)
+	defer func() {
+		os.Args = oldArgs
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+		if oldHooks != "" {
+			os.Setenv(ENV_KEY_HOOKS, oldHooks)
+		} else {
+			os.Unsetenv(ENV_KEY_HOOKS)
+		}
+		rules.LockHooksFiles()
+		rules.HooksFiles = nil
+		rules.UnlockHooksFiles()
+	}()
+
+	// Clear rules.HooksFiles before test
+	rules.LockHooksFiles()
+	rules.HooksFiles = nil
+	rules.UnlockHooksFiles()
+
+	os.Setenv(ENV_KEY_HOOKS, "env_hooks1.json,env_hooks2.json")
+	os.Args = []string{"webhook"}
+
+	result := ParseConfig()
+
+	assert.GreaterOrEqual(t, len(result.HooksFiles), 2)
+	assert.Contains(t, result.HooksFiles, "env_hooks1.json")
+	assert.Contains(t, result.HooksFiles, "env_hooks2.json")
+}
+
+func TestParseConfig_ResponseHeaders(t *testing.T) {
 	oldArgs := os.Args
 	defer func() {
 		os.Args = oldArgs
@@ -119,9 +95,7 @@ func TestParseCLI_ResponseHeaders(t *testing.T) {
 	}()
 
 	os.Args = []string{"webhook", "-header", "Content-Type=application/json", "-header", "X-Custom=test"}
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	envs := AppFlags{}
-	result := ParseCLI(envs)
+	result := ParseConfig()
 
 	assert.Len(t, result.ResponseHeaders, 2)
 	assert.Equal(t, "Content-Type", result.ResponseHeaders[0].Name)
@@ -130,8 +104,7 @@ func TestParseCLI_ResponseHeaders(t *testing.T) {
 	assert.Equal(t, "test", result.ResponseHeaders[1].Value)
 }
 
-func TestParseCLI_AllFlagsComprehensive(t *testing.T) {
-	// Save original command line args
+func TestParseConfig_AllFlagsComprehensive(t *testing.T) {
 	oldArgs := os.Args
 	defer func() {
 		os.Args = oldArgs
@@ -178,9 +151,7 @@ func TestParseCLI_AllFlagsComprehensive(t *testing.T) {
 		"-idle-timeout-seconds", "180",
 		"-max-header-bytes", "2097152",
 	}
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	envs := AppFlags{}
-	result := ParseCLI(envs)
+	result := ParseConfig()
 
 	assert.Equal(t, "192.168.1.1", result.Host)
 	assert.Equal(t, 9001, result.Port)
@@ -221,8 +192,7 @@ func TestParseCLI_AllFlagsComprehensive(t *testing.T) {
 	assert.Equal(t, 2097152, result.MaxHeaderBytes)
 }
 
-func TestParseCLI_HooksFilesLocking(t *testing.T) {
-	// Save original command line args
+func TestParseConfig_HooksFilesLocking(t *testing.T) {
 	oldArgs := os.Args
 	defer func() {
 		os.Args = oldArgs
@@ -238,12 +208,9 @@ func TestParseCLI_HooksFilesLocking(t *testing.T) {
 	rules.UnlockHooksFiles()
 
 	os.Args = []string{"webhook", "-hooks", "new.json"}
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	envs := ParseEnvs() // Initialize with default values
-	result := ParseCLI(envs)
+	result := ParseConfig()
 
-	// Should include both initial and new hooks
-	// ParseCLI reads from rules.HooksFiles and appends CLI hooks
+	// Should include new hooks
 	assert.GreaterOrEqual(t, len(result.HooksFiles), 1)
 	assert.Contains(t, result.HooksFiles, "new.json")
 }

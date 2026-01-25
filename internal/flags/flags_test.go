@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseEnvs(t *testing.T) {
-	// Save original environment
+func TestParseConfig_DefaultValues(t *testing.T) {
+	// Save original environment and args
 	originalEnv := make(map[string]string)
 	envKeys := []string{
 		ENV_KEY_HOST, ENV_KEY_PORT, ENV_KEY_VERBOSE, ENV_KEY_DEBUG,
@@ -24,22 +24,22 @@ func TestParseEnvs(t *testing.T) {
 		if val := os.Getenv(key); val != "" {
 			originalEnv[key] = val
 		}
+		os.Unsetenv(key)
 	}
 
-	// Clean up after test
+	originalArgs := os.Args
 	defer func() {
+		os.Args = originalArgs
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 		for key := range originalEnv {
 			os.Setenv(key, originalEnv[key])
 		}
-		for _, key := range envKeys {
-			if _, exists := originalEnv[key]; !exists {
-				os.Unsetenv(key)
-			}
-		}
 	}()
 
-	// Test with default values
-	flags := ParseEnvs()
+	// Test with default values (no CLI args, no env vars)
+	os.Args = []string{"webhook"}
+
+	flags := ParseConfig()
 	assert.Equal(t, DEFAULT_HOST, flags.Host)
 	assert.Equal(t, DEFAULT_PORT, flags.Port)
 	assert.Equal(t, DEFAULT_ENABLE_VERBOSE, flags.Verbose)
@@ -58,8 +58,41 @@ func TestParseEnvs(t *testing.T) {
 	assert.Equal(t, DEFAULT_PID_FILE, flags.PidPath)
 	assert.Equal(t, DEFAULT_LANG, flags.Lang)
 	assert.Equal(t, DEFAULT_I18N_DIR, flags.I18nDir)
+}
 
-	// Test with custom environment variables
+func TestParseConfig_FromEnvVars(t *testing.T) {
+	// Save original environment and args
+	originalEnv := make(map[string]string)
+	envKeys := []string{
+		ENV_KEY_HOST, ENV_KEY_PORT, ENV_KEY_VERBOSE, ENV_KEY_DEBUG,
+		ENV_KEY_NO_PANIC, ENV_KEY_HOT_RELOAD, ENV_KEY_LOG_PATH,
+		ENV_KEY_HOOKS_URLPREFIX, ENV_KEY_TEMPLATE, ENV_KEY_X_REQUEST_ID,
+		ENV_KEY_MAX_MPART_MEM, ENV_KEY_GID, ENV_KEY_UID,
+		ENV_KEY_HTTP_METHODS, ENV_KEY_PID_FILE, ENV_KEY_HOOKS,
+		ENV_KEY_LANG, ENV_KEY_I18N,
+	}
+
+	for _, key := range envKeys {
+		if val := os.Getenv(key); val != "" {
+			originalEnv[key] = val
+		}
+	}
+
+	originalArgs := os.Args
+	defer func() {
+		os.Args = originalArgs
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+		for key := range originalEnv {
+			os.Setenv(key, originalEnv[key])
+		}
+		for _, key := range envKeys {
+			if _, exists := originalEnv[key]; !exists {
+				os.Unsetenv(key)
+			}
+		}
+	}()
+
+	// Set custom environment variables
 	os.Setenv(ENV_KEY_HOST, "127.0.0.1")
 	os.Setenv(ENV_KEY_PORT, "8080")
 	os.Setenv(ENV_KEY_VERBOSE, "true")
@@ -78,7 +111,9 @@ func TestParseEnvs(t *testing.T) {
 	os.Setenv(ENV_KEY_LANG, "zh-CN")
 	os.Setenv(ENV_KEY_I18N, "/tmp/locales")
 
-	flags = ParseEnvs()
+	os.Args = []string{"webhook"}
+
+	flags := ParseConfig()
 	assert.Equal(t, "127.0.0.1", flags.Host)
 	assert.Equal(t, 8080, flags.Port)
 	assert.True(t, flags.Verbose)
@@ -96,71 +131,74 @@ func TestParseEnvs(t *testing.T) {
 	assert.Equal(t, "/tmp/webhook.pid", flags.PidPath)
 	assert.Equal(t, "zh-CN", flags.Lang)
 	assert.Equal(t, "/tmp/locales", flags.I18nDir)
-
-	// Test with hooks environment variable
-	os.Setenv(ENV_KEY_HOOKS, "hooks1.json,hooks2.json")
-	flags = ParseEnvs()
-	assert.Len(t, flags.HooksFiles, 2)
 }
 
-func TestParseCLI(t *testing.T) {
-	// Save original os.Args
+func TestParseConfig_FromCLI(t *testing.T) {
+	// Save original environment and args
 	originalArgs := os.Args
 	defer func() {
 		os.Args = originalArgs
-		// Reset flag.CommandLine to allow it to be reinitialized
 		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	}()
 
-	// Set minimal args to avoid parsing command line arguments
-	os.Args = []string{"test"}
+	// Test with CLI flags
+	os.Args = []string{"webhook", "-ip", "127.0.0.1", "-port", "8080", "-verbose"}
 
-	// Test with default values
-	flags := AppFlags{
-		Host:            DEFAULT_HOST,
-		Port:            DEFAULT_PORT,
-		Verbose:         DEFAULT_ENABLE_VERBOSE,
-		Debug:           DEFAULT_ENABLE_DEBUG,
-		NoPanic:         DEFAULT_ENABLE_NO_PANIC,
-		HotReload:       DEFAULT_ENABLE_HOT_RELOAD,
-		LogPath:         DEFAULT_LOG_PATH,
-		HooksURLPrefix:  DEFAULT_URL_PREFIX,
-		AsTemplate:      DEFAULT_ENABLE_PARSE_TEMPLATE,
-		UseXRequestID:   DEFAULT_ENABLE_X_REQUEST_ID,
-		XRequestIDLimit: DEFAULT_X_REQUEST_ID_LIMIT,
-		MaxMultipartMem: int64(DEFAULT_MAX_MPART_MEM),
-		SetGID:          DEFAULT_GID,
-		SetUID:          DEFAULT_UID,
-		HttpMethods:     DEFAULT_HTTP_METHODS,
-		PidPath:         DEFAULT_PID_FILE,
-		Lang:            DEFAULT_LANG,
-		I18nDir:         DEFAULT_I18N_DIR,
-	}
+	flags := ParseConfig()
+	assert.Equal(t, "127.0.0.1", flags.Host)
+	assert.Equal(t, 8080, flags.Port)
+	assert.True(t, flags.Verbose)
+}
 
-	result := ParseCLI(flags)
-	assert.Equal(t, DEFAULT_HOST, result.Host)
-	assert.Equal(t, DEFAULT_PORT, result.Port)
+func TestParseConfig_CLIPriorityOverEnv(t *testing.T) {
+	// Save original environment and args
+	originalArgs := os.Args
+	originalHost := os.Getenv(ENV_KEY_HOST)
+	originalPort := os.Getenv(ENV_KEY_PORT)
+	defer func() {
+		os.Args = originalArgs
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+		if originalHost != "" {
+			os.Setenv(ENV_KEY_HOST, originalHost)
+		} else {
+			os.Unsetenv(ENV_KEY_HOST)
+		}
+		if originalPort != "" {
+			os.Setenv(ENV_KEY_PORT, originalPort)
+		} else {
+			os.Unsetenv(ENV_KEY_PORT)
+		}
+	}()
+
+	// Set environment variables
+	os.Setenv(ENV_KEY_HOST, "10.0.0.1")
+	os.Setenv(ENV_KEY_PORT, "3000")
+
+	// CLI should override ENV
+	os.Args = []string{"webhook", "-ip", "192.168.1.1", "-port", "9000"}
+
+	flags := ParseConfig()
+	assert.Equal(t, "192.168.1.1", flags.Host, "CLI should override ENV for host")
+	assert.Equal(t, 9000, flags.Port, "CLI should override ENV for port")
 }
 
 func TestParse(t *testing.T) {
-	// This test is tricky because Parse() calls flag.Parse() which expects command line args
 	// Save original os.Args
 	originalArgs := os.Args
 	defer func() {
 		os.Args = originalArgs
-		// Reset flag.CommandLine to allow it to be reinitialized
 		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	}()
 
-	// Set minimal args to avoid parsing command line arguments
-	os.Args = []string{"test"}
+	// Set minimal args
+	os.Args = []string{"webhook"}
 
 	// Test that Parse doesn't panic
 	flags := Parse()
 	assert.NotNil(t, flags)
 }
 
-func TestParseCLI_AllFlags(t *testing.T) {
+func TestParseConfig_AllFlags(t *testing.T) {
 	// Save original os.Args
 	originalArgs := os.Args
 	defer func() {
@@ -176,42 +214,42 @@ func TestParseCLI_AllFlags(t *testing.T) {
 	}{
 		{
 			name: "set host",
-			args: []string{"test", "-ip=192.168.1.1"},
+			args: []string{"webhook", "-ip=192.168.1.1"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.Equal(t, "192.168.1.1", flags.Host)
 			},
 		},
 		{
 			name: "set port",
-			args: []string{"test", "-port=9090"},
+			args: []string{"webhook", "-port=9090"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.Equal(t, 9090, flags.Port)
 			},
 		},
 		{
 			name: "set verbose",
-			args: []string{"test", "-verbose"},
+			args: []string{"webhook", "-verbose"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.True(t, flags.Verbose)
 			},
 		},
 		{
 			name: "set debug",
-			args: []string{"test", "-debug"},
+			args: []string{"webhook", "-debug"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.True(t, flags.Debug)
 			},
 		},
 		{
 			name: "set logfile",
-			args: []string{"test", "-logfile=/tmp/test.log"},
+			args: []string{"webhook", "-logfile=/tmp/test.log"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.Equal(t, "/tmp/test.log", flags.LogPath)
 			},
 		},
 		{
 			name: "set hooks",
-			args: []string{"test", "-hooks=test1.json", "-hooks=test2.json"},
+			args: []string{"webhook", "-hooks=test1.json", "-hooks=test2.json"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.Contains(t, flags.HooksFiles, "test1.json")
 				assert.Contains(t, flags.HooksFiles, "test2.json")
@@ -219,28 +257,28 @@ func TestParseCLI_AllFlags(t *testing.T) {
 		},
 		{
 			name: "set header",
-			args: []string{"test", "-header=X-Test=value1", "-header=X-Test2=value2"},
+			args: []string{"webhook", "-header=X-Test=value1", "-header=X-Test2=value2"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.Len(t, flags.ResponseHeaders, 2)
 			},
 		},
 		{
 			name: "set version flag",
-			args: []string{"test", "-version"},
+			args: []string{"webhook", "-version"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.True(t, flags.ShowVersion)
 			},
 		},
 		{
 			name: "set validate-config flag",
-			args: []string{"test", "-validate-config"},
+			args: []string{"webhook", "-validate-config"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.True(t, flags.ValidateConfig)
 			},
 		},
 		{
 			name: "set rate limit flags",
-			args: []string{"test", "-rate-limit-enabled", "-rate-limit-rps=200", "-rate-limit-burst=20"},
+			args: []string{"webhook", "-rate-limit-enabled", "-rate-limit-rps=200", "-rate-limit-burst=20"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.True(t, flags.RateLimitEnabled)
 				assert.Equal(t, 200, flags.RateLimitRPS)
@@ -249,7 +287,7 @@ func TestParseCLI_AllFlags(t *testing.T) {
 		},
 		{
 			name: "set security flags",
-			args: []string{"test", "-max-arg-length=2048", "-max-total-args-length=20480", "-max-args-count=500"},
+			args: []string{"webhook", "-max-arg-length=2048", "-max-total-args-length=20480", "-max-args-count=500"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.Equal(t, 2048, flags.MaxArgLength)
 				assert.Equal(t, 20480, flags.MaxTotalArgsLength)
@@ -258,7 +296,7 @@ func TestParseCLI_AllFlags(t *testing.T) {
 		},
 		{
 			name: "set timeout flags",
-			args: []string{"test", "-read-header-timeout-seconds=10", "-read-timeout-seconds=20", "-write-timeout-seconds=60", "-idle-timeout-seconds=120"},
+			args: []string{"webhook", "-read-header-timeout-seconds=10", "-read-timeout-seconds=20", "-write-timeout-seconds=60", "-idle-timeout-seconds=120"},
 			verify: func(t *testing.T, flags AppFlags) {
 				assert.Equal(t, 10, flags.ReadHeaderTimeoutSeconds)
 				assert.Equal(t, 20, flags.ReadTimeoutSeconds)
@@ -271,30 +309,8 @@ func TestParseCLI_AllFlags(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			os.Args = tc.args
-			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
-			initialFlags := AppFlags{
-				Host:            DEFAULT_HOST,
-				Port:            DEFAULT_PORT,
-				Verbose:         DEFAULT_ENABLE_VERBOSE,
-				Debug:           DEFAULT_ENABLE_DEBUG,
-				NoPanic:         DEFAULT_ENABLE_NO_PANIC,
-				HotReload:       DEFAULT_ENABLE_HOT_RELOAD,
-				LogPath:         DEFAULT_LOG_PATH,
-				HooksURLPrefix:  DEFAULT_URL_PREFIX,
-				AsTemplate:      DEFAULT_ENABLE_PARSE_TEMPLATE,
-				UseXRequestID:   DEFAULT_ENABLE_X_REQUEST_ID,
-				XRequestIDLimit: DEFAULT_X_REQUEST_ID_LIMIT,
-				MaxMultipartMem: int64(DEFAULT_MAX_MPART_MEM),
-				SetGID:          DEFAULT_GID,
-				SetUID:          DEFAULT_UID,
-				HttpMethods:     DEFAULT_HTTP_METHODS,
-				PidPath:         DEFAULT_PID_FILE,
-				Lang:            DEFAULT_LANG,
-				I18nDir:         DEFAULT_I18N_DIR,
-			}
-
-			result := ParseCLI(initialFlags)
+			result := ParseConfig()
 			tc.verify(t, result)
 		})
 	}
