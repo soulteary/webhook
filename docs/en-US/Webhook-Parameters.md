@@ -1,104 +1,267 @@
-# Webhook parameters
-```
-Usage of webhook:
-  -debug
-    	show debug output
-  -header value
-    	response header to return, specified in format name=value, use multiple times to set multiple headers
-  -hooks value
-    	path to the json file containing defined hooks the webhook should serve, use multiple times to load from different files
-  -hotreload
-    	watch hooks file for changes and reload them automatically
-  -http-methods string
-    	set default allowed HTTP methods (ie. "POST"); separate methods with comma
-  -ip string
-    	ip the webhook should serve hooks on (default "0.0.0.0")
-  -logfile string
-    	send log output to a file; implicitly enables verbose logging
-  -max-multipart-mem int
-    	maximum memory in bytes for parsing multipart form data before disk caching (default 1048576)
-  -nopanic
-    	do not panic if hooks cannot be loaded when webhook is not running in verbose mode
-  -pidfile string
-    	create PID file at the given path
-  -port int
-    	port the webhook should serve hooks on (default 9000)
-  -setgid int
-    	set group ID after opening listening port; must be used with setuid
-  -setuid int
-    	set user ID after opening listening port; must be used with setgid
-  -template
-    	parse hooks file as a Go template
-  -urlprefix string
-    	url prefix to use for served hooks (protocol://yourserver:port/PREFIX/:hook-id) (default "hooks")
-  -verbose
-    	show verbose output
-  -version
-    	display webhook version and quit
-  -x-request-id
-    	use X-Request-Id header, if present, as request ID
-  -x-request-id-limit int
-    	truncate X-Request-Id header to limit; default no limit
-  -lang string
-    	set the language code for the webhook (default "en-US")
-  -lang-dir string
-    	set the directory for the i18n files (default "./locales")
-  -hook-timeout-seconds int
-    	default timeout in seconds for hook execution (default 30)
-  -max-concurrent-hooks int
-    	maximum number of concurrent hook executions (default 10)
-  -hook-execution-timeout int
-    	timeout in seconds for acquiring execution slot when max concurrent hooks reached (default 5)
-  -allow-auto-chmod
-    	allow automatically modifying file permissions when permission denied (SECURITY RISK: default false)
-  -allowed-command-paths string
-    	comma-separated list of allowed command paths (directories or files) for command execution whitelist; empty means no whitelist check
-  -max-arg-length int
-    	maximum length for a single command argument in bytes (default 1048576, 1MB)
-  -max-total-args-length int
-    	maximum total length for all command arguments in bytes (default 10485760, 10MB)
-  -max-args-count int
-    	maximum number of command arguments (default 1000)
-  -strict-mode
-    	strict mode: reject arguments containing potentially dangerous characters (default false)
-```
+# Webhook Parameters
 
-Use any of the above specified flags to override their default behavior.
+This document describes all available command-line parameters and environment variables for configuring webhook.
 
-## Security Configuration
+## Command-Line Parameters
 
-The following security-related flags help prevent command injection attacks:
+### Basic Configuration
 
-- **`-allowed-command-paths`**: Specify a whitelist of allowed command paths. When configured, only commands from the whitelist can be executed. You can specify directories (e.g., `/usr/bin`) or specific file paths.
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-ip string` | IP address the webhook should serve hooks on | `0.0.0.0` |
+| `-port int` | Port the webhook should serve hooks on | `9000` |
+| `-hooks value` | Path to the JSON/YAML file containing hook definitions (can be used multiple times) | - |
+| `-urlprefix string` | URL prefix for served hooks (protocol://yourserver:port/PREFIX/:hook-id) | `hooks` |
 
-  Example:
-  ```bash
-  # Allow commands from /usr/bin and /opt/scripts directories
-  -allowed-command-paths="/usr/bin,/opt/scripts"
-  
-  # Allow specific files
-  -allowed-command-paths="/usr/bin/git,/opt/scripts/deploy.sh"
-  ```
+### Logging and Debugging
 
-- **`-max-arg-length`**: Maximum length for a single command argument (default: 1MB). Prevents memory issues from overly long arguments.
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-verbose` | Show verbose output | `false` |
+| `-debug` | Show debug output | `false` |
+| `-logfile string` | Send log output to a file; implicitly enables verbose logging | - |
+| `-nopanic` | Do not panic if hooks cannot be loaded when not in verbose mode | `false` |
+| `-log-request-body` | Log request body in debug mode (SECURITY: may expose sensitive data) | `false` |
 
-- **`-max-total-args-length`**: Maximum total length for all command arguments (default: 10MB). Limits the total size of all arguments to prevent memory exhaustion.
+### Feature Options
 
-- **`-max-args-count`**: Maximum number of command arguments (default: 1000). Limits the number of arguments to prevent performance issues.
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-hotreload` | Watch hooks file for changes and reload automatically | `false` |
+| `-template` | Parse hooks file as a Go template | `false` |
+| `-http-methods string` | Set default allowed HTTP methods (e.g., "POST"); separate with comma | - |
+| `-max-multipart-mem int` | Maximum memory in bytes for parsing multipart form data before disk caching | `1048576` (1MB) |
+| `-max-request-body-size int` | Maximum size in bytes for request body | `10485760` (10MB) |
 
-- **`-strict-mode`**: When enabled, rejects arguments containing potentially dangerous characters such as shell special characters (`;`, `|`, `&`, `` ` ``, `$`, `()`, `{}`, etc.).
+### Request ID
 
-**Note**: All security-related flags can also be set via environment variables:
-- `ALLOWED_COMMAND_PATHS`
-- `MAX_ARG_LENGTH`
-- `MAX_TOTAL_ARGS_LENGTH`
-- `MAX_ARGS_COUNT`
-- `STRICT_MODE`
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-x-request-id` | Use X-Request-Id header, if present, as request ID | `false` |
+| `-x-request-id-limit int` | Truncate X-Request-Id header to limit | `0` (no limit) |
 
-# Live reloading hooks
-If you are running an OS that supports the HUP or USR1 signal, you can use it to trigger hooks reload from hooks file, without restarting the webhook instance.
+### Response Headers
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-header value` | Response header to return (format: name=value); can be used multiple times | - |
+
+### Process Management
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-pidfile string` | Create PID file at the given path | - |
+| `-setuid int` | Set user ID after opening listening port; must be used with setgid | `0` |
+| `-setgid int` | Set group ID after opening listening port; must be used with setuid | `0` |
+
+### Internationalization
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-lang string` | Set the language code for the webhook | `en-US` |
+| `-lang-dir string` | Set the directory for i18n files | `./locales` |
+
+### Hook Execution Control
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-hook-timeout-seconds int` | Default timeout in seconds for hook execution | `30` |
+| `-max-concurrent-hooks int` | Maximum number of concurrent hook executions | `10` |
+| `-hook-execution-timeout int` | Timeout in seconds for acquiring execution slot when max concurrent hooks reached | `5` |
+| `-allow-auto-chmod` | Allow automatically modifying file permissions when permission denied (SECURITY RISK) | `false` |
+
+### Rate Limiting
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-rate-limit-enabled` | Enable rate limiting | `false` |
+| `-rate-limit-rps int` | Rate limit requests per second | `100` |
+| `-rate-limit-burst int` | Rate limit burst size | `10` |
+
+### HTTP Server Timeouts
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-read-header-timeout-seconds int` | Timeout in seconds for reading request headers | `5` |
+| `-read-timeout-seconds int` | Timeout in seconds for reading request body | `10` |
+| `-write-timeout-seconds int` | Timeout in seconds for writing response | `30` |
+| `-idle-timeout-seconds int` | Timeout in seconds for idle connections | `90` |
+| `-max-header-bytes int` | Maximum size in bytes for request headers | `1048576` (1MB) |
+
+### Security Configuration
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-allowed-command-paths string` | Comma-separated list of allowed command paths for whitelist; empty means no check | - |
+| `-max-arg-length int` | Maximum length for a single command argument in bytes | `1048576` (1MB) |
+| `-max-total-args-length int` | Maximum total length for all command arguments in bytes | `10485760` (10MB) |
+| `-max-args-count int` | Maximum number of command arguments | `1000` |
+| `-strict-mode` | Reject arguments containing potentially dangerous characters | `false` |
+
+### Other
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-version` | Display webhook version and quit | - |
+| `-validate-config` | Validate configuration and exit (does not start server) | - |
+
+## Environment Variables
+
+All command-line parameters can also be set via environment variables:
+
+### Basic Configuration
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `HOST` | `-ip` | Listen IP address | `0.0.0.0` |
+| `PORT` | `-port` | Listen port | `9000` |
+| `HOOKS` | `-hooks` | Hook file paths (comma-separated) | - |
+| `URL_PREFIX` | `-urlprefix` | URL prefix | `hooks` |
+
+### Logging and Debugging
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `VERBOSE` | `-verbose` | Verbose output | `false` |
+| `DEBUG` | `-debug` | Debug output | `false` |
+| `LOG_PATH` | `-logfile` | Log file path | - |
+| `NO_PANIC` | `-nopanic` | Don't panic | `false` |
+| `LOG_REQUEST_BODY` | `-log-request-body` | Log request body (debug) | `false` |
+
+### Feature Options
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `HOT_RELOAD` | `-hotreload` | Hot reload | `false` |
+| `TEMPLATE` | `-template` | Template mode | `false` |
+| `HTTP_METHODS` | `-http-methods` | HTTP methods | - |
+| `MAX_MPART_MEM` | `-max-multipart-mem` | Max multipart memory | `1048576` |
+| `MAX_REQUEST_BODY_SIZE` | `-max-request-body-size` | Max request body size | `10485760` |
+| `X_REQUEST_ID` | `-x-request-id` | Use X-Request-Id | `false` |
+| `X_REQUEST_ID_LIMIT` | `-x-request-id-limit` | X-Request-Id limit | `0` |
+| `HEADER` | `-header` | Response header | - |
+
+### Process Management
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `PID_FILE` | `-pidfile` | PID file path | - |
+| `UID` | `-setuid` | User ID | `0` |
+| `GID` | `-setgid` | Group ID | `0` |
+
+### Internationalization
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `LANGUAGE` | `-lang` | Language code | `en-US` |
+| `LANG_DIR` | `-lang-dir` | i18n directory | `./locales` |
+
+### Hook Execution Control
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `HOOK_TIMEOUT_SECONDS` | `-hook-timeout-seconds` | Hook execution timeout (sec) | `30` |
+| `MAX_CONCURRENT_HOOKS` | `-max-concurrent-hooks` | Max concurrent hooks | `10` |
+| `HOOK_EXECUTION_TIMEOUT` | `-hook-execution-timeout` | Execution slot timeout (sec) | `5` |
+| `ALLOW_AUTO_CHMOD` | `-allow-auto-chmod` | Allow auto chmod | `false` |
+
+### Rate Limiting
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `RATE_LIMIT_ENABLED` | `-rate-limit-enabled` | Enable rate limiting | `false` |
+| `RATE_LIMIT_RPS` | `-rate-limit-rps` | Requests per second | `100` |
+| `RATE_LIMIT_BURST` | `-rate-limit-burst` | Burst size | `10` |
+
+### HTTP Server Timeouts
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `READ_HEADER_TIMEOUT_SECONDS` | `-read-header-timeout-seconds` | Read header timeout (sec) | `5` |
+| `READ_TIMEOUT_SECONDS` | `-read-timeout-seconds` | Read body timeout (sec) | `10` |
+| `WRITE_TIMEOUT_SECONDS` | `-write-timeout-seconds` | Write response timeout (sec) | `30` |
+| `IDLE_TIMEOUT_SECONDS` | `-idle-timeout-seconds` | Idle connection timeout (sec) | `90` |
+| `MAX_HEADER_BYTES` | `-max-header-bytes` | Max header size (bytes) | `1048576` |
+
+### Security Configuration
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `ALLOWED_COMMAND_PATHS` | `-allowed-command-paths` | Allowed command paths (comma-separated) | - |
+| `MAX_ARG_LENGTH` | `-max-arg-length` | Max single argument length (bytes) | `1048576` |
+| `MAX_TOTAL_ARGS_LENGTH` | `-max-total-args-length` | Max total arguments length (bytes) | `10485760` |
+| `MAX_ARGS_COUNT` | `-max-args-count` | Max argument count | `1000` |
+| `STRICT_MODE` | `-strict-mode` | Strict mode | `false` |
+
+## Security Best Practices
+
+### Command Path Whitelisting
+
+Use `-allowed-command-paths` to restrict which commands can be executed:
+
 ```bash
-kill -USR1 webhookpid
+# Allow commands from specific directories
+-allowed-command-paths="/usr/bin,/opt/scripts"
 
-kill -HUP webhookpid
+# Allow specific files only
+-allowed-command-paths="/usr/bin/git,/opt/scripts/deploy.sh"
+```
+
+### Strict Mode
+
+Enable `-strict-mode` to reject arguments containing potentially dangerous shell characters (`;`, `|`, `&`, `` ` ``, `$`, `()`, `{}`, etc.).
+
+### Rate Limiting
+
+Enable rate limiting to protect against DoS attacks:
+
+```bash
+-rate-limit-enabled -rate-limit-rps=100 -rate-limit-burst=10
+```
+
+## Configuration Priority
+
+When using both environment variables and command-line flags, **command-line flags take priority**. The resolution order is:
+
+1. Default values
+2. Environment variables (override defaults)
+3. Command-line flags (override environment variables)
+
+## Live Reloading Hooks
+
+If your OS supports HUP or USR1 signals, you can use them to trigger hook reload without restarting:
+
+```bash
+kill -USR1 <webhook_pid>
+# or
+kill -HUP <webhook_pid>
+```
+
+Alternatively, use `-hotreload` (or `HOT_RELOAD=true`) for automatic hot reloading when hook files change.
+
+## Example Usage
+
+```bash
+# Basic usage
+./webhook -hooks hooks.json -verbose
+
+# With security settings
+./webhook -hooks hooks.json \
+  -allowed-command-paths="/usr/bin,/opt/scripts" \
+  -strict-mode \
+  -rate-limit-enabled \
+  -rate-limit-rps=100
+
+# With HTTP server tuning
+./webhook -hooks hooks.json \
+  -read-header-timeout-seconds=10 \
+  -read-timeout-seconds=30 \
+  -write-timeout-seconds=60 \
+  -max-concurrent-hooks=20
+
+# Using environment variables
+export PORT=8080
+export HOOKS=/path/to/hooks.json
+export RATE_LIMIT_ENABLED=true
+./webhook
 ```

@@ -38,6 +38,11 @@
 - `-nopanic`
   当 webhook 未在详细模式下运行时，如果无法加载钩子，不触发 panic
 
+- `-log-request-body`
+  在调试模式下记录请求体（默认值：`false`）
+  
+  **安全警告**：启用此选项可能会暴露敏感数据，仅在调试时使用。
+
 ### 功能选项
 
 - `-hotreload`
@@ -51,6 +56,9 @@
 
 - `-max-multipart-mem int`
   在磁盘缓存之前解析 multipart 表单数据的最大内存（字节，默认值：`1048576`，即 1MB）
+
+- `-max-request-body-size int`
+  设置请求体的最大大小（字节，默认值：`10485760`，即 10MB）
 
 ### 请求 ID
 
@@ -106,6 +114,38 @@
   
   **警告**：启用此选项会带来安全风险，不建议在生产环境中使用。建议手动设置正确的文件权限（`chmod +x`）。
 
+### 限流配置
+
+以下参数用于配置请求限流，防止服务被过多请求压垮：
+
+- `-rate-limit-enabled`
+  启用请求限流（默认值：`false`）
+
+- `-rate-limit-rps int`
+  设置每秒允许的请求数（默认值：`100`）
+
+- `-rate-limit-burst int`
+  设置突发请求的最大数量（默认值：`10`）
+
+### HTTP 服务器超时配置
+
+以下参数用于配置 HTTP 服务器的各种超时时间：
+
+- `-read-header-timeout-seconds int`
+  设置读取请求头的超时时间（秒，默认值：`5`）
+
+- `-read-timeout-seconds int`
+  设置读取请求体的超时时间（秒，默认值：`10`）
+
+- `-write-timeout-seconds int`
+  设置写入响应的超时时间（秒，默认值：`30`）
+
+- `-idle-timeout-seconds int`
+  设置空闲连接的超时时间（秒，默认值：`90`）
+
+- `-max-header-bytes int`
+  设置请求头的最大大小（字节，默认值：`1048576`，即 1MB）
+
 ### 安全配置
 
 以下参数用于增强命令执行的安全性，防止命令注入攻击：
@@ -149,9 +189,16 @@
 - `-version`
   显示 webhook 版本并退出
 
+- `-validate-config`
+  验证配置并退出（不启动服务器）
+  
+  用于检查配置文件和参数是否有效，在部署前进行配置验证。
+
 ## 环境变量
 
 所有命令行参数都可以通过环境变量进行设置。环境变量名称与命令行参数对应关系如下：
+
+### 基础配置
 
 | 环境变量 | 命令行参数 | 说明 | 默认值 |
 |---------|-----------|------|--------|
@@ -159,26 +206,76 @@
 | `PORT` | `-port` | 监听端口 | `9000` |
 | `HOOKS` | `-hooks` | 钩子文件路径（多个用逗号分隔） | - |
 | `URL_PREFIX` | `-urlprefix` | URL 前缀 | `hooks` |
+
+### 日志和调试
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
 | `VERBOSE` | `-verbose` | 详细输出 | `false` |
 | `DEBUG` | `-debug` | 调试输出 | `false` |
 | `LOG_PATH` | `-logfile` | 日志文件路径 | - |
 | `NO_PANIC` | `-nopanic` | 不触发 panic | `false` |
+| `LOG_REQUEST_BODY` | `-log-request-body` | 记录请求体（调试用） | `false` |
+
+### 功能选项
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
 | `HOT_RELOAD` | `-hotreload` | 热重载 | `false` |
 | `TEMPLATE` | `-template` | 模板模式 | `false` |
 | `HTTP_METHODS` | `-http-methods` | HTTP 方法 | - |
 | `MAX_MPART_MEM` | `-max-multipart-mem` | 最大 multipart 内存 | `1048576` |
+| `MAX_REQUEST_BODY_SIZE` | `-max-request-body-size` | 最大请求体大小 | `10485760` |
 | `X_REQUEST_ID` | `-x-request-id` | 使用 X-Request-Id | `false` |
 | `X_REQUEST_ID_LIMIT` | `-x-request-id-limit` | X-Request-Id 长度限制 | `0` |
 | `HEADER` | `-header` | 响应头（格式：`name=value`） | - |
+
+### 进程管理
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
 | `PID_FILE` | `-pidfile` | PID 文件路径 | - |
 | `UID` | `-setuid` | 用户 ID | `0` |
 | `GID` | `-setgid` | 组 ID | `0` |
+
+### 国际化
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
 | `LANGUAGE` | `-lang` | 语言代码 | `en-US` |
 | `LANG_DIR` | `-lang-dir` | 国际化文件目录 | `./locales` |
+
+### Hook 执行控制
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
 | `HOOK_TIMEOUT_SECONDS` | `-hook-timeout-seconds` | Hook 执行超时时间（秒） | `30` |
 | `MAX_CONCURRENT_HOOKS` | `-max-concurrent-hooks` | 最大并发 hook 数量 | `10` |
 | `HOOK_EXECUTION_TIMEOUT` | `-hook-execution-timeout` | 获取执行槽位超时时间（秒） | `5` |
 | `ALLOW_AUTO_CHMOD` | `-allow-auto-chmod` | 允许自动修改文件权限 | `false` |
+
+### 限流配置
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
+| `RATE_LIMIT_ENABLED` | `-rate-limit-enabled` | 启用限流 | `false` |
+| `RATE_LIMIT_RPS` | `-rate-limit-rps` | 每秒请求数限制 | `100` |
+| `RATE_LIMIT_BURST` | `-rate-limit-burst` | 突发请求数限制 | `10` |
+
+### HTTP 服务器超时配置
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
+| `READ_HEADER_TIMEOUT_SECONDS` | `-read-header-timeout-seconds` | 读取请求头超时（秒） | `5` |
+| `READ_TIMEOUT_SECONDS` | `-read-timeout-seconds` | 读取请求体超时（秒） | `10` |
+| `WRITE_TIMEOUT_SECONDS` | `-write-timeout-seconds` | 写入响应超时（秒） | `30` |
+| `IDLE_TIMEOUT_SECONDS` | `-idle-timeout-seconds` | 空闲连接超时（秒） | `90` |
+| `MAX_HEADER_BYTES` | `-max-header-bytes` | 最大请求头大小（字节） | `1048576` |
+
+### 安全配置
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
 | `ALLOWED_COMMAND_PATHS` | `-allowed-command-paths` | 允许的命令路径白名单（逗号分隔） | - |
 | `MAX_ARG_LENGTH` | `-max-arg-length` | 单个参数最大长度（字节） | `1048576` |
 | `MAX_TOTAL_ARGS_LENGTH` | `-max-total-args-length` | 所有参数总长度限制（字节） | `10485760` |
@@ -188,22 +285,29 @@
 ### 环境变量使用示例
 
 ```bash
-# 设置监听端口
+# 基础配置
+export HOST=0.0.0.0
 export PORT=8080
-
-# 设置钩子文件路径
 export HOOKS=/path/to/hooks.json
 
-# 启用详细输出
+# 启用详细输出和热重载
 export VERBOSE=true
-
-# 启用热重载
 export HOT_RELOAD=true
 
 # 设置语言为中文
 export LANGUAGE=zh-CN
 
-# 安全配置示例
+# 限流配置
+export RATE_LIMIT_ENABLED=true
+export RATE_LIMIT_RPS=200
+export RATE_LIMIT_BURST=20
+
+# HTTP 服务器超时配置
+export READ_HEADER_TIMEOUT_SECONDS=10
+export READ_TIMEOUT_SECONDS=30
+export WRITE_TIMEOUT_SECONDS=60
+
+# 安全配置
 export ALLOWED_COMMAND_PATHS="/usr/bin,/opt/scripts"
 export MAX_ARG_LENGTH=1048576
 export STRICT_MODE=true
@@ -228,4 +332,10 @@ kill -HUP <webhook_pid>
 
 ## 优先级说明
 
-当同时使用命令行参数和环境变量时，命令行参数的优先级更高。程序会先读取环境变量，然后用命令行参数覆盖相应的值。
+当同时使用命令行参数和环境变量时，**命令行参数的优先级更高**。配置解析顺序为：
+
+1. 首先读取默认值
+2. 然后读取环境变量（覆盖默认值）
+3. 最后读取命令行参数（覆盖环境变量）
+
+这使得你可以在环境变量中设置基础配置，然后通过命令行参数进行临时覆盖。
