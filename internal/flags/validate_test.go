@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/soulteary/cli-kit/validator"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -808,27 +809,27 @@ func TestValidateDirectory(t *testing.T) {
 	assert.True(t, result.HasErrors())
 }
 
-func TestIsWritable(t *testing.T) {
+func TestValidateDirWritable(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Test writable directory
-	assert.True(t, isWritable(tempDir))
+	// Test writable directory - using cli-kit/validator
+	assert.NoError(t, validator.ValidateDirWritable(tempDir))
 
 	// Test non-existent directory
-	assert.False(t, isWritable(filepath.Join(tempDir, "nonexistent")))
+	assert.Error(t, validator.ValidateDirWritable(filepath.Join(tempDir, "nonexistent")))
 }
 
-func TestIsReadable(t *testing.T) {
+func TestValidateFileReadable(t *testing.T) {
 	tempDir := t.TempDir()
 	filePath := filepath.Join(tempDir, "test.txt")
 
-	// Test non-existent file
-	assert.False(t, isReadable(filePath))
+	// Test non-existent file - using cli-kit/validator
+	assert.Error(t, validator.ValidateFileReadable(filePath))
 
 	// Create file
 	err := os.WriteFile(filePath, []byte("test"), 0644)
 	require.NoError(t, err)
 
 	// Test readable file
-	assert.True(t, isReadable(filePath))
+	assert.NoError(t, validator.ValidateFileReadable(filePath))
 }

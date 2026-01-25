@@ -1,10 +1,11 @@
 package flags
 
 import (
+	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
+	"github.com/soulteary/cli-kit/validator"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/i18n"
 	"github.com/soulteary/webhook/internal/rules"
@@ -39,8 +40,8 @@ func (r *ValidationResult) HasErrors() bool {
 func Validate(flags AppFlags) *ValidationResult {
 	result := &ValidationResult{}
 
-	// 验证端口范围
-	if flags.Port < 1 || flags.Port > 65535 {
+	// 验证端口范围 - 使用 cli-kit/validator
+	if err := validator.ValidatePort(flags.Port); err != nil {
 		result.AddError("port", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_PORT, flags.Port))
 	}
 
@@ -62,17 +63,17 @@ func Validate(flags AppFlags) *ValidationResult {
 	// 验证 Hook 文件
 	validateHookFiles(result, flags)
 
-	// 验证超时配置
-	if flags.ReadHeaderTimeoutSeconds < 0 {
+	// 验证超时配置 - 使用 cli-kit/validator
+	if err := validator.ValidateNonNegative(flags.ReadHeaderTimeoutSeconds); err != nil {
 		result.AddError("read-header-timeout-seconds", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_TIMEOUT, "read-header-timeout-seconds"))
 	}
-	if flags.ReadTimeoutSeconds < 0 {
+	if err := validator.ValidateNonNegative(flags.ReadTimeoutSeconds); err != nil {
 		result.AddError("read-timeout-seconds", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_TIMEOUT, "read-timeout-seconds"))
 	}
-	if flags.WriteTimeoutSeconds < 0 {
+	if err := validator.ValidateNonNegative(flags.WriteTimeoutSeconds); err != nil {
 		result.AddError("write-timeout-seconds", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_TIMEOUT, "write-timeout-seconds"))
 	}
-	if flags.IdleTimeoutSeconds < 0 {
+	if err := validator.ValidateNonNegative(flags.IdleTimeoutSeconds); err != nil {
 		result.AddError("idle-timeout-seconds", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_TIMEOUT, "idle-timeout-seconds"))
 	}
 
@@ -83,46 +84,46 @@ func Validate(flags AppFlags) *ValidationResult {
 		}
 	}
 
-	// 验证限流配置
+	// 验证限流配置 - 使用 cli-kit/validator
 	if flags.RateLimitEnabled {
-		if flags.RateLimitRPS <= 0 {
+		if err := validator.ValidatePositive(flags.RateLimitRPS); err != nil {
 			result.AddError("rate-limit-rps", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_RATE_LIMIT, "rate-limit-rps"))
 		}
-		if flags.RateLimitBurst <= 0 {
+		if err := validator.ValidatePositive(flags.RateLimitBurst); err != nil {
 			result.AddError("rate-limit-burst", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_RATE_LIMIT, "rate-limit-burst"))
 		}
 	}
 
-	// 验证 Hook 执行配置
-	if flags.HookTimeoutSeconds < 0 {
+	// 验证 Hook 执行配置 - 使用 cli-kit/validator
+	if err := validator.ValidateNonNegative(flags.HookTimeoutSeconds); err != nil {
 		result.AddError("hook-timeout-seconds", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_TIMEOUT, "hook-timeout-seconds"))
 	}
-	if flags.MaxConcurrentHooks <= 0 {
+	if err := validator.ValidatePositive(flags.MaxConcurrentHooks); err != nil {
 		result.AddError("max-concurrent-hooks", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_POSITIVE_INT, "max-concurrent-hooks"))
 	}
-	if flags.HookExecutionTimeout < 0 {
+	if err := validator.ValidateNonNegative(flags.HookExecutionTimeout); err != nil {
 		result.AddError("hook-execution-timeout", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_TIMEOUT, "hook-execution-timeout"))
 	}
 
-	// 验证安全配置
-	if flags.MaxArgLength <= 0 {
+	// 验证安全配置 - 使用 cli-kit/validator
+	if err := validator.ValidatePositive(flags.MaxArgLength); err != nil {
 		result.AddError("max-arg-length", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_POSITIVE_INT, "max-arg-length"))
 	}
-	if flags.MaxTotalArgsLength <= 0 {
+	if err := validator.ValidatePositive(flags.MaxTotalArgsLength); err != nil {
 		result.AddError("max-total-args-length", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_POSITIVE_INT, "max-total-args-length"))
 	}
-	if flags.MaxArgsCount <= 0 {
+	if err := validator.ValidatePositive(flags.MaxArgsCount); err != nil {
 		result.AddError("max-args-count", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_POSITIVE_INT, "max-args-count"))
 	}
 
-	// 验证大小限制
-	if flags.MaxMultipartMem <= 0 {
+	// 验证大小限制 - 使用 cli-kit/validator
+	if err := validator.ValidatePositiveInt64(flags.MaxMultipartMem); err != nil {
 		result.AddError("max-multipart-mem", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_POSITIVE_INT, "max-multipart-mem"))
 	}
-	if flags.MaxRequestBodySize <= 0 {
+	if err := validator.ValidatePositiveInt64(flags.MaxRequestBodySize); err != nil {
 		result.AddError("max-request-body-size", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_POSITIVE_INT, "max-request-body-size"))
 	}
-	if flags.MaxHeaderBytes <= 0 {
+	if err := validator.ValidatePositive(flags.MaxHeaderBytes); err != nil {
 		result.AddError("max-header-bytes", i18n.Sprintf(i18n.ERR_VALIDATE_INVALID_POSITIVE_INT, "max-header-bytes"))
 	}
 
@@ -134,49 +135,23 @@ func validateFilePath(result *ValidationResult, field, path string, checkWritabl
 	cleanPath := filepath.Clean(path)
 	dir := filepath.Dir(cleanPath)
 
-	// 检查目录是否存在
-	dirInfo, err := os.Stat(dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_NOT_EXIST, dir))
-		} else {
-			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_ACCESS_ERROR, dir, err))
-		}
+	// 检查目录是否存在 - 使用 cli-kit/validator
+	if err := validator.ValidateDirExists(dir); err != nil {
+		result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_NOT_EXIST, dir))
 		return
 	}
 
-	if !dirInfo.IsDir() {
-		result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_NOT_DIRECTORY, dir))
-		return
-	}
-
-	// 检查目录是否可写
+	// 检查目录是否可写 - 使用 cli-kit/validator
 	if checkWritable {
-		if !isWritable(dir) {
+		if err := validator.ValidateDirWritable(dir); err != nil {
 			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_NOT_WRITABLE, dir))
 		}
 	}
 
-	// 如果文件必须存在，检查文件是否存在
+	// 如果文件必须存在，检查文件是否存在和可读 - 使用 cli-kit/validator
 	if mustExist {
-		fileInfo, err := os.Stat(cleanPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_FILE_NOT_EXIST, cleanPath))
-			} else {
-				result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_FILE_ACCESS_ERROR, cleanPath, err))
-			}
-			return
-		}
-
-		if fileInfo.IsDir() {
-			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_NOT_FILE, cleanPath))
-			return
-		}
-
-		// 检查文件是否可读
-		if !isReadable(cleanPath) {
-			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_FILE_NOT_READABLE, cleanPath))
+		if err := validator.ValidateFileReadable(cleanPath); err != nil {
+			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_FILE_NOT_EXIST, cleanPath))
 		}
 	}
 }
@@ -185,20 +160,18 @@ func validateFilePath(result *ValidationResult, field, path string, checkWritabl
 func validateDirectory(result *ValidationResult, field, path string, mustExist bool) {
 	cleanPath := filepath.Clean(path)
 
-	dirInfo, err := os.Stat(cleanPath)
+	// 使用 cli-kit/validator 验证目录
+	err := validator.ValidateDirExists(cleanPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			if mustExist {
-				result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_NOT_EXIST, cleanPath))
-			}
-		} else {
-			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_ACCESS_ERROR, cleanPath, err))
+		// 如果路径是文件而非目录，始终报错
+		if errors.Is(err, validator.ErrNotADirectory) {
+			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_NOT_DIRECTORY, cleanPath))
+			return
 		}
-		return
-	}
-
-	if !dirInfo.IsDir() {
-		result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_NOT_DIRECTORY, cleanPath))
+		// 如果目录不存在，只有在 mustExist 为 true 时才报错
+		if mustExist && errors.Is(err, validator.ErrDirNotFound) {
+			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_NOT_EXIST, cleanPath))
+		}
 	}
 }
 
@@ -277,26 +250,6 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 	}
 }
 
-// isWritable 检查目录是否可写
-// 使用跨平台方法：尝试创建临时文件来检查写入权限
-func isWritable(path string) bool {
-	testFile := filepath.Join(path, ".webhook_write_test")
-	f, err := os.Create(testFile)
-	if err != nil {
-		return false
-	}
-	f.Close()
-	os.Remove(testFile)
-	return true
-}
-
-// isReadable 检查文件是否可读
-func isReadable(path string) bool {
-	// 尝试打开文件进行读取
-	f, err := os.Open(path)
-	if err != nil {
-		return false
-	}
-	f.Close()
-	return true
-}
+// isWritable and isReadable functions have been replaced by cli-kit/validator functions:
+// - validator.ValidateDirWritable
+// - validator.ValidateFileReadable
