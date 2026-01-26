@@ -12,7 +12,7 @@ require (
 	github.com/invopop/yaml v0.3.1
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/prometheus/client_golang v1.23.2
-	github.com/redis/go-redis/v9 v9.17.2
+	github.com/redis/go-redis/v9 v9.17.3
 	github.com/soulteary/audit-kit v1.0.0
 	github.com/soulteary/cli-kit v1.1.0
 	github.com/soulteary/middleware-kit v1.0.0
