@@ -46,12 +46,12 @@ const (
 	DEFAULT_RATE_LIMIT_BURST   = 10  // burst size
 
 	// Redis rate limiting defaults
-	DEFAULT_REDIS_ENABLED       = false
-	DEFAULT_REDIS_ADDR          = "localhost:6379"
-	DEFAULT_REDIS_PASSWORD      = ""
-	DEFAULT_REDIS_DB            = 0
-	DEFAULT_REDIS_KEY_PREFIX    = "webhook:ratelimit:"
-	DEFAULT_RATE_LIMIT_WINDOW   = 60 // rate limit window in seconds
+	DEFAULT_REDIS_ENABLED     = false
+	DEFAULT_REDIS_ADDR        = "localhost:6379"
+	DEFAULT_REDIS_PASSWORD    = ""
+	DEFAULT_REDIS_DB          = 0
+	DEFAULT_REDIS_KEY_PREFIX  = "webhook:ratelimit:"
+	DEFAULT_RATE_LIMIT_WINDOW = 60 // rate limit window in seconds
 
 	// Logging defaults
 	DEFAULT_LOG_REQUEST_BODY = false // 默认不记录请求体，避免敏感信息泄露
@@ -67,6 +67,14 @@ const (
 	DEFAULT_TRACING_ENABLED  = false
 	DEFAULT_OTLP_ENDPOINT    = ""
 	DEFAULT_TRACING_SVC_NAME = "webhook"
+
+	// Audit defaults
+	DEFAULT_AUDIT_ENABLED      = false
+	DEFAULT_AUDIT_STORAGE_TYPE = "file"
+	DEFAULT_AUDIT_FILE_PATH    = "./audit.log"
+	DEFAULT_AUDIT_QUEUE_SIZE   = 1000
+	DEFAULT_AUDIT_WORKERS      = 2
+	DEFAULT_AUDIT_MASK_IP      = true
 )
 
 const (
@@ -133,6 +141,14 @@ const (
 	ENV_KEY_TRACING_ENABLED  = "TRACING_ENABLED"
 	ENV_KEY_OTLP_ENDPOINT    = "OTLP_ENDPOINT"
 	ENV_KEY_TRACING_SVC_NAME = "TRACING_SERVICE_NAME"
+
+	// Audit environment keys
+	ENV_KEY_AUDIT_ENABLED      = "AUDIT_ENABLED"
+	ENV_KEY_AUDIT_STORAGE_TYPE = "AUDIT_STORAGE_TYPE"
+	ENV_KEY_AUDIT_FILE_PATH    = "AUDIT_FILE_PATH"
+	ENV_KEY_AUDIT_QUEUE_SIZE   = "AUDIT_QUEUE_SIZE"
+	ENV_KEY_AUDIT_WORKERS      = "AUDIT_WORKERS"
+	ENV_KEY_AUDIT_MASK_IP      = "AUDIT_MASK_IP"
 )
 
 type AppFlags struct {
@@ -180,12 +196,12 @@ type AppFlags struct {
 	RateLimitBurst   int  // 突发请求数限制
 
 	// Redis rate limiting settings (分布式限流)
-	RedisEnabled      bool   // 是否启用 Redis 分布式限流
-	RedisAddr         string // Redis 服务器地址
-	RedisPassword     string // Redis 密码
-	RedisDB           int    // Redis 数据库索引
-	RedisKeyPrefix    string // Redis 限流键前缀
-	RateLimitWindowSec int   // 限流时间窗口（秒）
+	RedisEnabled       bool   // 是否启用 Redis 分布式限流
+	RedisAddr          string // Redis 服务器地址
+	RedisPassword      string // Redis 密码
+	RedisDB            int    // Redis 数据库索引
+	RedisKeyPrefix     string // Redis 限流键前缀
+	RateLimitWindowSec int    // 限流时间窗口（秒）
 
 	// Logging settings
 	LogRequestBody bool // 是否在调试模式下记录请求体（默认false，避免敏感信息泄露）
@@ -201,4 +217,12 @@ type AppFlags struct {
 	TracingEnabled     bool   // 是否启用分布式追踪
 	OTLPEndpoint       string // OTLP 导出端点（如 localhost:4318）
 	TracingServiceName string // 追踪服务名称
+
+	// Audit settings
+	AuditEnabled     bool   // 是否启用审计日志
+	AuditStorageType string // 审计存储类型：file, redis, database
+	AuditFilePath    string // 审计日志文件路径（当存储类型为 file 时）
+	AuditQueueSize   int    // 异步写入队列大小
+	AuditWorkers     int    // 异步写入工作协程数
+	AuditMaskIP      bool   // 是否对 IP 地址进行脱敏
 }

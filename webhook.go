@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/soulteary/webhook/internal/audit"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/i18n"
 	"github.com/soulteary/webhook/internal/logger"
@@ -191,6 +192,13 @@ func main() {
 		}
 	}
 
+	// 初始化审计日志系统
+	if appFlags.AuditEnabled {
+		if err := audit.Init(appFlags); err != nil {
+			logger.Warnf("failed to initialize audit logging: %v", err)
+		}
+	}
+
 	// load and parse hooks
 	rules.ParseAndLoadHooks(appFlags.AsTemplate)
 
@@ -207,6 +215,15 @@ func main() {
 
 	// 设置优雅关闭回调
 	shutdownFn := func() {
+		// 关闭审计日志系统
+		if audit.IsEnabled() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := audit.Shutdown(ctx); err != nil {
+				logger.Warnf("error shutting down audit logging: %v", err)
+			}
+		}
+
 		// 关闭追踪系统
 		if tracing.IsEnabled() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
