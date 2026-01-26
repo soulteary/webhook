@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.17.2
 	github.com/soulteary/audit-kit v1.0.0
-	github.com/soulteary/cli-kit v1.1.0
+	github.com/soulteary/cli-kit v1.2.0
 	github.com/soulteary/middleware-kit v1.0.0
 	github.com/soulteary/redis-kit v1.0.0
 	github.com/soulteary/secure-kit v1.0.0
