@@ -56,6 +56,14 @@ func ParseConfig() AppFlags {
 	fs.Int("rate-limit-rps", DEFAULT_RATE_LIMIT_RPS, "rate limit requests per second (default 100)")
 	fs.Int("rate-limit-burst", DEFAULT_RATE_LIMIT_BURST, "rate limit burst size (default 10)")
 
+	// Redis rate limiting flags (分布式限流)
+	fs.Bool("redis-enabled", DEFAULT_REDIS_ENABLED, "enable Redis for distributed rate limiting (default false)")
+	fs.String("redis-addr", DEFAULT_REDIS_ADDR, "Redis server address (default localhost:6379)")
+	fs.String("redis-password", DEFAULT_REDIS_PASSWORD, "Redis password (default empty)")
+	fs.Int("redis-db", DEFAULT_REDIS_DB, "Redis database index (default 0)")
+	fs.String("redis-key-prefix", DEFAULT_REDIS_KEY_PREFIX, "Redis key prefix for rate limiting (default webhook:ratelimit:)")
+	fs.Int("rate-limit-window", DEFAULT_RATE_LIMIT_WINDOW, "rate limit window in seconds (default 60)")
+
 	// Logging flags
 	fs.Bool("log-request-body", DEFAULT_LOG_REQUEST_BODY, "log request body in debug mode (default false, SECURITY: may expose sensitive data)")
 
@@ -134,6 +142,14 @@ func ParseConfig() AppFlags {
 	flags.RateLimitEnabled = configutil.ResolveBool(fs, "rate-limit-enabled", ENV_KEY_RATE_LIMIT_ENABLED, DEFAULT_RATE_LIMIT_ENABLED)
 	flags.RateLimitRPS = configutil.ResolveInt(fs, "rate-limit-rps", ENV_KEY_RATE_LIMIT_RPS, DEFAULT_RATE_LIMIT_RPS, false)
 	flags.RateLimitBurst = configutil.ResolveInt(fs, "rate-limit-burst", ENV_KEY_RATE_LIMIT_BURST, DEFAULT_RATE_LIMIT_BURST, false)
+
+	// Redis rate limiting settings (分布式限流)
+	flags.RedisEnabled = configutil.ResolveBool(fs, "redis-enabled", ENV_KEY_REDIS_ENABLED, DEFAULT_REDIS_ENABLED)
+	flags.RedisAddr = configutil.ResolveString(fs, "redis-addr", ENV_KEY_REDIS_ADDR, DEFAULT_REDIS_ADDR, true)
+	flags.RedisPassword = configutil.ResolveString(fs, "redis-password", ENV_KEY_REDIS_PASSWORD, DEFAULT_REDIS_PASSWORD, true)
+	flags.RedisDB = configutil.ResolveInt(fs, "redis-db", ENV_KEY_REDIS_DB, DEFAULT_REDIS_DB, true)
+	flags.RedisKeyPrefix = configutil.ResolveString(fs, "redis-key-prefix", ENV_KEY_REDIS_KEY_PREFIX, DEFAULT_REDIS_KEY_PREFIX, true)
+	flags.RateLimitWindowSec = configutil.ResolveInt(fs, "rate-limit-window", ENV_KEY_RATE_LIMIT_WINDOW, DEFAULT_RATE_LIMIT_WINDOW, true)
 
 	// Logging settings
 	flags.LogRequestBody = configutil.ResolveBool(fs, "log-request-body", ENV_KEY_LOG_REQUEST_BODY, DEFAULT_LOG_REQUEST_BODY)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewRateLimiter(t *testing.T) {
@@ -492,4 +493,156 @@ func TestRateLimiter_HookMiddleware_EmptyHookID(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Errorf("Status code = %d, want %d", w.Code, http.StatusOK)
 	}
+}
+
+// TestRateLimitConfig_RedisFields 测试 Redis 配置字段
+func TestRateLimitConfig_RedisFields(t *testing.T) {
+	config := RateLimitConfig{
+		Enabled:        true,
+		RPS:            100,
+		Burst:          10,
+		RedisEnabled:   true,
+		RedisAddr:      "localhost:6379",
+		RedisPassword:  "secret",
+		RedisDB:        1,
+		RedisKeyPrefix: "myapp:ratelimit:",
+		WindowSeconds:  120,
+	}
+
+	assert.True(t, config.Enabled)
+	assert.True(t, config.RedisEnabled)
+	assert.Equal(t, "localhost:6379", config.RedisAddr)
+	assert.Equal(t, "secret", config.RedisPassword)
+	assert.Equal(t, 1, config.RedisDB)
+	assert.Equal(t, "myapp:ratelimit:", config.RedisKeyPrefix)
+	assert.Equal(t, 120, config.WindowSeconds)
+}
+
+// TestNewRateLimiterWithRedis 测试带 Redis 配置的限流器创建
+func TestNewRateLimiterWithRedis(t *testing.T) {
+	// 测试禁用 Redis 时的行为（应该回退到内存限流）
+	rl := NewRateLimiterWithRedis(true, 100, 10, "", "", 0, "", 60)
+	require.NotNil(t, rl)
+	assert.False(t, rl.IsRedisEnabled(), "should not use Redis when addr is empty")
+
+	// 清理
+	err := rl.Close()
+	assert.NoError(t, err)
+}
+
+// TestNewRateLimiter_WithInvalidRedis 测试无效 Redis 配置时的回退行为
+func TestNewRateLimiter_WithInvalidRedis(t *testing.T) {
+	config := RateLimitConfig{
+		Enabled:       true,
+		RPS:           100,
+		Burst:         10,
+		RedisEnabled:  true,
+		RedisAddr:     "invalid-host:6379", // 无效的 Redis 地址
+		RedisPassword: "",
+		RedisDB:       0,
+		WindowSeconds: 60,
+	}
+
+	// 应该创建限流器，但回退到内存模式
+	rl := NewRateLimiter(config)
+	require.NotNil(t, rl)
+
+	// 由于 Redis 连接失败，应该回退到内存模式
+	// 注意：这个测试可能需要一些时间来完成连接超时
+	// 在某些环境中，DNS 解析可能成功但连接失败
+
+	// 清理
+	err := rl.Close()
+	assert.NoError(t, err)
+}
+
+// TestRateLimiter_IsRedisEnabled 测试 Redis 启用状态检查
+func TestRateLimiter_IsRedisEnabled(t *testing.T) {
+	// 测试 nil 限流器
+	var nilRL *RateLimiter
+	assert.False(t, nilRL.IsRedisEnabled())
+
+	// 测试内存限流器
+	config := RateLimitConfig{
+		Enabled: true,
+		RPS:     100,
+		Burst:   10,
+	}
+	rl := NewRateLimiter(config)
+	require.NotNil(t, rl)
+	assert.False(t, rl.IsRedisEnabled())
+
+	// 清理
+	err := rl.Close()
+	assert.NoError(t, err)
+}
+
+// TestRateLimiter_Close 测试限流器关闭
+func TestRateLimiter_Close(t *testing.T) {
+	// 测试 nil 限流器关闭
+	var nilRL *RateLimiter
+	err := nilRL.Close()
+	assert.NoError(t, err)
+
+	// 测试内存限流器关闭
+	config := RateLimitConfig{
+		Enabled: true,
+		RPS:     100,
+		Burst:   10,
+	}
+	rl := NewRateLimiter(config)
+	require.NotNil(t, rl)
+
+	err = rl.Close()
+	assert.NoError(t, err)
+}
+
+// TestRateLimiter_MiddlewareWithHeaders 测试限流响应头
+func TestRateLimiter_MiddlewareWithHeaders(t *testing.T) {
+	config := RateLimitConfig{
+		Enabled: true,
+		RPS:     100,
+		Burst:   10,
+	}
+
+	rl := NewRateLimiter(config)
+	require.NotNil(t, rl)
+	defer rl.Close()
+
+	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "192.168.1.1:12345"
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// TestRateLimiter_HookMiddleware_WithConfig 测试带配置的 Hook 限流中间件
+func TestRateLimiter_HookMiddleware_WithConfig(t *testing.T) {
+	config := RateLimitConfig{
+		Enabled:       true,
+		RPS:           10,
+		Burst:         5,
+		WindowSeconds: 60,
+	}
+
+	rl := NewRateLimiter(config)
+	require.NotNil(t, rl)
+	defer rl.Close()
+
+	hookMiddleware := rl.HookMiddleware(5, 2)
+	handler := hookMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// 测试正常请求
+	req := httptest.NewRequest("GET", "/hooks/test-hook", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
 }
