@@ -45,6 +45,14 @@ const (
 	DEFAULT_RATE_LIMIT_RPS     = 100 // requests per second
 	DEFAULT_RATE_LIMIT_BURST   = 10  // burst size
 
+	// Redis rate limiting defaults
+	DEFAULT_REDIS_ENABLED       = false
+	DEFAULT_REDIS_ADDR          = "localhost:6379"
+	DEFAULT_REDIS_PASSWORD      = ""
+	DEFAULT_REDIS_DB            = 0
+	DEFAULT_REDIS_KEY_PREFIX    = "webhook:ratelimit:"
+	DEFAULT_RATE_LIMIT_WINDOW   = 60 // rate limit window in seconds
+
 	// Logging defaults
 	DEFAULT_LOG_REQUEST_BODY = false // 默认不记录请求体，避免敏感信息泄露
 
@@ -102,6 +110,14 @@ const (
 	ENV_KEY_RATE_LIMIT_ENABLED = "RATE_LIMIT_ENABLED"
 	ENV_KEY_RATE_LIMIT_RPS     = "RATE_LIMIT_RPS"
 	ENV_KEY_RATE_LIMIT_BURST   = "RATE_LIMIT_BURST"
+
+	// Redis rate limiting environment keys
+	ENV_KEY_REDIS_ENABLED     = "REDIS_ENABLED"
+	ENV_KEY_REDIS_ADDR        = "REDIS_ADDR"
+	ENV_KEY_REDIS_PASSWORD    = "REDIS_PASSWORD"
+	ENV_KEY_REDIS_DB          = "REDIS_DB"
+	ENV_KEY_REDIS_KEY_PREFIX  = "REDIS_KEY_PREFIX"
+	ENV_KEY_RATE_LIMIT_WINDOW = "RATE_LIMIT_WINDOW"
 
 	// Logging environment keys
 	ENV_KEY_LOG_REQUEST_BODY = "LOG_REQUEST_BODY"
@@ -162,6 +178,14 @@ type AppFlags struct {
 	RateLimitEnabled bool // 是否启用限流
 	RateLimitRPS     int  // 每秒请求数限制
 	RateLimitBurst   int  // 突发请求数限制
+
+	// Redis rate limiting settings (分布式限流)
+	RedisEnabled      bool   // 是否启用 Redis 分布式限流
+	RedisAddr         string // Redis 服务器地址
+	RedisPassword     string // Redis 密码
+	RedisDB           int    // Redis 数据库索引
+	RedisKeyPrefix    string // Redis 限流键前缀
+	RateLimitWindowSec int   // 限流时间窗口（秒）
 
 	// Logging settings
 	LogRequestBody bool // 是否在调试模式下记录请求体（默认false，避免敏感信息泄露）

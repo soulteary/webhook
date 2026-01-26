@@ -50,12 +50,23 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	// 添加限流中间件（如果启用）
 	if appFlags.RateLimitEnabled {
 		rateLimitConfig := middleware.RateLimitConfig{
-			Enabled: appFlags.RateLimitEnabled,
-			RPS:     appFlags.RateLimitRPS,
-			Burst:   appFlags.RateLimitBurst,
+			Enabled:        appFlags.RateLimitEnabled,
+			RPS:            appFlags.RateLimitRPS,
+			Burst:          appFlags.RateLimitBurst,
+			RedisEnabled:   appFlags.RedisEnabled,
+			RedisAddr:      appFlags.RedisAddr,
+			RedisPassword:  appFlags.RedisPassword,
+			RedisDB:        appFlags.RedisDB,
+			RedisKeyPrefix: appFlags.RedisKeyPrefix,
+			WindowSeconds:  appFlags.RateLimitWindowSec,
 		}
 		r.Use(middleware.NewRateLimitMiddleware(rateLimitConfig))
-		logger.Infof("rate limiting enabled: %d RPS, burst: %d", appFlags.RateLimitRPS, appFlags.RateLimitBurst)
+		if appFlags.RedisEnabled {
+			logger.Infof("rate limiting enabled with Redis: %d RPS, burst: %d, window: %ds, Redis: %s",
+				appFlags.RateLimitRPS, appFlags.RateLimitBurst, appFlags.RateLimitWindowSec, appFlags.RedisAddr)
+		} else {
+			logger.Infof("rate limiting enabled (in-memory): %d RPS, burst: %d", appFlags.RateLimitRPS, appFlags.RateLimitBurst)
+		}
 	}
 
 	if appFlags.Debug {
