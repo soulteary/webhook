@@ -79,6 +79,14 @@ func ParseConfig() AppFlags {
 	fs.String("otlp-endpoint", DEFAULT_OTLP_ENDPOINT, "OTLP exporter endpoint (e.g., localhost:4318)")
 	fs.String("tracing-service-name", DEFAULT_TRACING_SVC_NAME, "service name for tracing (default 'webhook')")
 
+	// Audit flags
+	fs.Bool("audit-enabled", DEFAULT_AUDIT_ENABLED, "enable audit logging (default false)")
+	fs.String("audit-storage-type", DEFAULT_AUDIT_STORAGE_TYPE, "audit storage type: file, redis, or database (default 'file')")
+	fs.String("audit-file-path", DEFAULT_AUDIT_FILE_PATH, "audit log file path when storage type is file (default './audit.log')")
+	fs.Int("audit-queue-size", DEFAULT_AUDIT_QUEUE_SIZE, "audit async write queue size (default 1000)")
+	fs.Int("audit-workers", DEFAULT_AUDIT_WORKERS, "number of audit async write workers (default 2)")
+	fs.Bool("audit-mask-ip", DEFAULT_AUDIT_MASK_IP, "mask IP addresses in audit logs (default true)")
+
 	showVersion := fs.Bool("version", false, "display webhook version and quit")
 	validateConfig := fs.Bool("validate-config", false, "validate configuration and exit")
 
@@ -165,6 +173,14 @@ func ParseConfig() AppFlags {
 	flags.TracingEnabled = configutil.ResolveBool(fs, "tracing-enabled", ENV_KEY_TRACING_ENABLED, DEFAULT_TRACING_ENABLED)
 	flags.OTLPEndpoint = configutil.ResolveString(fs, "otlp-endpoint", ENV_KEY_OTLP_ENDPOINT, DEFAULT_OTLP_ENDPOINT, true)
 	flags.TracingServiceName = configutil.ResolveString(fs, "tracing-service-name", ENV_KEY_TRACING_SVC_NAME, DEFAULT_TRACING_SVC_NAME, true)
+
+	// Audit settings
+	flags.AuditEnabled = configutil.ResolveBool(fs, "audit-enabled", ENV_KEY_AUDIT_ENABLED, DEFAULT_AUDIT_ENABLED)
+	flags.AuditStorageType = configutil.ResolveString(fs, "audit-storage-type", ENV_KEY_AUDIT_STORAGE_TYPE, DEFAULT_AUDIT_STORAGE_TYPE, true)
+	flags.AuditFilePath = configutil.ResolveString(fs, "audit-file-path", ENV_KEY_AUDIT_FILE_PATH, DEFAULT_AUDIT_FILE_PATH, true)
+	flags.AuditQueueSize = configutil.ResolveInt(fs, "audit-queue-size", ENV_KEY_AUDIT_QUEUE_SIZE, DEFAULT_AUDIT_QUEUE_SIZE, false)
+	flags.AuditWorkers = configutil.ResolveInt(fs, "audit-workers", ENV_KEY_AUDIT_WORKERS, DEFAULT_AUDIT_WORKERS, false)
+	flags.AuditMaskIP = configutil.ResolveBool(fs, "audit-mask-ip", ENV_KEY_AUDIT_MASK_IP, DEFAULT_AUDIT_MASK_IP)
 
 	// Special flags
 	flags.ShowVersion = *showVersion

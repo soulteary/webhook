@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/soulteary/webhook/internal/audit"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/fn"
 	"github.com/soulteary/webhook/internal/hook"
@@ -366,14 +367,29 @@ func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 	trw := &trackingResponseWriter{ResponseWriter: w}
 	_, err := executor.Execute(ctx, matchedHook, req, trw, executionTimeout)
 	duration := time.Since(startTime)
+	durationMS := duration.Milliseconds()
+
+	// 获取请求信息用于审计日志
+	var ip, userAgent string
+	if req.RawRequest != nil {
+		ip = req.RawRequest.RemoteAddr
+		userAgent = req.RawRequest.UserAgent()
+	}
 
 	if err != nil {
 		// 记录失败的 hook 执行
 		status := "error"
 		if errors.Is(err, context.DeadlineExceeded) {
 			status = "timeout"
+			// 记录审计日志：执行超时
+			audit.LogHookTimeout(requestID, hookID, ip, userAgent, durationMS)
 		} else if errors.Is(err, context.Canceled) {
 			status = "cancelled"
+			// 记录审计日志：执行取消
+			audit.LogHookCancelled(requestID, hookID, ip, userAgent, durationMS)
+		} else {
+			// 记录审计日志：执行失败
+			audit.LogHookFailed(requestID, hookID, ip, userAgent, err.Error(), durationMS)
 		}
 		metrics.RecordHookExecution(hookID, status, duration)
 
@@ -408,6 +424,8 @@ func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 	} else {
 		// 记录成功的 hook 执行
 		metrics.RecordHookExecution(hookID, "success", duration)
+		// 记录审计日志：执行成功
+		audit.LogHookExecuted(requestID, hookID, ip, userAgent, durationMS)
 	}
 }
 
@@ -415,14 +433,29 @@ func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string, startTime time.Time) {
 	response, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
 	duration := time.Since(startTime)
+	durationMS := duration.Milliseconds()
+
+	// 获取请求信息用于审计日志
+	var ip, userAgent string
+	if req.RawRequest != nil {
+		ip = req.RawRequest.RemoteAddr
+		userAgent = req.RawRequest.UserAgent()
+	}
 
 	if err != nil {
 		// 记录失败的 hook 执行
 		status := "error"
 		if errors.Is(err, context.DeadlineExceeded) {
 			status = "timeout"
+			// 记录审计日志：执行超时
+			audit.LogHookTimeout(requestID, hookID, ip, userAgent, durationMS)
 		} else if errors.Is(err, context.Canceled) {
 			status = "cancelled"
+			// 记录审计日志：执行取消
+			audit.LogHookCancelled(requestID, hookID, ip, userAgent, durationMS)
+		} else {
+			// 记录审计日志：执行失败
+			audit.LogHookFailed(requestID, hookID, ip, userAgent, err.Error(), durationMS)
 		}
 		metrics.RecordHookExecution(hookID, status, duration)
 
@@ -449,6 +482,8 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 	} else {
 		// 记录成功的 hook 执行
 		metrics.RecordHookExecution(hookID, "success", duration)
+		// 记录审计日志：执行成功
+		audit.LogHookExecuted(requestID, hookID, ip, userAgent, durationMS)
 
 		// Check if a success return code is configured for the hook
 		if matchedHook.SuccessHttpResponseCode != 0 {
@@ -460,6 +495,13 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 
 // executeAsyncHook 执行异步 hook
 func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string, startTime time.Time) {
+	// 获取请求信息用于审计日志（在 goroutine 外获取，避免请求对象被回收）
+	var ip, userAgent string
+	if req.RawRequest != nil {
+		ip = req.RawRequest.RemoteAddr
+		userAgent = req.RawRequest.UserAgent()
+	}
+
 	// 异步执行，但仍需要并发控制和超时
 	// 使用 WaitGroup 跟踪 goroutine，防止泄漏
 	asyncHookWaitGroup.Add(1)
@@ -467,6 +509,7 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 		defer asyncHookWaitGroup.Done()
 		_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
 		duration := time.Since(startTime)
+		durationMS := duration.Milliseconds()
 
 		if err != nil {
 			// 记录失败的 hook 执行
@@ -474,16 +517,24 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 			if errors.Is(err, context.DeadlineExceeded) {
 				status = "timeout"
 				logger.Errorf("[%s] async hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
+				// 记录审计日志：执行超时
+				audit.LogHookTimeout(requestID, hookID, ip, userAgent, durationMS)
 			} else if errors.Is(err, context.Canceled) {
 				status = "cancelled"
 				logger.Warnf("[%s] async hook %s execution cancelled due to request context (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
+				// 记录审计日志：执行取消
+				audit.LogHookCancelled(requestID, hookID, ip, userAgent, durationMS)
 			} else {
 				logger.Errorf("[%s] error executing async hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
+				// 记录审计日志：执行失败
+				audit.LogHookFailed(requestID, hookID, ip, userAgent, err.Error(), durationMS)
 			}
 			metrics.RecordHookExecution(hookID, status, duration)
 		} else {
 			// 记录成功的 hook 执行
 			metrics.RecordHookExecution(hookID, "success", duration)
+			// 记录审计日志：执行成功
+			audit.LogHookExecuted(requestID, hookID, ip, userAgent, durationMS)
 		}
 	}()
 
@@ -587,6 +638,8 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 			err := NewHTTPError(ErrorTypeClient, http.StatusNotFound, "Hook not found.", nil)
 			statusCode = err.Status
 			HandleErrorPlain(wrappedWriter, err, requestID, hookID)
+			// 记录审计日志：hook 未找到
+			audit.LogHookNotFound(requestID, hookID, r.RemoteAddr, r.UserAgent())
 			return
 		}
 
@@ -596,6 +649,8 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 				fmt.Sprintf("HTTP %s method not allowed for hook %q", r.Method, hookID), nil)
 			statusCode = err.Status
 			HandleErrorPlain(wrappedWriter, err, requestID, hookID)
+			// 记录审计日志：HTTP 方法不允许
+			audit.LogMethodNotAllowed(requestID, hookID, r.RemoteAddr, r.UserAgent(), r.Method)
 			return
 		}
 
@@ -620,6 +675,9 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 		if ok {
 			logger.Infof("[%s] %s hook triggered successfully", requestID, matchedHook.ID)
 
+			// 记录审计日志：hook 被触发
+			audit.LogHookTriggered(requestID, matchedHook.ID, r.RemoteAddr, r.UserAgent(), r.Method)
+
 			setResponseHeaders(wrappedWriter, matchedHook.ResponseHeaders)
 
 			// 执行 hook 并处理响应
@@ -635,6 +693,9 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 
 		// if none of the hooks got triggered
 		logger.Debugf("[%s] %s got matched, but didn't get triggered because the trigger rules were not satisfied", requestID, matchedHook.ID)
+
+		// 记录审计日志：触发规则不满足
+		audit.LogRulesNotSatisfied(requestID, matchedHook.ID, r.RemoteAddr, r.UserAgent())
 
 		fmt.Fprint(wrappedWriter, "Hook rules were not satisfied.")
 	}
