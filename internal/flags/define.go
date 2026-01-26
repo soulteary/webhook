@@ -54,6 +54,11 @@ const (
 	DEFAULT_WRITE_TIMEOUT_SECONDS       = 30      // 30 seconds
 	DEFAULT_IDLE_TIMEOUT_SECONDS        = 90      // 90 seconds
 	DEFAULT_MAX_HEADER_BYTES            = 1 << 20 // 1MB
+
+	// Tracing defaults
+	DEFAULT_TRACING_ENABLED  = false
+	DEFAULT_OTLP_ENDPOINT    = ""
+	DEFAULT_TRACING_SVC_NAME = "webhook"
 )
 
 const (
@@ -107,6 +112,11 @@ const (
 	ENV_KEY_WRITE_TIMEOUT_SECONDS       = "WRITE_TIMEOUT_SECONDS"
 	ENV_KEY_IDLE_TIMEOUT_SECONDS        = "IDLE_TIMEOUT_SECONDS"
 	ENV_KEY_MAX_HEADER_BYTES            = "MAX_HEADER_BYTES"
+
+	// Tracing environment keys
+	ENV_KEY_TRACING_ENABLED  = "TRACING_ENABLED"
+	ENV_KEY_OTLP_ENDPOINT    = "OTLP_ENDPOINT"
+	ENV_KEY_TRACING_SVC_NAME = "TRACING_SERVICE_NAME"
 )
 
 type AppFlags struct {
@@ -162,4 +172,9 @@ type AppFlags struct {
 	WriteTimeoutSeconds      int // 写入响应超时时间（秒）
 	IdleTimeoutSeconds       int // 空闲连接超时时间（秒）
 	MaxHeaderBytes           int // 最大请求头大小（字节）
+
+	// Tracing settings
+	TracingEnabled     bool   // 是否启用分布式追踪
+	OTLPEndpoint       string // OTLP 导出端点（如 localhost:4318）
+	TracingServiceName string // 追踪服务名称
 }
