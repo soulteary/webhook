@@ -66,6 +66,11 @@ func ParseConfig() AppFlags {
 	fs.Int("idle-timeout-seconds", DEFAULT_IDLE_TIMEOUT_SECONDS, "timeout in seconds for idle connections (default 90)")
 	fs.Int("max-header-bytes", DEFAULT_MAX_HEADER_BYTES, "maximum size in bytes for request headers (default 1MB)")
 
+	// Tracing flags
+	fs.Bool("tracing-enabled", DEFAULT_TRACING_ENABLED, "enable distributed tracing with OpenTelemetry (default false)")
+	fs.String("otlp-endpoint", DEFAULT_OTLP_ENDPOINT, "OTLP exporter endpoint (e.g., localhost:4318)")
+	fs.String("tracing-service-name", DEFAULT_TRACING_SVC_NAME, "service name for tracing (default 'webhook')")
+
 	showVersion := fs.Bool("version", false, "display webhook version and quit")
 	validateConfig := fs.Bool("validate-config", false, "validate configuration and exit")
 
@@ -139,6 +144,11 @@ func ParseConfig() AppFlags {
 	flags.WriteTimeoutSeconds = configutil.ResolveInt(fs, "write-timeout-seconds", ENV_KEY_WRITE_TIMEOUT_SECONDS, DEFAULT_WRITE_TIMEOUT_SECONDS, true)
 	flags.IdleTimeoutSeconds = configutil.ResolveInt(fs, "idle-timeout-seconds", ENV_KEY_IDLE_TIMEOUT_SECONDS, DEFAULT_IDLE_TIMEOUT_SECONDS, true)
 	flags.MaxHeaderBytes = configutil.ResolveInt(fs, "max-header-bytes", ENV_KEY_MAX_HEADER_BYTES, DEFAULT_MAX_HEADER_BYTES, false)
+
+	// Tracing settings
+	flags.TracingEnabled = configutil.ResolveBool(fs, "tracing-enabled", ENV_KEY_TRACING_ENABLED, DEFAULT_TRACING_ENABLED)
+	flags.OTLPEndpoint = configutil.ResolveString(fs, "otlp-endpoint", ENV_KEY_OTLP_ENDPOINT, DEFAULT_OTLP_ENDPOINT, true)
+	flags.TracingServiceName = configutil.ResolveString(fs, "tracing-service-name", ENV_KEY_TRACING_SVC_NAME, DEFAULT_TRACING_SVC_NAME, true)
 
 	// Special flags
 	flags.ShowVersion = *showVersion

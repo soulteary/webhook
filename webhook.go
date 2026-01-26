@@ -16,6 +16,7 @@ import (
 	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/soulteary/webhook/internal/server"
+	"github.com/soulteary/webhook/internal/tracing"
 	"github.com/soulteary/webhook/internal/version"
 )
 
@@ -175,6 +176,21 @@ func main() {
 
 	logger.Info(i18n.Sprintf(i18n.MSG_SERVER_IS_STARTING, version.Version))
 
+	// 初始化追踪系统
+	if appFlags.TracingEnabled {
+		tracingConfig := tracing.TracingConfig{
+			Enabled:        appFlags.TracingEnabled,
+			ServiceName:    appFlags.TracingServiceName,
+			ServiceVersion: version.Version,
+			OTLPEndpoint:   appFlags.OTLPEndpoint,
+		}
+		if err := tracing.Init(tracingConfig); err != nil {
+			logger.Warnf("failed to initialize tracing: %v", err)
+		} else {
+			logger.Infof("tracing enabled: service=%s, endpoint=%s", appFlags.TracingServiceName, appFlags.OTLPEndpoint)
+		}
+	}
+
 	// load and parse hooks
 	rules.ParseAndLoadHooks(appFlags.AsTemplate)
 
@@ -191,6 +207,17 @@ func main() {
 
 	// 设置优雅关闭回调
 	shutdownFn := func() {
+		// 关闭追踪系统
+		if tracing.IsEnabled() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := tracing.Shutdown(ctx); err != nil {
+				logger.Warnf("error shutting down tracing: %v", err)
+			} else {
+				logger.Info("tracing shutdown completed")
+			}
+		}
+
 		if httpServer != nil {
 			// 设置最大等待时间为 30 秒
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
