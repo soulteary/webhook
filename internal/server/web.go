@@ -31,6 +31,15 @@ type Server struct {
 func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	r := chi.NewRouter()
 
+	// 安全头中间件（来自 middleware-kit）
+	// 设置 X-Content-Type-Options, X-Frame-Options, X-XSS-Protection 等安全头
+	securityConfig := middleware.DefaultSecurityConfig()
+	if appFlags.StrictMode {
+		// 严格模式下使用更多安全头
+		securityConfig = middleware.StrictSecurityConfig()
+	}
+	r.Use(middleware.SecurityHeaders(securityConfig))
+
 	r.Use(middleware.RequestID(
 		middleware.UseXRequestIDHeaderOption(appFlags.UseXRequestID),
 		middleware.XRequestIDLimitOption(appFlags.XRequestIDLimit),
