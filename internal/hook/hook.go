@@ -2,34 +2,26 @@ package hook
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"path/filepath"
-	"sync"
-
-	// #nosec
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
-	"crypto/subtle"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/soulteary/webhook/internal/logger"
-	"hash"
 	"math"
 	"net"
 	"net/textproto"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
 	"github.com/invopop/yaml"
+	secure "github.com/soulteary/secure-kit"
+	"github.com/soulteary/webhook/internal/logger"
 )
 
 // Constants used to specify the parameter source
@@ -160,85 +152,88 @@ func ExtractCommaSeparatedValues(source, prefix string) []string {
 }
 
 // ExtractSignatures will extract all the signatures from the source.
+// This function delegates to secure-kit's ExtractSignatures for consistent behavior.
 func ExtractSignatures(source, prefix string) []string {
-	// If there are multiple possible matches, let the comma separated extractor
-	// do it's work.
-	if strings.Contains(source, ",") {
-		return ExtractCommaSeparatedValues(source, prefix)
-	}
-
-	// There were no commas, so just trim the prefix (if it even exists) and
-	// pass it back.
-	return []string{
-		strings.TrimPrefix(source, prefix),
-	}
+	return secure.ExtractSignatures(source, prefix)
 }
 
-// ValidateMAC will verify that the expected mac for the given hash will match
-// the one provided.
-func ValidateMAC(payload []byte, mac hash.Hash, signatures []string) (string, error) {
-	// Write the payload to the provided hash.
-	if _, err := mac.Write(payload); err != nil {
-		return "", err
+// CheckPayloadSignature calculates and verifies SHA1 signature of the given payload
+// using secure-kit's HMAC verifier with constant-time comparison.
+func CheckPayloadSignature(payload []byte, secret, signature string) (string, error) {
+	if secret == "" {
+		return "", errors.New("signature validation secret can not be empty")
 	}
 
-	actualMAC := hex.EncodeToString(mac.Sum(nil))
+	// Create HMAC verifier using secure-kit
+	verifier := secure.NewHMACVerifier(secure.HMACSHA1, secret)
 
-	// Use constant-time comparison for security
-	actualMACBytes := []byte(actualMAC)
-	for _, signature := range signatures {
-		if hmac.Equal(actualMACBytes, []byte(signature)) {
-			return actualMAC, nil
-		}
+	// Extract and verify signatures
+	signatures := ExtractSignatures(signature, "sha1=")
+	valid, actualMAC := verifier.VerifyAny(payload, signatures)
+
+	if valid {
+		return actualMAC, nil
 	}
 
 	e := &SignatureError{Signatures: signatures}
 	if len(payload) == 0 {
 		e.EmptyPayload = true
 	}
-
 	return actualMAC, e
 }
 
-// CheckPayloadSignature calculates and verifies SHA1 signature of the given payload
-func CheckPayloadSignature(payload []byte, secret, signature string) (string, error) {
-	if secret == "" {
-		return "", errors.New("signature validation secret can not be empty")
-	}
-
-	// Extract the signatures.
-	signatures := ExtractSignatures(signature, "sha1=")
-
-	// Validate the MAC.
-	return ValidateMAC(payload, hmac.New(sha1.New, []byte(secret)), signatures)
-}
-
 // CheckPayloadSignature256 calculates and verifies SHA256 signature of the given payload
+// using secure-kit's HMAC verifier with constant-time comparison.
 func CheckPayloadSignature256(payload []byte, secret, signature string) (string, error) {
 	if secret == "" {
 		return "", errors.New("signature validation secret can not be empty")
 	}
 
-	// Extract the signatures.
-	signatures := ExtractSignatures(signature, "sha256=")
+	// Create HMAC verifier using secure-kit
+	verifier := secure.NewHMACVerifier(secure.HMACSHA256, secret)
 
-	// Validate the MAC.
-	return ValidateMAC(payload, hmac.New(sha256.New, []byte(secret)), signatures)
+	// Extract and verify signatures
+	signatures := ExtractSignatures(signature, "sha256=")
+	valid, actualMAC := verifier.VerifyAny(payload, signatures)
+
+	if valid {
+		return actualMAC, nil
+	}
+
+	e := &SignatureError{Signatures: signatures}
+	if len(payload) == 0 {
+		e.EmptyPayload = true
+	}
+	return actualMAC, e
 }
 
 // CheckPayloadSignature512 calculates and verifies SHA512 signature of the given payload
+// using secure-kit's HMAC verifier with constant-time comparison.
 func CheckPayloadSignature512(payload []byte, secret, signature string) (string, error) {
 	if secret == "" {
 		return "", errors.New("signature validation secret can not be empty")
 	}
 
-	// Extract the signatures.
-	signatures := ExtractSignatures(signature, "sha512=")
+	// Create HMAC verifier using secure-kit
+	verifier := secure.NewHMACVerifier(secure.HMACSHA512, secret)
 
-	// Validate the MAC.
-	return ValidateMAC(payload, hmac.New(sha512.New, []byte(secret)), signatures)
+	// Extract and verify signatures
+	signatures := ExtractSignatures(signature, "sha512=")
+	valid, actualMAC := verifier.VerifyAny(payload, signatures)
+
+	if valid {
+		return actualMAC, nil
+	}
+
+	e := &SignatureError{Signatures: signatures}
+	if len(payload) == 0 {
+		e.EmptyPayload = true
+	}
+	return actualMAC, e
 }
 
+// CheckMSTeamsSignature verifies MS Teams webhook signatures using secure-kit.
+// MS Teams uses base64-encoded HMAC-SHA256 signatures.
 func CheckMSTeamsSignature(r *Request, signingKey string) (bool, error) {
 	if r.Headers == nil {
 		return false, nil
@@ -252,6 +247,7 @@ func CheckMSTeamsSignature(r *Request, signingKey string) (bool, error) {
 	if err != nil {
 		return false, errors.New("signature validation key must be valid base64")
 	}
+
 	// Check if a valid HMAC header was provided
 	if _, ok := r.Headers["Authorization"]; !ok {
 		return false, nil
@@ -262,15 +258,16 @@ func CheckMSTeamsSignature(r *Request, signingKey string) (bool, error) {
 	}
 	providedSignature := headerParts[1]
 
-	mac := hmac.New(sha256.New, secret)
-	mac.Write(r.Body)
-	expectedSignature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
-	if !hmac.Equal([]byte(providedSignature), []byte(expectedSignature)) {
+	// Use secure-kit for HMAC verification with base64 encoding
+	verifier := secure.NewHMACVerifierFromBytes(secure.HMACSHA256, secret)
+	if !verifier.VerifyBase64(r.Body, providedSignature) {
 		return false, &SignatureError{Signature: providedSignature}
 	}
 	return true, nil
 }
 
+// CheckScalrSignature verifies Scalr webhook signatures using secure-kit.
+// Scalr uses HMAC-SHA1 with the body and date header combined.
 func CheckScalrSignature(r *Request, signingKey string, checkDate bool) (bool, error) {
 	if r.Headers == nil {
 		return false, nil
@@ -289,18 +286,20 @@ func CheckScalrSignature(r *Request, signingKey string, checkDate bool) (bool, e
 
 	providedSignature := r.Headers["X-Signature"].(string)
 	dateHeader := r.Headers["Date"].(string)
-	mac := hmac.New(sha1.New, []byte(signingKey))
-	mac.Write(r.Body)
-	mac.Write([]byte(dateHeader))
-	expectedSignature := hex.EncodeToString(mac.Sum(nil))
 
-	if !hmac.Equal([]byte(providedSignature), []byte(expectedSignature)) {
+	// Scalr combines body + date for signature, use secure-kit for HMAC
+	combinedPayload := append(r.Body, []byte(dateHeader)...)
+	expectedSignature := secure.ComputeHMACSHA1(combinedPayload, signingKey)
+
+	// Use constant-time comparison from secure-kit
+	if !secure.ConstantTimeEqual(providedSignature, expectedSignature) {
 		return false, &SignatureError{Signature: providedSignature}
 	}
 
 	if !checkDate {
 		return true, nil
 	}
+
 	// Example format: Fri 08 Sep 2017 11:24:32 UTC
 	date, err := time.Parse("Mon 02 Jan 2006 15:04:05 MST", dateHeader)
 	if err != nil {
@@ -1076,8 +1075,9 @@ func (r MatchRule) Evaluate(req *Request) (bool, error) {
 }
 
 // compare is a helper function for constant time string comparisons.
+// Uses secure-kit's ConstantTimeEqual for consistent timing behavior.
 func compare(a, b string) bool {
-	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+	return secure.ConstantTimeEqual(a, b)
 }
 
 // getenv provides a template function to retrieve OS environment variables.
