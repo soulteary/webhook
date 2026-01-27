@@ -12,3 +12,4 @@ redeploy.sh
 *.out
 
 OPTIMIZATION_REPORT.md
+test.log

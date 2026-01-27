@@ -171,7 +171,6 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 - [Testing Guide](docs/en-US/Testing-Guide.md) - How to run tests, generate coverage reports, and key testing scenarios
 - [Troubleshooting](docs/en-US/Troubleshooting.md) - Common issues and solutions
 - [Migration Guide](docs/en-US/Migration-Guide.md) - Upgrading from previous versions
-- [Refactoring Report](docs/en-US/REFACTORING_REPORT.md) - Detailed comparison between the original fork (adnanh/webhook 2.8.0) and current version (4.9.0)
 
 ### Security
 - [Security Policy](SECURITY.md) - Security features and vulnerability reporting
@@ -186,7 +185,5 @@ This project is a maintained fork of the original [webhook](https://github.com/a
 - **Documentation**: Comprehensive documentation in both English and Chinese
 
 We aim to provide a reliable, secure, and well-maintained webhook server for the community.
-
-- [Refactoring Report](docs/en-US/REFACTORING_REPORT.md) - Detailed comparison between the original fork (adnanh/webhook 2.8.0) and current version (4.9.0)
 
 [w]: https://github.com/soulteary/webhook

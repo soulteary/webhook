@@ -27,7 +27,7 @@ var (
 	httpServer *server.Server
 )
 
-//go:embed locales/*.toml
+//go:embed locales/*.yaml
 var WebhookLocales embed.FS
 
 func NeedEchoVersionInfo(appFlags flags.AppFlags) {
@@ -37,17 +37,19 @@ func NeedEchoVersionInfo(appFlags flags.AppFlags) {
 	}
 }
 
+// prepareHooksFilesAndValidate 加锁检查并填充默认 HooksFiles，然后执行配置验证，供 NeedValidateConfig 与 main 共用。
+func prepareHooksFilesAndValidate(appFlags flags.AppFlags) *flags.ValidationResult {
+	rules.LockHooksFiles()
+	if len(rules.HooksFiles) == 0 {
+		rules.HooksFiles = append(rules.HooksFiles, "hooks.json")
+	}
+	rules.UnlockHooksFiles()
+	return flags.Validate(appFlags)
+}
+
 func NeedValidateConfig(appFlags flags.AppFlags) {
 	if appFlags.ValidateConfig {
-		// 加锁检查和更新 HooksFiles（与 main 函数中的逻辑一致）
-		rules.LockHooksFiles()
-		if len(rules.HooksFiles) == 0 {
-			rules.HooksFiles = append(rules.HooksFiles, "hooks.json")
-		}
-		rules.UnlockHooksFiles()
-
-		// 验证配置
-		validationResult := flags.Validate(appFlags)
+		validationResult := prepareHooksFilesAndValidate(appFlags)
 		if validationResult.HasErrors() {
 			fmt.Fprintf(os.Stderr, "%s\n", i18n.Sprintf(i18n.MSG_CONFIG_VALIDATION_FAILED, len(validationResult.Errors)))
 			for _, err := range validationResult.Errors {
@@ -55,7 +57,6 @@ func NeedValidateConfig(appFlags flags.AppFlags) {
 			}
 			os.Exit(1)
 		}
-
 		fmt.Println(i18n.Sprintf(i18n.MSG_CONFIG_VALIDATION_PASSED))
 		os.Exit(0)
 	}
@@ -117,15 +118,7 @@ func main() {
 		appFlags.Verbose = true
 	}
 
-	// 加锁检查和更新 HooksFiles
-	rules.LockHooksFiles()
-	if len(rules.HooksFiles) == 0 {
-		rules.HooksFiles = append(rules.HooksFiles, "hooks.json")
-	}
-	rules.UnlockHooksFiles()
-
-	// 验证配置
-	validationResult := flags.Validate(appFlags)
+	validationResult := prepareHooksFilesAndValidate(appFlags)
 	if validationResult.HasErrors() {
 		fmt.Fprintf(os.Stderr, "%s\n", i18n.Sprintf(i18n.MSG_CONFIG_VALIDATION_FAILED, len(validationResult.Errors)))
 		for _, err := range validationResult.Errors {
