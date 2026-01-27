@@ -63,14 +63,8 @@ func WatchForFileChange(watcher *fsnotify.Watcher, asTemplate bool, verbose bool
 	}()
 
 	// 处理事件的主循环
-	for {
-		select {
-		case event, ok := <-eventQueue:
-			if !ok {
-				return
-			}
-			handleEvent(event, watcher, asTemplate, verbose, noPanic, reloadHooks, removeHooks, &processors, &processorsMu)
-		}
+	for event := range eventQueue {
+		handleEvent(event, watcher, asTemplate, verbose, noPanic, reloadHooks, removeHooks, &processors, &processorsMu)
 	}
 }
 

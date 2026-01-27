@@ -61,13 +61,10 @@ func TestRateLimiter_Middleware(t *testing.T) {
 		handler.ServeHTTP(w2, req)
 	}
 
-	// 最后一个请求应该被限流
+	// 最后一个请求应该被限流；由于限流器的实现，可能需要更多请求才能触发限流，这里主要测试不会 panic
 	w3 := httptest.NewRecorder()
 	handler.ServeHTTP(w3, req)
-	if w3.Code == http.StatusOK {
-		// 由于限流器的实现，可能需要更多请求才能触发限流
-		// 这里主要测试不会 panic
-	}
+	_ = w3.Code // may be OK or rate-limited depending on implementation
 }
 
 func TestRateLimiter_Middleware_Disabled(t *testing.T) {
@@ -607,7 +604,7 @@ func TestRateLimiter_MiddlewareWithHeaders(t *testing.T) {
 
 	rl := NewRateLimiter(config)
 	require.NotNil(t, rl)
-	defer rl.Close()
+	defer func() { _ = rl.Close() }()
 
 	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -632,7 +629,7 @@ func TestRateLimiter_HookMiddleware_WithConfig(t *testing.T) {
 
 	rl := NewRateLimiter(config)
 	require.NotNil(t, rl)
-	defer rl.Close()
+	defer func() { _ = rl.Close() }()
 
 	hookMiddleware := rl.HookMiddleware(5, 2)
 	handler := hookMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

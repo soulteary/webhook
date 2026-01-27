@@ -19,7 +19,7 @@ func RunHookecho(args []string, environ []string, writer io.Writer) (shouldExit 
 	}
 
 	if len(args) > 1 {
-		fmt.Fprintf(writer, "arg: %s\n", strings.Join(args[1:], " "))
+		_, _ = fmt.Fprintf(writer, "arg: %s\n", strings.Join(args[1:], " "))
 	}
 
 	var env []string
@@ -30,14 +30,14 @@ func RunHookecho(args []string, environ []string, writer io.Writer) (shouldExit 
 	}
 
 	if len(env) > 0 {
-		fmt.Fprintf(writer, "env: %s\n", strings.Join(env, " "))
+		_, _ = fmt.Fprintf(writer, "env: %s\n", strings.Join(env, " "))
 	}
 
 	if (len(args) > 1) && (strings.HasPrefix(args[1], "exit=")) {
 		exit_code_str := args[1][5:]
 		exit_code, err := strconv.Atoi(exit_code_str)
 		if err != nil {
-			fmt.Fprintf(writer, "Exit code %s not an int!", exit_code_str)
+			_, _ = fmt.Fprintf(writer, "Exit code %s not an int!", exit_code_str)
 			return true, -1
 		}
 		return true, exit_code

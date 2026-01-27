@@ -367,7 +367,7 @@ func TestWatchForSignals_WithPidFile_RemoveError(t *testing.T) {
 		t.Fatalf("Failed to create PID file: %v", err)
 	}
 	// Remove the file so Remove() will return an error
-	os.Remove(pidFilePath)
+	_ = os.Remove(pidFilePath)
 
 	handler := NewSignalHandler(mockExit)
 	signals := make(chan os.Signal, 1)

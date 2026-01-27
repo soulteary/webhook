@@ -15,13 +15,13 @@ func TestScanDirByExt(t *testing.T) {
 	testFile2 := filepath.Join(tempDir, "test2.jpg")
 	testFile3 := filepath.Join(tempDir, "test3.txt")
 
-	os.Create(testFile1)
-	os.Create(testFile2)
-	os.Create(testFile3)
+	_, _ = os.Create(testFile1)
+	_, _ = os.Create(testFile2)
+	_, _ = os.Create(testFile3)
 
-	defer os.Remove(testFile1)
-	defer os.Remove(testFile2)
-	defer os.Remove(testFile3)
+	defer func() { _ = os.Remove(testFile1) }()
+	defer func() { _ = os.Remove(testFile2) }()
+	defer func() { _ = os.Remove(testFile3) }()
 
 	txtFiles := fn.ScanDirByExt(tempDir, ".txt")
 	assert.Equal(t, []string{testFile1, testFile3}, txtFiles)
@@ -43,10 +43,10 @@ func TestScanDirByExt(t *testing.T) {
 
 	// Test with nested directories
 	subDir := filepath.Join(tempDir, "subdir")
-	os.Mkdir(subDir, 0755)
+	_ = os.Mkdir(subDir, 0755)
 	testFile4 := filepath.Join(subDir, "test4.txt")
-	os.Create(testFile4)
-	defer os.Remove(testFile4)
+	_, _ = os.Create(testFile4)
+	defer func() { _ = os.Remove(testFile4) }()
 
 	txtFiles4 := fn.ScanDirByExt(tempDir, ".txt")
 	assert.Contains(t, txtFiles4, testFile4)
@@ -70,13 +70,13 @@ func TestScanDirByExt_CaseInsensitive(t *testing.T) {
 	testFile2 := filepath.Join(tempDir, "test2.txt")
 	testFile3 := filepath.Join(tempDir, "test3.Txt")
 
-	os.Create(testFile1)
-	os.Create(testFile2)
-	os.Create(testFile3)
+	_, _ = os.Create(testFile1)
+	_, _ = os.Create(testFile2)
+	_, _ = os.Create(testFile3)
 
-	defer os.Remove(testFile1)
-	defer os.Remove(testFile2)
-	defer os.Remove(testFile3)
+	defer func() { _ = os.Remove(testFile1) }()
+	defer func() { _ = os.Remove(testFile2) }()
+	defer func() { _ = os.Remove(testFile3) }()
 
 	txtFiles := fn.ScanDirByExt(tempDir, ".txt")
 	assert.Len(t, txtFiles, 3)

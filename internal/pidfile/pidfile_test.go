@@ -41,7 +41,7 @@ func TestNew_WithExistingPIDFile(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not create test directory")
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	path := filepath.Join(dir, "testfile")
 
@@ -50,7 +50,7 @@ func TestNew_WithExistingPIDFile(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not create test file", err)
 	}
-	defer file.Remove()
+	defer func() { _ = file.Remove() }()
 
 	// 尝试再次创建同一个 PID 文件（应该失败）
 	_, err = New(path)
@@ -69,7 +69,7 @@ func TestNew_WithInvalidDirectory(t *testing.T) {
 	_, err := New(invalidPath)
 	if err == nil {
 		// 如果成功创建，清理文件
-		os.Remove(invalidPath)
+		_ = os.Remove(invalidPath)
 		// 这个测试主要确保错误处理路径被执行
 	}
 }
@@ -79,7 +79,7 @@ func TestNew_WithLongPath(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not create test directory")
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	// 创建一个很长的路径
 	longPath := filepath.Join(dir, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "pidfile")
@@ -107,7 +107,7 @@ func TestCheckPIDFileAlreadyExists(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not create test directory")
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	path := filepath.Join(dir, "testfile")
 
@@ -122,7 +122,7 @@ func TestCheckPIDFileAlreadyExists(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not create test file", err)
 	}
-	defer os.Remove(path)
+	defer func() { _ = os.Remove(path) }()
 
 	// 应该返回 nil，因为 PID 无法解析
 	err = checkPIDFileAlreadyExists(path)

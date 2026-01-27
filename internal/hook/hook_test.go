@@ -516,7 +516,7 @@ var hooksLoadFromFileTests = []struct {
 
 func TestHooksLoadFromFile(t *testing.T) {
 	secret := `foo"123`
-	os.Setenv("XXXTEST_SECRET", secret)
+	_ = os.Setenv("XXXTEST_SECRET", secret)
 
 	for _, tt := range hooksLoadFromFileTests {
 		h := &Hooks{}
@@ -529,7 +529,7 @@ func TestHooksLoadFromFile(t *testing.T) {
 
 func TestHooksTemplateLoadFromFile(t *testing.T) {
 	secret := `foo"123`
-	os.Setenv("XXXTEST_SECRET", secret)
+	_ = os.Setenv("XXXTEST_SECRET", secret)
 
 	for _, tt := range hooksLoadFromFileTests {
 		if !tt.asTemplate {

@@ -24,7 +24,7 @@ func TestParseConfig_DefaultValues(t *testing.T) {
 		if val := os.Getenv(key); val != "" {
 			originalEnv[key] = val
 		}
-		os.Unsetenv(key)
+		_ = os.Unsetenv(key)
 	}
 
 	originalArgs := os.Args
@@ -32,7 +32,7 @@ func TestParseConfig_DefaultValues(t *testing.T) {
 		os.Args = originalArgs
 		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 		for key := range originalEnv {
-			os.Setenv(key, originalEnv[key])
+			_ = os.Setenv(key, originalEnv[key])
 		}
 	}()
 
@@ -83,33 +83,33 @@ func TestParseConfig_FromEnvVars(t *testing.T) {
 		os.Args = originalArgs
 		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 		for key := range originalEnv {
-			os.Setenv(key, originalEnv[key])
+			_ = os.Setenv(key, originalEnv[key])
 		}
 		for _, key := range envKeys {
 			if _, exists := originalEnv[key]; !exists {
-				os.Unsetenv(key)
+				_ = os.Unsetenv(key)
 			}
 		}
 	}()
 
 	// Set custom environment variables
-	os.Setenv(ENV_KEY_HOST, "127.0.0.1")
-	os.Setenv(ENV_KEY_PORT, "8080")
-	os.Setenv(ENV_KEY_VERBOSE, "true")
-	os.Setenv(ENV_KEY_DEBUG, "true")
-	os.Setenv(ENV_KEY_NO_PANIC, "true")
-	os.Setenv(ENV_KEY_HOT_RELOAD, "true")
-	os.Setenv(ENV_KEY_LOG_PATH, "/tmp/test.log")
-	os.Setenv(ENV_KEY_HOOKS_URLPREFIX, "webhooks")
-	os.Setenv(ENV_KEY_TEMPLATE, "true")
-	os.Setenv(ENV_KEY_X_REQUEST_ID, "true")
-	os.Setenv(ENV_KEY_MAX_MPART_MEM, "2097152")
-	os.Setenv(ENV_KEY_GID, "1000")
-	os.Setenv(ENV_KEY_UID, "1000")
-	os.Setenv(ENV_KEY_HTTP_METHODS, "POST,GET")
-	os.Setenv(ENV_KEY_PID_FILE, "/tmp/webhook.pid")
-	os.Setenv(ENV_KEY_LANG, "zh-CN")
-	os.Setenv(ENV_KEY_I18N, "/tmp/locales")
+	_ = os.Setenv(ENV_KEY_HOST, "127.0.0.1")
+	_ = os.Setenv(ENV_KEY_PORT, "8080")
+	_ = os.Setenv(ENV_KEY_VERBOSE, "true")
+	_ = os.Setenv(ENV_KEY_DEBUG, "true")
+	_ = os.Setenv(ENV_KEY_NO_PANIC, "true")
+	_ = os.Setenv(ENV_KEY_HOT_RELOAD, "true")
+	_ = os.Setenv(ENV_KEY_LOG_PATH, "/tmp/test.log")
+	_ = os.Setenv(ENV_KEY_HOOKS_URLPREFIX, "webhooks")
+	_ = os.Setenv(ENV_KEY_TEMPLATE, "true")
+	_ = os.Setenv(ENV_KEY_X_REQUEST_ID, "true")
+	_ = os.Setenv(ENV_KEY_MAX_MPART_MEM, "2097152")
+	_ = os.Setenv(ENV_KEY_GID, "1000")
+	_ = os.Setenv(ENV_KEY_UID, "1000")
+	_ = os.Setenv(ENV_KEY_HTTP_METHODS, "POST,GET")
+	_ = os.Setenv(ENV_KEY_PID_FILE, "/tmp/webhook.pid")
+	_ = os.Setenv(ENV_KEY_LANG, "zh-CN")
+	_ = os.Setenv(ENV_KEY_I18N, "/tmp/locales")
 
 	os.Args = []string{"webhook"}
 
@@ -159,20 +159,20 @@ func TestParseConfig_CLIPriorityOverEnv(t *testing.T) {
 		os.Args = originalArgs
 		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 		if originalHost != "" {
-			os.Setenv(ENV_KEY_HOST, originalHost)
+			_ = os.Setenv(ENV_KEY_HOST, originalHost)
 		} else {
-			os.Unsetenv(ENV_KEY_HOST)
+			_ = os.Unsetenv(ENV_KEY_HOST)
 		}
 		if originalPort != "" {
-			os.Setenv(ENV_KEY_PORT, originalPort)
+			_ = os.Setenv(ENV_KEY_PORT, originalPort)
 		} else {
-			os.Unsetenv(ENV_KEY_PORT)
+			_ = os.Unsetenv(ENV_KEY_PORT)
 		}
 	}()
 
 	// Set environment variables
-	os.Setenv(ENV_KEY_HOST, "10.0.0.1")
-	os.Setenv(ENV_KEY_PORT, "3000")
+	_ = os.Setenv(ENV_KEY_HOST, "10.0.0.1")
+	_ = os.Setenv(ENV_KEY_PORT, "3000")
 
 	// CLI should override ENV
 	os.Args = []string{"webhook", "-ip", "192.168.1.1", "-port", "9000"}

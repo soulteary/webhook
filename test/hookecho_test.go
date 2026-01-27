@@ -24,18 +24,18 @@ func buildHookecho(t *testing.T) (binPath string, cleanupFn func()) {
 	// 获取当前工作目录
 	wd, err := os.Getwd()
 	if err != nil {
-		os.RemoveAll(tmp)
+		_ = os.RemoveAll(tmp)
 		t.Fatal(err)
 	}
 
 	// 编译 hookecho.go
 	cmd := exec.Command("go", "build", "-o", binPath, filepath.Join(wd, "hookecho.go"))
 	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmp)
+		_ = os.RemoveAll(tmp)
 		t.Fatalf("Building hookecho: %v", err)
 	}
 
-	return binPath, func() { os.RemoveAll(tmp) }
+	return binPath, func() { _ = os.RemoveAll(tmp) }
 }
 
 func TestHookecho_NoArgs(t *testing.T) {

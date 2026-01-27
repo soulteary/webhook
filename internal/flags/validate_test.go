@@ -103,6 +103,23 @@ func TestValidate_Port(t *testing.T) {
 func TestValidate_LogPath(t *testing.T) {
 	tempDir := t.TempDir()
 
+	// Create a temporary hooks file to avoid validation errors from validateHookFiles
+	hookFile := filepath.Join(tempDir, "hooks.json")
+	hookContent := `[]`
+	err := os.WriteFile(hookFile, []byte(hookContent), 0644)
+	require.NoError(t, err)
+
+	// Setup rules so that Validate does not fail on missing hooks.json
+	rules.LockHooksFiles()
+	oldHooksFiles := rules.HooksFiles
+	rules.HooksFiles = []string{hookFile}
+	rules.UnlockHooksFiles()
+	defer func() {
+		rules.LockHooksFiles()
+		rules.HooksFiles = oldHooksFiles
+		rules.UnlockHooksFiles()
+	}()
+
 	tests := []struct {
 		name     string
 		logPath  string
@@ -155,12 +172,13 @@ func TestValidate_LogPath(t *testing.T) {
 
 			flags := createValidFlags()
 			flags.LogPath = tt.logPath
+			flags.HooksFiles = []string{hookFile}
 			result := Validate(flags)
 			if tt.hasError {
 				assert.True(t, result.HasErrors())
 			} else if tt.logPath != "" {
-				// Only check if log path is provided
-				// Empty log path is valid and won't trigger validation
+				// Only check if log path is provided; empty log path is valid and won't trigger validation
+				assert.False(t, result.HasErrors())
 			}
 		})
 	}

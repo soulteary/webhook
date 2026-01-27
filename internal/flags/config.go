@@ -92,8 +92,7 @@ func ParseConfig() AppFlags {
 
 	// Multi-value flags
 	rules.RLockHooksFiles()
-	var hooksFiles hook.HooksFiles
-	hooksFiles = make(hook.HooksFiles, len(rules.HooksFiles))
+	hooksFiles := make(hook.HooksFiles, len(rules.HooksFiles))
 	copy(hooksFiles, rules.HooksFiles)
 	rules.RUnlockHooksFiles()
 	fs.Var(&hooksFiles, "hooks", "path to the json file containing defined hooks the webhook should serve, use multiple times to load from different files")

@@ -348,7 +348,7 @@ func TestIsDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// 创建临时文件
 	tmpFile := filepath.Join(tmpDir, "test_file")

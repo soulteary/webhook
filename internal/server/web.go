@@ -46,6 +46,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	if readHeaderTimeout == 0 {
 		readHeaderTimeout = 5 * time.Second
 	}
+	_ = readHeaderTimeout // Fiber does not expose ReadHeaderTimeout in Config; reserved for future use
 	readTimeout := time.Duration(appFlags.ReadTimeoutSeconds) * time.Second
 	if readTimeout == 0 {
 		readTimeout = 10 * time.Second

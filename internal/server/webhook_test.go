@@ -334,32 +334,6 @@ func TestHandleHook_Async(t *testing.T) {
 	assert.Contains(t, output, "test output")
 }
 
-type mockResponseWriter struct {
-	http.ResponseWriter
-	header http.Header
-	code   int
-	body   *bytes.Buffer
-}
-
-func newMockResponseWriter() *mockResponseWriter {
-	return &mockResponseWriter{
-		header: make(http.Header),
-		body:   &bytes.Buffer{},
-	}
-}
-
-func (m *mockResponseWriter) Header() http.Header {
-	return m.header
-}
-
-func (m *mockResponseWriter) Write(b []byte) (int, error) {
-	return m.body.Write(b)
-}
-
-func (m *mockResponseWriter) WriteHeader(code int) {
-	m.code = code
-}
-
 type mockFlushWriter struct {
 	io.Writer
 	flushed bool

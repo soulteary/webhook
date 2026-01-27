@@ -22,8 +22,7 @@ import (
 
 func TestWebhook(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		// Skip tests that require Unix-specific features on Windows
-		// Some tests will be skipped individually
+		t.Skip("Skip tests that require Unix-specific features on Windows")
 	}
 
 	hookecho, cleanupHookecho := buildHookecho(t)
@@ -113,7 +112,7 @@ func TestWebhook(t *testing.T) {
 				}
 
 				body, err := io.ReadAll(res.Body)
-				res.Body.Close()
+				_ = res.Body.Close()
 				if err != nil {
 					t.Errorf("POST %q: failed to ready body: %s", tt.desc, err)
 				}
@@ -160,7 +159,7 @@ func buildHookecho(t *testing.T) (binPath string, cleanupFn func()) {
 	}
 	defer func() {
 		if cleanupFn == nil {
-			os.RemoveAll(tmp)
+			_ = os.RemoveAll(tmp)
 		}
 	}()
 
@@ -174,7 +173,7 @@ func buildHookecho(t *testing.T) (binPath string, cleanupFn func()) {
 		t.Fatalf("Building hookecho: %v", err)
 	}
 
-	return binPath, func() { os.RemoveAll(tmp) }
+	return binPath, func() { _ = os.RemoveAll(tmp) }
 }
 
 func genConfig(t *testing.T, bin, hookTemplate string) (configPath string, cleanupFn func()) {
@@ -190,7 +189,7 @@ func genConfigWithData(t *testing.T, bin, hookTemplate string, extraData map[str
 	}
 	defer func() {
 		if cleanupFn == nil {
-			os.RemoveAll(tmp)
+			_ = os.RemoveAll(tmp)
 		}
 	}()
 
@@ -201,7 +200,7 @@ func genConfigWithData(t *testing.T, bin, hookTemplate string, extraData map[str
 	if err != nil {
 		t.Fatalf("Creating config template: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	data := struct {
 		Hookecho        string
@@ -212,7 +211,7 @@ func genConfigWithData(t *testing.T, bin, hookTemplate string, extraData map[str
 	}
 	if runtime.GOOS == "windows" {
 		// Simulate escaped backslashes on Windows.
-		data.Hookecho = strings.Replace(data.Hookecho, `\`, `\\`, -1)
+		data.Hookecho = strings.ReplaceAll(data.Hookecho, `\`, `\\`)
 	}
 
 	// Add extra data if provided
@@ -229,7 +228,7 @@ func genConfigWithData(t *testing.T, bin, hookTemplate string, extraData map[str
 		t.Fatalf("Executing template: %v", err)
 	}
 
-	return path, func() { os.RemoveAll(tmp) }
+	return path, func() { _ = os.RemoveAll(tmp) }
 }
 
 func buildWebhook(t *testing.T) (binPath string, cleanupFn func()) {
@@ -239,7 +238,7 @@ func buildWebhook(t *testing.T) (binPath string, cleanupFn func()) {
 	}
 	defer func() {
 		if cleanupFn == nil {
-			os.RemoveAll(tmp)
+			_ = os.RemoveAll(tmp)
 		}
 	}()
 

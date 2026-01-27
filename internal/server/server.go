@@ -552,11 +552,6 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 		maxConcurrent = DefaultMaxConcurrentHooks
 	}
 
-	hookTimeout := time.Duration(appFlags.HookTimeoutSeconds) * time.Second
-	if hookTimeout <= 0 {
-		hookTimeout = DefaultHookTimeout
-	}
-
 	executionTimeout := time.Duration(appFlags.HookExecutionTimeout) * time.Second
 	if executionTimeout <= 0 {
 		executionTimeout = HookExecutionTimeout
@@ -567,7 +562,7 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 	executorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
 		return handleHook(ctx, h, r, w, appFlags)
 	}
-	executor := NewHookExecutorWithFunc(maxConcurrent, hookTimeout, executorFunc)
+	executor := NewHookExecutorWithFunc(maxConcurrent, executionTimeout, executorFunc)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 记录请求开始时间

@@ -38,12 +38,12 @@ func TestCheckPrivilegesParamsCorrect(t *testing.T) {
 	// Should not exit
 
 	// Test when only SetUID is set (invalid)
-	appFlags = flags.AppFlags{SetUID: 1000, SetGID: 0}
+	_ = flags.AppFlags{SetUID: 1000, SetGID: 0}
 	// This will call os.Exit(1), so we can't test it directly
 	// This is tested in integration tests
 
 	// Test when only SetGID is set (invalid)
-	appFlags = flags.AppFlags{SetUID: 0, SetGID: 1000}
+	_ = flags.AppFlags{SetUID: 0, SetGID: 1000}
 	// This will call os.Exit(1), so we can't test it directly
 	// This is tested in integration tests
 }
@@ -58,13 +58,13 @@ func TestGetNetAddr(t *testing.T) {
 	assert.NotNil(t, ln)
 	assert.Equal(t, 0, len(logQueue))
 	if ln != nil && *ln != nil {
-		(*ln).Close()
+		_ = (*ln).Close()
 	}
 
 	// Test with invalid address (should add to log queue)
 	appFlags = flags.AppFlags{Host: "invalid-host", Port: 99999}
 	logQueue = []string{}
-	addr, ln = GetNetAddr(appFlags, &logQueue)
+	addr, _ = GetNetAddr(appFlags, &logQueue)
 
 	assert.NotEmpty(t, addr)
 	// Should have error in log queue
@@ -112,7 +112,7 @@ func TestSetupLogger(t *testing.T) {
 	// Test with invalid log path (should add to log queue)
 	appFlags = flags.AppFlags{LogPath: "/nonexistent/dir/test.log", Verbose: true}
 	logQueue = []string{}
-	err = SetupLogger(appFlags, &logQueue)
+	_ = SetupLogger(appFlags, &logQueue)
 
 	// Should have error in log queue
 	assert.Greater(t, len(logQueue), 0)
@@ -130,7 +130,7 @@ func TestGetNetAddr_ErrorHandling(t *testing.T) {
 	// Port 0 should succeed (OS assigns a port)
 	assert.NotNil(t, ln)
 	if ln != nil && *ln != nil {
-		(*ln).Close()
+		_ = (*ln).Close()
 	}
 }
 
@@ -148,7 +148,7 @@ func TestSetupLogger_ErrorHandling(t *testing.T) {
 	tmpDir := t.TempDir()
 	readOnlyDir := filepath.Join(tmpDir, "readonly")
 	_ = os.Mkdir(readOnlyDir, 0444)
-	defer os.Chmod(readOnlyDir, 0755)
+	defer func() { _ = os.Chmod(readOnlyDir, 0755) }()
 
 	logPath := filepath.Join(readOnlyDir, "test.log")
 	appFlags := flags.AppFlags{LogPath: logPath, Verbose: true}
@@ -182,7 +182,7 @@ func TestNeedValidateConfig(t *testing.T) {
 	hooksFile := filepath.Join(tmpDir, "hooks.json")
 	_ = os.WriteFile(hooksFile, []byte(`[]`), 0644)
 
-	appFlags = flags.AppFlags{
+	_ = flags.AppFlags{
 		ValidateConfig: true,
 		Port:           9000,
 		HooksFiles:     []string{hooksFile},
@@ -228,7 +228,7 @@ func TestGetNetAddr_WithPortZero(t *testing.T) {
 	assert.NotNil(t, ln)
 	assert.Equal(t, 0, len(logQueue))
 	if ln != nil && *ln != nil {
-		(*ln).Close()
+		_ = (*ln).Close()
 	}
 }
 
@@ -242,7 +242,7 @@ func TestGetNetAddr_WithIPv6(t *testing.T) {
 	assert.NotNil(t, ln)
 	// Check if the listener is actually valid (not nil)
 	if ln != nil && *ln != nil {
-		(*ln).Close()
+		_ = (*ln).Close()
 	}
 }
 
@@ -255,7 +255,7 @@ func TestGetNetAddr_AddressFormat(t *testing.T) {
 	assert.Contains(t, addr, "127.0.0.1")
 	assert.Contains(t, addr, "8080")
 	if ln != nil && *ln != nil {
-		(*ln).Close()
+		_ = (*ln).Close()
 	}
 }
 
@@ -390,7 +390,7 @@ func TestGetNetAddr_LogQueueAppend(t *testing.T) {
 	// Should have error in log queue
 	assert.Greater(t, len(logQueue), 0, "Should have error in log queue for invalid address")
 	if ln != nil && *ln != nil {
-		(*ln).Close()
+		_ = (*ln).Close()
 	}
 }
 
@@ -411,7 +411,7 @@ func TestSetupLogger_ErrorInLogQueue(t *testing.T) {
 	tmpDir := t.TempDir()
 	readOnlyDir := filepath.Join(tmpDir, "readonly")
 	_ = os.Mkdir(readOnlyDir, 0444)
-	defer os.Chmod(readOnlyDir, 0755)
+	defer func() { _ = os.Chmod(readOnlyDir, 0755) }()
 
 	logPath := filepath.Join(readOnlyDir, "test.log")
 	appFlags := flags.AppFlags{LogPath: logPath, Verbose: true}
@@ -466,7 +466,7 @@ func TestGetNetAddr_ReturnValueTypes(t *testing.T) {
 	assert.NotNil(t, ln, "ln should not be nil")
 	if ln != nil && *ln != nil {
 		assert.IsType(t, (*net.Listener)(nil), ln, "ln should be *net.Listener")
-		(*ln).Close()
+		_ = (*ln).Close()
 	}
 }
 
@@ -508,7 +508,7 @@ func TestGetNetAddr_ConcurrentAccess(t *testing.T) {
 			addr, ln := GetNetAddr(appFlags, &logQueue)
 			assert.NotEmpty(t, addr)
 			if ln != nil && *ln != nil {
-				(*ln).Close()
+				_ = (*ln).Close()
 			}
 			done <- true
 		}()
@@ -598,7 +598,7 @@ func TestGetNetAddr_WithDifferentHosts(t *testing.T) {
 				assert.NotEmpty(t, addr)
 				assert.NotNil(t, ln)
 				if ln != nil && *ln != nil {
-					(*ln).Close()
+					_ = (*ln).Close()
 				}
 			}
 		})
@@ -704,8 +704,8 @@ func TestCheckPrivilegesParamsCorrect_AllCases(t *testing.T) {
 				CheckPrivilegesParamsCorrect(appFlags)
 				// If we get here, test passes
 			} else {
-				// This will exit, so we can't test it directly
-				// The function is tested in integration tests
+				// This would call os.Exit(1); tested in integration tests
+				_ = appFlags
 			}
 		})
 	}

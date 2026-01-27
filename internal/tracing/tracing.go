@@ -25,8 +25,8 @@ type TracingConfig struct {
 }
 
 var (
-	// globalConfig 全局追踪配置
-	globalConfig TracingConfig
+	// globalConfig 全局追踪配置（供测试 resetTracingState 使用）
+	globalConfig TracingConfig //nolint:unused // used by tracing_test.resetTracingState
 	// tracingEnabled 是否启用追踪
 	tracingEnabled bool
 )

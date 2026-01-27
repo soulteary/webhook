@@ -11,7 +11,7 @@ import (
 func NewLogger() func(next http.Handler) http.Handler {
 	if logger.DefaultLogger == nil {
 		// 如果 logger 未初始化，使用默认配置
-		logger.Init(true, false, "", false)
+		_ = logger.Init(true, false, "", false)
 	}
 
 	cfg := loggerkit.DefaultMiddlewareConfig()

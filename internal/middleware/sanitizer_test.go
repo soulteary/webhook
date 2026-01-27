@@ -124,13 +124,14 @@ func TestSanitizeJSON(t *testing.T) {
 				// 包含敏感字段的JSON应该被脱敏
 				assert.Contains(t, result, "***")
 				// 验证敏感字段被脱敏
-				if tt.name == "包含password字段" {
+				switch tt.name {
+				case "包含password字段":
 					assert.Contains(t, result, "password")
 					assert.Contains(t, result, "username")
-				} else if tt.name == "包含token字段" {
+				case "包含token字段":
 					assert.Contains(t, result, "token")
 					assert.Contains(t, result, "data")
-				} else if tt.name == "嵌套JSON" {
+				case "嵌套JSON":
 					assert.Contains(t, result, "user")
 					assert.Contains(t, result, "password")
 				}
@@ -240,11 +241,12 @@ func TestSanitizeRequestBody(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := SanitizeRequestBody(tt.contentType, tt.body, tt.includeBody)
-			if tt.name == "不包含请求体" {
+			switch tt.name {
+			case "不包含请求体":
 				assert.Empty(t, result)
-			} else if tt.name == "表单请求体" {
+			case "表单请求体":
 				assert.Equal(t, tt.expected, result)
-			} else {
+			default:
 				// JSON结果可能顺序不同，只检查是否包含脱敏标记
 				assert.Contains(t, result, "***")
 			}

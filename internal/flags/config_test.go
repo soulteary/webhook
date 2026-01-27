@@ -63,9 +63,9 @@ func TestParseConfig_HooksFromEnv(t *testing.T) {
 		os.Args = oldArgs
 		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 		if oldHooks != "" {
-			os.Setenv(ENV_KEY_HOOKS, oldHooks)
+			_ = os.Setenv(ENV_KEY_HOOKS, oldHooks)
 		} else {
-			os.Unsetenv(ENV_KEY_HOOKS)
+			_ = os.Unsetenv(ENV_KEY_HOOKS)
 		}
 		rules.LockHooksFiles()
 		rules.HooksFiles = nil
@@ -77,7 +77,7 @@ func TestParseConfig_HooksFromEnv(t *testing.T) {
 	rules.HooksFiles = nil
 	rules.UnlockHooksFiles()
 
-	os.Setenv(ENV_KEY_HOOKS, "env_hooks1.json,env_hooks2.json")
+	_ = os.Setenv(ENV_KEY_HOOKS, "env_hooks1.json,env_hooks2.json")
 	os.Args = []string{"webhook"}
 
 	result := ParseConfig()

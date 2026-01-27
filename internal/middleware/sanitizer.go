@@ -235,7 +235,7 @@ func SanitizeDumpRequest(dump []byte, includeBody bool) []byte {
 	lines := bytes.Split(dump, []byte("\n"))
 	result := make([][]byte, 0, len(lines))
 	var contentType string
-	var bodyStartIdx int = -1
+	bodyStartIdx := -1
 
 	// 第一遍：找到Content-Type和请求体位置
 	for i, line := range lines {

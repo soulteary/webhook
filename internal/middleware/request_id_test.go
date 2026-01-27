@@ -64,8 +64,8 @@ func TestRequestID_WithLimit(t *testing.T) {
 }
 
 func TestGetReqID(t *testing.T) {
-	// Test with nil context
-	assert.Empty(t, GetReqID(nil))
+	// Test with context without request ID (use context.TODO() instead of nil per staticcheck)
+	assert.Empty(t, GetReqID(context.TODO()))
 
 	// Test with context without request ID
 	ctx := context.Background()

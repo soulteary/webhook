@@ -17,7 +17,7 @@ func TestDumper(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"ok"}`))
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		}),
 	)
 
@@ -88,7 +88,7 @@ func TestDumperWithConfig(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"ok"}`))
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		}),
 	)
 
@@ -111,7 +111,7 @@ func TestDumperWithConfig_IncludeRequestBody(t *testing.T) {
 	})(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("response body"))
+			_, _ = w.Write([]byte("response body"))
 		}),
 	)
 
@@ -134,7 +134,7 @@ func TestDumperWithConfig_ExcludeRequestBody(t *testing.T) {
 	})(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("response body"))
+			_, _ = w.Write([]byte("response body"))
 		}),
 	)
 
@@ -181,6 +181,6 @@ func TestResponseDupper_Flush(t *testing.T) {
 
 	// Test that Flush doesn't panic (if ResponseWriter implements Flusher)
 	// httptest.NewRecorder doesn't implement Flusher, so this should be safe
-	dupper.Write([]byte("test"))
+	_, _ = dupper.Write([]byte("test"))
 	assert.Equal(t, []byte("test"), w.Body.Bytes())
 }

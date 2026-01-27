@@ -80,7 +80,7 @@ func TestWatchForFileChange(t *testing.T) {
 	reloadMutex.Unlock()
 
 	// Close watcher to stop the goroutine
-	watcher.Close()
+	_ = watcher.Close()
 
 	// Wait for goroutine to exit (with timeout)
 	select {
@@ -143,7 +143,7 @@ func TestWatchForFileChange_Remove(t *testing.T) {
 	removeMutex.Unlock()
 
 	// Close watcher to stop the goroutine
-	watcher.Close()
+	_ = watcher.Close()
 
 	// Wait for goroutine to exit (with timeout)
 	select {
@@ -173,7 +173,7 @@ func TestWatchForFileChange_Error(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Close the watcher to trigger an error
-	watcher.Close()
+	_ = watcher.Close()
 
 	// Wait for the error to be processed and goroutine to exit
 	select {
@@ -196,7 +196,7 @@ func TestWatchForFileChange_Rename_Overwritten(t *testing.T) {
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
 	defer func() {
-		watcher.Close()
+		_ = watcher.Close()
 		time.Sleep(100 * time.Millisecond)
 	}()
 
@@ -240,7 +240,7 @@ func TestWatchForFileChange_Rename_Overwritten(t *testing.T) {
 	reloadMutex.Unlock()
 
 	// Close watcher to stop the goroutine
-	watcher.Close()
+	_ = watcher.Close()
 
 	// Wait for goroutine to exit (with timeout)
 	select {
@@ -263,7 +263,7 @@ func TestWatchForFileChange_Rename_Removed(t *testing.T) {
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
 	defer func() {
-		watcher.Close()
+		_ = watcher.Close()
 		time.Sleep(100 * time.Millisecond)
 	}()
 
@@ -306,7 +306,7 @@ func TestWatchForFileChange_Rename_Removed(t *testing.T) {
 	removeMutex.Unlock()
 
 	// Close watcher to stop the goroutine
-	watcher.Close()
+	_ = watcher.Close()
 
 	// Wait for goroutine to exit (with timeout)
 	select {
@@ -329,7 +329,7 @@ func TestWatchForFileChange_Remove_FileStillExists(t *testing.T) {
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
 	defer func() {
-		watcher.Close()
+		_ = watcher.Close()
 		time.Sleep(100 * time.Millisecond)
 	}()
 
@@ -366,7 +366,7 @@ func TestWatchForFileChange_Remove_FileStillExists(t *testing.T) {
 	assert.False(t, removeCalled, "removeHooks should not be called if file still exists")
 
 	// Close watcher to stop the goroutine
-	watcher.Close()
+	_ = watcher.Close()
 
 	// Wait for goroutine to exit (with timeout)
 	select {
@@ -389,7 +389,7 @@ func TestWatchForFileChange_RemoveError(t *testing.T) {
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
 	defer func() {
-		watcher.Close()
+		_ = watcher.Close()
 		time.Sleep(100 * time.Millisecond)
 	}()
 
@@ -432,7 +432,7 @@ func TestWatchForFileChange_RemoveError(t *testing.T) {
 	removeMutex.Unlock()
 
 	// Close watcher to stop the goroutine
-	watcher.Close()
+	_ = watcher.Close()
 
 	// Wait for goroutine to exit (with timeout)
 	select {
@@ -455,7 +455,7 @@ func TestWatchForFileChange_RenameAddError(t *testing.T) {
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
 	defer func() {
-		watcher.Close()
+		_ = watcher.Close()
 		time.Sleep(100 * time.Millisecond)
 	}()
 
@@ -498,7 +498,7 @@ func TestWatchForFileChange_RenameAddError(t *testing.T) {
 	reloadMutex.Unlock()
 
 	// Close watcher to stop the goroutine
-	watcher.Close()
+	_ = watcher.Close()
 
 	// Wait for goroutine to exit (with timeout)
 	select {
@@ -531,7 +531,7 @@ func TestWatchForFileChange_DebounceMultipleWrites(t *testing.T) {
 
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	reloadCount := 0
 	var reloadMutex sync.Mutex
@@ -570,7 +570,7 @@ func TestWatchForFileChange_DebounceMultipleWrites(t *testing.T) {
 	assert.GreaterOrEqual(t, reloadCount, 1, "reloadHooks should be called at least once")
 	reloadMutex.Unlock()
 
-	watcher.Close()
+	_ = watcher.Close()
 	select {
 	case <-done:
 	case <-time.After(1 * time.Second):
@@ -588,7 +588,7 @@ func TestWatchForFileChange_ProcessingFlag(t *testing.T) {
 
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	reloadCount := 0
 	var reloadMutex sync.Mutex
@@ -643,7 +643,7 @@ func TestWatchForFileChange_ProcessingFlag(t *testing.T) {
 	assert.GreaterOrEqual(t, reloadCount, 1, "reloadHooks should be called at least once")
 	reloadMutex.Unlock()
 
-	watcher.Close()
+	_ = watcher.Close()
 	select {
 	case <-done:
 	case <-time.After(1 * time.Second):
@@ -661,7 +661,7 @@ func TestWatchForFileChange_RemoveWithProcessor(t *testing.T) {
 
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	reloadHooks := func(hooksFilePath string, asTemplate bool) {}
 	removeCalled := false
@@ -702,7 +702,7 @@ func TestWatchForFileChange_RemoveWithProcessor(t *testing.T) {
 	assert.True(t, removeCalled, "removeHooks should have been called")
 	removeMutex.Unlock()
 
-	watcher.Close()
+	_ = watcher.Close()
 	select {
 	case <-done:
 	case <-time.After(1 * time.Second):
@@ -723,7 +723,7 @@ func TestWatchForFileChange_MultipleFiles(t *testing.T) {
 
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	reloadCount := 0
 	var reloadMutex sync.Mutex
@@ -766,7 +766,7 @@ func TestWatchForFileChange_MultipleFiles(t *testing.T) {
 	assert.True(t, reloadedFiles[testFile2], "testFile2 should have been reloaded")
 	reloadMutex.Unlock()
 
-	watcher.Close()
+	_ = watcher.Close()
 	select {
 	case <-done:
 	case <-time.After(1 * time.Second):
@@ -784,7 +784,7 @@ func TestWatchForFileChange_EventQueueFull(t *testing.T) {
 
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	reloadCount := 0
 	var reloadMutex sync.Mutex
@@ -825,7 +825,7 @@ func TestWatchForFileChange_EventQueueFull(t *testing.T) {
 	assert.Greater(t, reloadCount, 0, "reloadHooks should be called at least once")
 	reloadMutex.Unlock()
 
-	watcher.Close()
+	_ = watcher.Close()
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
@@ -847,7 +847,7 @@ func TestWatchForFileChange_RenameOverwrite(t *testing.T) {
 
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	reloadCalled := false
 	var reloadMutex sync.Mutex
@@ -887,7 +887,7 @@ func TestWatchForFileChange_RenameOverwrite(t *testing.T) {
 	assert.True(t, reloadCalled, "reloadHooks should be called for file write (which simulates overwrite scenario)")
 	reloadMutex.Unlock()
 
-	watcher.Close()
+	_ = watcher.Close()
 	select {
 	case <-done:
 	case <-time.After(1 * time.Second):
@@ -905,7 +905,7 @@ func TestWatchForFileChange_WithTemplate(t *testing.T) {
 
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	reloadCalled := false
 	var reloadMutex sync.Mutex
@@ -941,7 +941,7 @@ func TestWatchForFileChange_WithTemplate(t *testing.T) {
 	assert.True(t, reloadAsTemplate, "asTemplate should be true")
 	reloadMutex.Unlock()
 
-	watcher.Close()
+	_ = watcher.Close()
 	select {
 	case <-done:
 	case <-time.After(1 * time.Second):

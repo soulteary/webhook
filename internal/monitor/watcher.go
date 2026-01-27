@@ -15,7 +15,7 @@ func ApplyWatcher(appFlags flags.AppFlags) {
 	if err != nil {
 		logger.Fatalf("error creating file watcher instance: %v", err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// 加锁读取 HooksFiles
 	rules.RLockHooksFiles()

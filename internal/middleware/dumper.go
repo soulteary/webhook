@@ -52,7 +52,7 @@ func DumperWithConfig(w io.Writer, config DumperConfig) func(http.Handler) http.
 			// Dump request (包含请求体)
 			bd, err := httputil.DumpRequest(r, true)
 			if err != nil {
-				buf.WriteString(fmt.Sprintf("[%s] Error dumping request for debugging: %s\n", rid, err))
+				fmt.Fprintf(buf, "[%s] Error dumping request for debugging: %s\n", rid, err)
 			} else {
 				// 脱敏请求转储
 				sanitized := SanitizeDumpRequest(bd, config.IncludeRequestBody)
@@ -66,13 +66,13 @@ func DumperWithConfig(w io.Writer, config DumperConfig) func(http.Handler) http.
 						// 找到空行，停止处理（空行后是请求体）
 						break
 					}
-					buf.WriteString(fmt.Sprintf("> [%s] ", rid))
+					fmt.Fprintf(buf, "> [%s] ", rid)
 					buf.WriteString(line + "\n")
 				}
 
 				// 如果不包含请求体，添加提示
 				if !config.IncludeRequestBody && len(bd) > 0 {
-					buf.WriteString(fmt.Sprintf("> [%s] [Request body omitted for security - use --log-request-body to include]\n", rid))
+					fmt.Fprintf(buf, "> [%s] [Request body omitted for security - use --log-request-body to include]\n", rid)
 				}
 			}
 
@@ -88,7 +88,7 @@ func DumperWithConfig(w io.Writer, config DumperConfig) func(http.Handler) http.
 			h.ServeHTTP(dupper, r)
 
 			// Response Status
-			buf.WriteString(fmt.Sprintf("< [%s] %d %s\n", rid, dupper.Status, http.StatusText(dupper.Status)))
+			fmt.Fprintf(buf, "< [%s] %d %s\n", rid, dupper.Status, http.StatusText(dupper.Status))
 
 			// Response Headers
 			keys := make([]string, len(dupper.Header()))
@@ -99,7 +99,7 @@ func DumperWithConfig(w io.Writer, config DumperConfig) func(http.Handler) http.
 			}
 			sort.Strings(keys)
 			for _, k := range keys {
-				buf.WriteString(fmt.Sprintf("< [%s] %s: %s\n", rid, k, strings.Join(dupper.Header()[k], ", ")))
+				fmt.Fprintf(buf, "< [%s] %s: %s\n", rid, k, strings.Join(dupper.Header()[k], ", "))
 			}
 
 			// Response Body (脱敏处理)
@@ -111,15 +111,15 @@ func DumperWithConfig(w io.Writer, config DumperConfig) func(http.Handler) http.
 				sanitizedBody := SanitizeRequestBody(responseContentType, responseBody, config.IncludeRequestBody)
 
 				if sanitizedBody != "" {
-					buf.WriteString(fmt.Sprintf("< [%s]\n", rid))
+					fmt.Fprintf(buf, "< [%s]\n", rid)
 					sc := bufio.NewScanner(bytes.NewBufferString(sanitizedBody))
 					sc.Split(bufio.ScanLines)
 					for sc.Scan() {
-						buf.WriteString(fmt.Sprintf("< [%s] ", rid))
+						fmt.Fprintf(buf, "< [%s] ", rid)
 						buf.WriteString(sc.Text() + "\n")
 					}
 				} else if !config.IncludeRequestBody {
-					buf.WriteString(fmt.Sprintf("< [%s] [Response body omitted for security]\n", rid))
+					fmt.Fprintf(buf, "< [%s] [Response body omitted for security]\n", rid)
 				}
 			}
 			_, err = w.Write(buf.Bytes())
