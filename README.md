@@ -10,10 +10,10 @@
 ## ✨ Key Features
 
 - 🔒 **Security First**: Command path whitelisting, argument validation, strict mode, and secure logging
-- ⚡ **High Performance**: Configurable concurrency, rate limiting, and optimized request handling
+- ⚡ **High Performance**: Configurable concurrency, rate limiting (including Redis-backed distributed), and optimized request handling
 - 🎯 **Flexible Configuration**: Support for JSON and YAML configuration files with Go template support
 - 🔐 **Advanced Authentication**: Multiple trigger rule types including HMAC signature validation, IP whitelisting, and custom rules
-- 📊 **Observability**: Built-in Prometheus metrics, health check endpoint, and comprehensive logging
+- 📊 **Observability**: Built-in Prometheus metrics, health check endpoint, OpenTelemetry tracing, audit logging, and comprehensive logging
 - 🐳 **Container Ready**: Official Docker images with multiple variants
 - 🌍 **Internationalization**: Full support for English and Chinese documentation
 - 🔄 **Hot Reload**: Update hook configurations without restarting the server
@@ -146,7 +146,7 @@ For more security options, see:
 
 ## Additional Features
 
-- **Form Data Support**: Parse multipart form data and file uploads - see [Form Data](docs/en-US/Form-Data.md)
+- **Form Data Support**: Parse multipart form data and file uploads - see [Form Data](docs/en-US/Referencing-Request-Values.md)
 - **Template Support**: Use Go templates in configuration files with `-template` flag - see [Templates](docs/en-US/Templates.md)
 - **HTTPS**: Use a reverse proxy (nginx, Traefik, Caddy) for HTTPS support
 - **CORS**: Set custom headers including CORS headers with `-header name=value`

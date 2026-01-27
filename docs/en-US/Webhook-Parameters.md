@@ -40,6 +40,8 @@ This document describes all available command-line parameters and environment va
 | `-x-request-id` | Use X-Request-Id header, if present, as request ID | `false` |
 | `-x-request-id-limit int` | Truncate X-Request-Id header to limit | `0` (no limit) |
 
+*Note:* The length limit is configurable only via the `-x-request-id-limit` flag; no separate environment variable is defined in the current implementation.
+
 ### Response Headers
 
 | Flag | Description | Default |
@@ -78,6 +80,17 @@ This document describes all available command-line parameters and environment va
 | `-rate-limit-rps int` | Rate limit requests per second | `100` |
 | `-rate-limit-burst int` | Rate limit burst size | `10` |
 
+### Redis Rate Limiting
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-redis-enabled` | Enable Redis for distributed rate limiting | `false` |
+| `-redis-addr string` | Redis server address | `localhost:6379` |
+| `-redis-password string` | Redis password | (empty) |
+| `-redis-db int` | Redis database index | `0` |
+| `-redis-key-prefix string` | Redis key prefix for rate limiting | `webhook:ratelimit:` |
+| `-rate-limit-window int` | Rate limit window in seconds | `60` |
+
 ### HTTP Server Timeouts
 
 | Flag | Description | Default |
@@ -97,6 +110,25 @@ This document describes all available command-line parameters and environment va
 | `-max-total-args-length int` | Maximum total length for all command arguments in bytes | `10485760` (10MB) |
 | `-max-args-count int` | Maximum number of command arguments | `1000` |
 | `-strict-mode` | Reject arguments containing potentially dangerous characters | `false` |
+
+### Tracing
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-tracing-enabled` | Enable distributed tracing with OpenTelemetry | `false` |
+| `-otlp-endpoint string` | OTLP exporter endpoint (e.g., localhost:4318) | (empty) |
+| `-tracing-service-name string` | Service name for tracing | `webhook` |
+
+### Audit
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-audit-enabled` | Enable audit logging | `false` |
+| `-audit-storage-type string` | Audit storage type: file, redis, or database | `file` |
+| `-audit-file-path string` | Audit log file path when storage type is file | `./audit.log` |
+| `-audit-queue-size int` | Audit async write queue size | `1000` |
+| `-audit-workers int` | Number of audit async write workers | `2` |
+| `-audit-mask-ip` | Mask IP addresses in audit logs | `true` |
 
 ### Other
 
@@ -138,8 +170,9 @@ All command-line parameters can also be set via environment variables:
 | `MAX_MPART_MEM` | `-max-multipart-mem` | Max multipart memory | `1048576` |
 | `MAX_REQUEST_BODY_SIZE` | `-max-request-body-size` | Max request body size | `10485760` |
 | `X_REQUEST_ID` | `-x-request-id` | Use X-Request-Id | `false` |
-| `X_REQUEST_ID_LIMIT` | `-x-request-id-limit` | X-Request-Id limit | `0` |
 | `HEADER` | `-header` | Response header | - |
+
+*Note:* The X-Request-Id length limit is only configurable via the `-x-request-id-limit` flag; there is no dedicated environment variable.
 
 ### Process Management
 
@@ -173,6 +206,17 @@ All command-line parameters can also be set via environment variables:
 | `RATE_LIMIT_RPS` | `-rate-limit-rps` | Requests per second | `100` |
 | `RATE_LIMIT_BURST` | `-rate-limit-burst` | Burst size | `10` |
 
+### Redis Rate Limiting
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `REDIS_ENABLED` | `-redis-enabled` | Enable Redis for distributed rate limiting | `false` |
+| `REDIS_ADDR` | `-redis-addr` | Redis server address | `localhost:6379` |
+| `REDIS_PASSWORD` | `-redis-password` | Redis password | (empty) |
+| `REDIS_DB` | `-redis-db` | Redis database index | `0` |
+| `REDIS_KEY_PREFIX` | `-redis-key-prefix` | Redis key prefix for rate limiting | `webhook:ratelimit:` |
+| `RATE_LIMIT_WINDOW` | `-rate-limit-window` | Rate limit window (seconds) | `60` |
+
 ### HTTP Server Timeouts
 
 | Environment Variable | CLI Flag | Description | Default |
@@ -192,6 +236,25 @@ All command-line parameters can also be set via environment variables:
 | `MAX_TOTAL_ARGS_LENGTH` | `-max-total-args-length` | Max total arguments length (bytes) | `10485760` |
 | `MAX_ARGS_COUNT` | `-max-args-count` | Max argument count | `1000` |
 | `STRICT_MODE` | `-strict-mode` | Strict mode | `false` |
+
+### Tracing
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `TRACING_ENABLED` | `-tracing-enabled` | Enable distributed tracing | `false` |
+| `OTLP_ENDPOINT` | `-otlp-endpoint` | OTLP exporter endpoint | (empty) |
+| `TRACING_SERVICE_NAME` | `-tracing-service-name` | Tracing service name | `webhook` |
+
+### Audit
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `AUDIT_ENABLED` | `-audit-enabled` | Enable audit logging | `false` |
+| `AUDIT_STORAGE_TYPE` | `-audit-storage-type` | Audit storage type (file/redis/database) | `file` |
+| `AUDIT_FILE_PATH` | `-audit-file-path` | Audit log file path | `./audit.log` |
+| `AUDIT_QUEUE_SIZE` | `-audit-queue-size` | Audit async queue size | `1000` |
+| `AUDIT_WORKERS` | `-audit-workers` | Audit async workers | `2` |
+| `AUDIT_MASK_IP` | `-audit-mask-ip` | Mask IP in audit logs | `true` |
 
 ## Security Best Practices
 

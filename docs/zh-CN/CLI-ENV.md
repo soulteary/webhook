@@ -68,6 +68,8 @@
 - `-x-request-id-limit int`
   截断 `X-Request-Id` 请求头的长度限制；默认无限制
 
+  **说明**：长度限制当前仅能通过 `-x-request-id-limit` 配置；当前实现未提供单独的环境变量。
+
 ### 响应头
 
 - `-header value`
@@ -127,6 +129,28 @@
 - `-rate-limit-burst int`
   设置突发请求的最大数量（默认值：`10`）
 
+### Redis 分布式限流
+
+以下参数用于配置基于 Redis 的分布式限流，适用于多实例部署：
+
+- `-redis-enabled`
+  启用 Redis 分布式限流（默认值：`false`）
+
+- `-redis-addr string`
+  Redis 服务器地址（默认值：`localhost:6379`）
+
+- `-redis-password string`
+  Redis 密码（默认值：空）
+
+- `-redis-db int`
+  Redis 数据库索引（默认值：`0`）
+
+- `-redis-key-prefix string`
+  限流键前缀（默认值：`webhook:ratelimit:`）
+
+- `-rate-limit-window int`
+  限流时间窗口（秒，默认值：`60`）
+
 ### HTTP 服务器超时配置
 
 以下参数用于配置 HTTP 服务器的各种超时时间：
@@ -184,6 +208,41 @@
   
   在严格模式下，包含 shell 特殊字符（如 `;`, `|`, `&`, `` ` ``, `$`, `()`, `{}` 等）的参数将被拒绝执行。
 
+### 分布式追踪
+
+以下参数用于配置 OpenTelemetry 分布式追踪：
+
+- `-tracing-enabled`
+  启用分布式追踪（默认值：`false`）
+
+- `-otlp-endpoint string`
+  OTLP 导出端点（例如 `localhost:4318`，默认值：空）
+
+- `-tracing-service-name string`
+  追踪服务名称（默认值：`webhook`）
+
+### 审计日志
+
+以下参数用于配置审计日志：
+
+- `-audit-enabled`
+  启用审计日志（默认值：`false`）
+
+- `-audit-storage-type string`
+  审计存储类型：file、redis 或 database（默认值：`file`）
+
+- `-audit-file-path string`
+  审计日志文件路径（当存储类型为 file 时，默认值：`./audit.log`）
+
+- `-audit-queue-size int`
+  异步写入队列大小（默认值：`1000`）
+
+- `-audit-workers int`
+  异步写入工作协程数（默认值：`2`）
+
+- `-audit-mask-ip`
+  在审计日志中脱敏 IP 地址（默认值：`true`）
+
 ### 其他
 
 - `-version`
@@ -227,8 +286,9 @@
 | `MAX_MPART_MEM` | `-max-multipart-mem` | 最大 multipart 内存 | `1048576` |
 | `MAX_REQUEST_BODY_SIZE` | `-max-request-body-size` | 最大请求体大小 | `10485760` |
 | `X_REQUEST_ID` | `-x-request-id` | 使用 X-Request-Id | `false` |
-| `X_REQUEST_ID_LIMIT` | `-x-request-id-limit` | X-Request-Id 长度限制 | `0` |
 | `HEADER` | `-header` | 响应头（格式：`name=value`） | - |
+
+**说明**：X-Request-Id 长度限制仅能通过 `-x-request-id-limit` 配置，无对应环境变量。
 
 ### 进程管理
 
@@ -262,6 +322,17 @@
 | `RATE_LIMIT_RPS` | `-rate-limit-rps` | 每秒请求数限制 | `100` |
 | `RATE_LIMIT_BURST` | `-rate-limit-burst` | 突发请求数限制 | `10` |
 
+### Redis 分布式限流
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
+| `REDIS_ENABLED` | `-redis-enabled` | 启用 Redis 分布式限流 | `false` |
+| `REDIS_ADDR` | `-redis-addr` | Redis 服务器地址 | `localhost:6379` |
+| `REDIS_PASSWORD` | `-redis-password` | Redis 密码 | （空） |
+| `REDIS_DB` | `-redis-db` | Redis 数据库索引 | `0` |
+| `REDIS_KEY_PREFIX` | `-redis-key-prefix` | 限流键前缀 | `webhook:ratelimit:` |
+| `RATE_LIMIT_WINDOW` | `-rate-limit-window` | 限流时间窗口（秒） | `60` |
+
 ### HTTP 服务器超时配置
 
 | 环境变量 | 命令行参数 | 说明 | 默认值 |
@@ -281,6 +352,25 @@
 | `MAX_TOTAL_ARGS_LENGTH` | `-max-total-args-length` | 所有参数总长度限制（字节） | `10485760` |
 | `MAX_ARGS_COUNT` | `-max-args-count` | 最大参数数量 | `1000` |
 | `STRICT_MODE` | `-strict-mode` | 严格模式 | `false` |
+
+### 分布式追踪
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
+| `TRACING_ENABLED` | `-tracing-enabled` | 启用分布式追踪 | `false` |
+| `OTLP_ENDPOINT` | `-otlp-endpoint` | OTLP 导出端点 | （空） |
+| `TRACING_SERVICE_NAME` | `-tracing-service-name` | 追踪服务名称 | `webhook` |
+
+### 审计日志
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
+| `AUDIT_ENABLED` | `-audit-enabled` | 启用审计日志 | `false` |
+| `AUDIT_STORAGE_TYPE` | `-audit-storage-type` | 审计存储类型（file/redis/database） | `file` |
+| `AUDIT_FILE_PATH` | `-audit-file-path` | 审计日志文件路径 | `./audit.log` |
+| `AUDIT_QUEUE_SIZE` | `-audit-queue-size` | 异步写入队列大小 | `1000` |
+| `AUDIT_WORKERS` | `-audit-workers` | 异步写入工作协程数 | `2` |
+| `AUDIT_MASK_IP` | `-audit-mask-ip` | 审计日志中脱敏 IP | `true` |
 
 ### 环境变量使用示例
 

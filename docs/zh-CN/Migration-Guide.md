@@ -370,6 +370,16 @@ docker run -d \
    - 健康检查端点
    - 系统指标
 
+### 可观测与合规
+
+本 fork 还支持：
+
+- **分布式追踪（OpenTelemetry/OTLP）：** 将追踪数据导出到任意兼容 OTLP 的后端。使用 `-tracing-enabled`、`-otlp-endpoint`、`-tracing-service-name`。
+- **审计日志：** 将 hook 执行与请求记录到 file、Redis 或 database。使用 `-audit-enabled`、`-audit-storage-type`、`-audit-file-path` 及相关选项。
+- **基于 Redis 的分布式限流：** 在多实例间共享限流状态。使用 `-redis-enabled`、`-redis-addr`、`-rate-limit-window` 及相关选项。
+
+完整参数与环境变量说明见 [配置参数](CLI-ENV.md)。
+
 ---
 
 ## 迁移检查清单

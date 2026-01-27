@@ -370,6 +370,16 @@ docker run -d \
    - Health check endpoint
    - System metrics
 
+### Observability and Compliance
+
+This fork also supports:
+
+- **Distributed tracing (OpenTelemetry/OTLP):** Export traces to any OTLP-compatible backend. Use `-tracing-enabled`, `-otlp-endpoint`, and `-tracing-service-name`.
+- **Audit logging:** Record hook executions and requests to file, Redis, or database. Use `-audit-enabled`, `-audit-storage-type`, `-audit-file-path`, and related options.
+- **Redis-based distributed rate limiting:** Share rate-limit state across multiple webhook instances. Use `-redis-enabled`, `-redis-addr`, `-rate-limit-window`, and related options.
+
+For full parameter lists and environment variables, see [Webhook Parameters](Webhook-Parameters.md).
+
 ---
 
 ## Migration Checklist
