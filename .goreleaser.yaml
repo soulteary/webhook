@@ -22,6 +22,8 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-amd64-{{ .Tag }}"
       - "soulteary/webhook:linux-amd64"
+      - "ghcr.io/soulteary/webhook:linux-amd64-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-amd64"
     dockerfile: docker/goreleaser/Dockerfile
     use: buildx
     goarch: amd64
@@ -40,6 +42,8 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-arm64-{{ .Tag }}"
       - "soulteary/webhook:linux-arm64"
+      - "ghcr.io/soulteary/webhook:linux-arm64-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-arm64"
     dockerfile: docker/goreleaser/Dockerfile
     use: buildx
     goos: linux
@@ -60,6 +64,8 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-armv7-{{ .Tag }}"
       - "soulteary/webhook:linux-armv7"
+      - "ghcr.io/soulteary/webhook:linux-armv7-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv7"
     dockerfile: docker/goreleaser/Dockerfile
     use: buildx
     goos: linux
@@ -80,6 +86,8 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-armv6-{{ .Tag }}"
       - "soulteary/webhook:linux-armv6"
+      - "ghcr.io/soulteary/webhook:linux-armv6-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv6"
     dockerfile: docker/goreleaser/Dockerfile
     use: buildx
     goos: linux
@@ -100,6 +108,8 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
       - "soulteary/webhook:linux-amd64-extend"
+      - "ghcr.io/soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-amd64-extend"
     dockerfile: docker/goreleaser/Dockerfile.extend
     use: buildx
     goarch: amd64
@@ -118,6 +128,8 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-arm64-extend-{{ .Tag }}"
       - "soulteary/webhook:linux-arm64-extend"
+      - "ghcr.io/soulteary/webhook:linux-arm64-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-arm64-extend"
     dockerfile: docker/goreleaser/Dockerfile.extend
     use: buildx
     goos: linux
@@ -138,6 +150,8 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-armv7-extend-{{ .Tag }}"
       - "soulteary/webhook:linux-armv7-extend"
+      - "ghcr.io/soulteary/webhook:linux-armv7-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv7-extend"
     dockerfile: docker/goreleaser/Dockerfile.extend
     use: buildx
     goos: linux
@@ -158,6 +172,8 @@ dockers:
   - image_templates:
       - "soulteary/webhook:linux-armv6-extend-{{ .Tag }}"
       - "soulteary/webhook:linux-armv6-extend"
+      - "ghcr.io/soulteary/webhook:linux-armv6-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv6-extend"
     dockerfile: docker/goreleaser/Dockerfile.extend
     use: buildx
     goos: linux
@@ -198,4 +214,29 @@ docker_manifests:
       - "soulteary/webhook:linux-arm64-{{ .Tag }}"
       - "soulteary/webhook:linux-armv7-{{ .Tag }}"
       - "soulteary/webhook:linux-armv6-{{ .Tag }}"
+    skip_push: "false"
+
+  # GHCR multi-arch manifests
+  - name_template: "ghcr.io/soulteary/webhook:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/soulteary/webhook:linux-amd64-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-arm64-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv7-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv6-{{ .Tag }}"
+    skip_push: "false"
+
+  - name_template: "ghcr.io/soulteary/webhook:extend-{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-arm64-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv7-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv6-extend-{{ .Tag }}"
+    skip_push: "false"
+
+  - name_template: "ghcr.io/soulteary/webhook:latest"
+    image_templates:
+      - "ghcr.io/soulteary/webhook:linux-amd64-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-arm64-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv7-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv6-{{ .Tag }}"
     skip_push: "false"
