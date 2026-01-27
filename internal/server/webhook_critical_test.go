@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/rules"
@@ -123,15 +122,13 @@ func TestCreateHookHandler_ConfigFileError(t *testing.T) {
 
 	handler := createHookHandler(appFlags, nil)
 	req := httptest.NewRequest("POST", "/hooks/invalid-hook", nil)
-	w := httptest.NewRecorder()
 
-	r := chi.NewRouter()
-	r.HandleFunc("/hooks/{id}", handler)
-	r.HandleFunc("/hooks/{id}/*", handler)
-	r.ServeHTTP(w, req)
+	app := testHookApp(handler)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
 
-	// 应该能够处理，即使配置不完整
-	assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
 
 // TestHandleHook_CommandTimeout 测试命令超时
@@ -199,8 +196,8 @@ func TestConcurrentHookExecution_SameHook(t *testing.T) {
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags, nil)
+	app := testHookApp(handler)
 
-	// 并发执行多个请求
 	numRequests := 10
 	var wg sync.WaitGroup
 	results := make(chan int, numRequests)
@@ -210,14 +207,13 @@ func TestConcurrentHookExecution_SameHook(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/hooks/concurrent-hook", nil)
-			w := httptest.NewRecorder()
-
-			r := chi.NewRouter()
-			r.HandleFunc("/hooks/{id}", handler)
-			r.HandleFunc("/hooks/{id}/*", handler)
-			r.ServeHTTP(w, req)
-
-			results <- w.Code
+			resp, err := app.Test(req, 5000)
+			if err != nil {
+				results <- 0
+				return
+			}
+			defer resp.Body.Close()
+			results <- resp.StatusCode
 		}(i)
 	}
 
@@ -266,8 +262,8 @@ func TestConcurrentHookExecution_FileOperations(t *testing.T) {
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags, nil)
+	app := testHookApp(handler)
 
-	// 并发执行多个请求，每个请求传递不同的数据
 	numRequests := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numRequests)
@@ -278,14 +274,13 @@ func TestConcurrentHookExecution_FileOperations(t *testing.T) {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/hooks/file-hook", nil)
 			req.Header.Set("X-Data", "data-"+strconv.Itoa(id))
-			w := httptest.NewRecorder()
-
-			r := chi.NewRouter()
-			r.HandleFunc("/hooks/{id}", handler)
-			r.HandleFunc("/hooks/{id}/*", handler)
-			r.ServeHTTP(w, req)
-
-			if w.Code != http.StatusOK {
+			resp, err := app.Test(req, 5000)
+			if err != nil {
+				errors <- err
+				return
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
 				errors <- assert.AnError
 			}
 		}(i)
@@ -326,13 +321,12 @@ func TestConcurrentHookExecution_ResourceContention(t *testing.T) {
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags, nil)
+	app := testHookApp(handler)
 
-	// 清理计数器文件
 	counterFile := "/tmp/webhook-test-counter"
 	os.Remove(counterFile)
 	defer os.Remove(counterFile)
 
-	// 并发执行多个请求
 	numRequests := 20
 	var wg sync.WaitGroup
 
@@ -341,12 +335,10 @@ func TestConcurrentHookExecution_ResourceContention(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/hooks/resource-hook", nil)
-			w := httptest.NewRecorder()
-
-			r := chi.NewRouter()
-			r.HandleFunc("/hooks/{id}", handler)
-			r.HandleFunc("/hooks/{id}/*", handler)
-			r.ServeHTTP(w, req)
+			resp, _ := app.Test(req, 5000)
+			if resp != nil {
+				resp.Body.Close()
+			}
 		}()
 	}
 
@@ -406,19 +398,15 @@ func TestCommandInjection_Prevention(t *testing.T) {
 			appFlags := flags.AppFlags{}
 
 			handler := createHookHandler(appFlags, nil)
-
 			req := httptest.NewRequest("POST", "/hooks/safe-hook", nil)
 			req.Header.Set("X-Input", injection)
-			w := httptest.NewRecorder()
 
-			r := chi.NewRouter()
-			r.HandleFunc("/hooks/{id}", handler)
-			r.HandleFunc("/hooks/{id}/*", handler)
-			r.ServeHTTP(w, req)
-
-			// 在严格模式下，包含危险字符的参数应该被拒绝
-			// 注意：实际的防护取决于验证器的配置
-			_ = w.Code
+			app := testHookApp(handler)
+			resp, _ := app.Test(req, 5000)
+			if resp != nil {
+				defer resp.Body.Close()
+				_ = resp.StatusCode
+			}
 		})
 	}
 }
@@ -673,17 +661,16 @@ func BenchmarkConcurrentHookExecution(b *testing.B) {
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags, nil)
+	app := testHookApp(handler)
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			req := httptest.NewRequest("POST", "/hooks/bench-hook", nil)
-			w := httptest.NewRecorder()
-
-			r := chi.NewRouter()
-			r.HandleFunc("/hooks/{id}", handler)
-			r.HandleFunc("/hooks/{id}/*", handler)
-			r.ServeHTTP(w, req)
+			resp, err := app.Test(req, 5000)
+			if err == nil && resp != nil {
+				resp.Body.Close()
+			}
 		}
 	})
 }
@@ -721,8 +708,8 @@ func TestLoadTest_MultipleHooks(t *testing.T) {
 	appFlags := flags.AppFlags{}
 
 	handler := createHookHandler(appFlags, nil)
+	app := testHookApp(handler)
 
-	// 对每个 hook 发送多个请求
 	requestsPerHook := 10
 	var wg sync.WaitGroup
 	successCount := 0
@@ -734,14 +721,12 @@ func TestLoadTest_MultipleHooks(t *testing.T) {
 			go func(hookID string) {
 				defer wg.Done()
 				req := httptest.NewRequest("POST", "/hooks/"+hookID, nil)
-				w := httptest.NewRecorder()
-
-				r := chi.NewRouter()
-				r.HandleFunc("/hooks/{id}", handler)
-				r.HandleFunc("/hooks/{id}/*", handler)
-				r.ServeHTTP(w, req)
-
-				if w.Code == http.StatusOK {
+				resp, err := app.Test(req, 5000)
+				if err != nil {
+					return
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
 					mu.Lock()
 					successCount++
 					mu.Unlock()
@@ -785,8 +770,8 @@ func TestStressTest_HighConcurrency(t *testing.T) {
 	}
 
 	handler := createHookHandler(appFlags, nil)
+	app := testHookApp(handler)
 
-	// 发送大量并发请求
 	numRequests := 100
 	var wg sync.WaitGroup
 	results := make(chan int, numRequests)
@@ -797,14 +782,13 @@ func TestStressTest_HighConcurrency(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/hooks/stress-hook", nil)
-			w := httptest.NewRecorder()
-
-			r := chi.NewRouter()
-			r.HandleFunc("/hooks/{id}", handler)
-			r.HandleFunc("/hooks/{id}/*", handler)
-			r.ServeHTTP(w, req)
-
-			results <- w.Code
+			resp, err := app.Test(req, 5000)
+			if err != nil {
+				results <- 0
+				return
+			}
+			defer resp.Body.Close()
+			results <- resp.StatusCode
 		}()
 	}
 

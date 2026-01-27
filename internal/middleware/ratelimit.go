@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	loggerkit "github.com/soulteary/logger-kit"
 	rediskit "github.com/soulteary/redis-kit/client"
 	redisratelimit "github.com/soulteary/redis-kit/ratelimit"
 	"github.com/soulteary/webhook/internal/logger"
@@ -270,11 +271,10 @@ func parseForwardedIP(xff string) string {
 
 // extractHookID 从请求中提取 hook ID
 // 注意：这个函数需要在路由匹配之后调用才能获取到 hook ID
-// 在中间件中，我们无法直接访问 chi.URLParam，所以这个函数主要用于 HookMiddleware
+// Fiber 下由 handler 从 c.Params 或 path 解析；此处从 URL 路径做简单提取供 HookMiddleware 使用
 func extractHookID(r *http.Request) string {
 	// 尝试从 URL 路径中提取
-	// 实际使用中，hook ID 应该在 handler 中通过 chi.URLParam(r, "id") 获取
-	// 这里提供一个简单的实现作为后备
+	// Fiber 下由 handler 从 c.Params("id") 或 path 解析；此处作为后备
 	path := r.URL.Path
 	if path == "" || path == "/" {
 		return ""
@@ -295,7 +295,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := extractIP(r)
-		requestID := GetReqID(r.Context())
+		requestID := loggerkit.RequestIDFromRequest(r)
 
 		if rl.useRedis {
 			// 使用 Redis 分布式限流
@@ -375,7 +375,7 @@ func (rl *RateLimiter) HookMiddleware(rps int, burst int) func(next http.Handler
 			hookID := extractHookID(r)
 
 			if hookID != "" {
-				requestID := GetReqID(r.Context())
+				requestID := loggerkit.RequestIDFromRequest(r)
 
 				if rl.useRedis {
 					// 使用 Redis 分布式限流

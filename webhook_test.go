@@ -97,10 +97,13 @@ func TestWebhook(t *testing.T) {
 				for k, v := range tt.headers {
 					req.Header.Add(k, v)
 				}
+				// Only set Content-Type from tt.contentType when not already in tt.headers
+				// (e.g. "unsupported content type error" sends Content-Type via headers)
+				if _, ok := tt.headers["Content-Type"]; !ok {
+					req.Header.Add("Content-Type", tt.contentType)
+				}
 
 				var res *http.Response
-
-				req.Header.Add("Content-Type", tt.contentType)
 				req.ContentLength = int64(len(tt.body))
 
 				client := &http.Client{}
@@ -1147,8 +1150,8 @@ env: HOOK_head_commit.timestamp=2013-03-12T08:14:29-07:00
 
 	// test with disallowed global HTTP method
 	{"global disallowed method", "bitbucket", []string{"Post "}, "GET", nil, `{}`, "application/json", false, http.StatusMethodNotAllowed, ``, ``},
-	// test with disallowed HTTP method
-	{"disallowed method", "github", nil, "Get", nil, `{}`, "application/json", false, http.StatusMethodNotAllowed, ``, ``},
+	// test with disallowed HTTP method (use canonical "GET" so request reaches handler; fasthttp returns 400 for "Get")
+	{"disallowed method", "github", nil, "GET", nil, `{}`, "application/json", false, http.StatusMethodNotAllowed, ``, ``},
 	// test with custom return code
 	{"empty payload", "github", nil, "POST", nil, "application/json", `{}`, false, http.StatusBadRequest, `Hook rules were not satisfied.`, ``},
 	// test with custom invalid http code, should default to 200 OK

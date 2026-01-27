@@ -1,6 +1,6 @@
 package link
 
-// makeRoutePattern builds a pattern matching URL for the chi router.
+// MakeRoutePattern builds a pattern matching URL for the router (Chi 风格 /{id}，Fiber 下使用 MakeBaseURL+"/:id")。
 // Returns the base pattern without wildcard - we'll register both /{id} and /{id}/* routes.
 func MakeRoutePattern(prefix *string) string {
 	return MakeBaseURL(prefix) + "/{id}"

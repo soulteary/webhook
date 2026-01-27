@@ -1,19 +1,16 @@
 package logger
 
 import (
-	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
-	"time"
+
+	loggerkit "github.com/soulteary/logger-kit"
 )
 
 var (
 	// DefaultLogger 是默认的日志记录器
-	DefaultLogger *slog.Logger
-	// defaultHandler 是默认的处理器
-	defaultHandler slog.Handler
+	DefaultLogger *loggerkit.Logger
 	// defaultWriter 是默认的写入器
 	defaultWriter io.Writer
 )
@@ -39,27 +36,27 @@ func Init(verbose, debug bool, logPath string, jsonFormat bool) error {
 	}
 
 	// 设置日志级别
-	level := slog.LevelInfo
+	level := loggerkit.InfoLevel
 	if debug {
-		level = slog.LevelDebug
+		level = loggerkit.DebugLevel
 	}
 
-	// 创建处理器
-	var handler slog.Handler
+	// 设置日志格式
+	format := loggerkit.FormatConsole
 	if jsonFormat {
-		handler = slog.NewJSONHandler(writer, &slog.HandlerOptions{
-			Level:     level,
-			AddSource: debug, // 调试模式下添加源码位置
-		})
-	} else {
-		// 使用自定义的简单文本处理器，只输出消息内容，兼容旧格式
-		handler = newSimpleTextHandler(writer, level)
+		format = loggerkit.FormatJSON
 	}
 
-	defaultHandler = handler
+	// 创建 logger-kit 配置
+	config := loggerkit.DefaultConfig()
+	config.Level = level
+	config.Output = writer
+	config.Format = format
+	config.CallerEnabled = debug // 调试模式下添加源码位置
+
+	// 创建 logger
+	DefaultLogger = loggerkit.New(config)
 	defaultWriter = writer
-	DefaultLogger = slog.New(handler)
-	slog.SetDefault(DefaultLogger)
 
 	return nil
 }
@@ -67,26 +64,27 @@ func Init(verbose, debug bool, logPath string, jsonFormat bool) error {
 // InitWithWriter 初始化日志系统并指定写入器（用于测试）
 func InitWithWriter(writer io.Writer, verbose, debug bool, jsonFormat bool) error {
 	// 设置日志级别
-	level := slog.LevelInfo
+	level := loggerkit.InfoLevel
 	if debug {
-		level = slog.LevelDebug
+		level = loggerkit.DebugLevel
 	}
 
-	// 创建处理器
-	var handler slog.Handler
+	// 设置日志格式
+	format := loggerkit.FormatConsole
 	if jsonFormat {
-		handler = slog.NewJSONHandler(writer, &slog.HandlerOptions{
-			Level:     level,
-			AddSource: debug,
-		})
-	} else {
-		handler = newSimpleTextHandler(writer, level)
+		format = loggerkit.FormatJSON
 	}
 
-	defaultHandler = handler
+	// 创建 logger-kit 配置
+	config := loggerkit.DefaultConfig()
+	config.Level = level
+	config.Output = writer
+	config.Format = format
+	config.CallerEnabled = debug
+
+	// 创建 logger
+	DefaultLogger = loggerkit.New(config)
 	defaultWriter = writer
-	DefaultLogger = slog.New(handler)
-	slog.SetDefault(DefaultLogger)
 
 	return nil
 }
@@ -100,176 +98,225 @@ func Writer() io.Writer {
 }
 
 // SetDefault 设置默认日志记录器
-func SetDefault(logger *slog.Logger) {
+func SetDefault(logger *loggerkit.Logger) {
 	DefaultLogger = logger
-	slog.SetDefault(logger)
 }
 
 // With 返回一个带有附加属性的新日志记录器
-func With(args ...any) *slog.Logger {
+func With(args ...any) *loggerkit.Logger {
 	if DefaultLogger == nil {
 		// 如果未初始化，使用默认配置初始化
-		Init(true, false, "", false)
+		_ = Init(true, false, "", false)
 	}
-	return DefaultLogger.With(args...)
+	fields := make(map[string]interface{})
+	for i := 0; i < len(args)-1; i += 2 {
+		if key, ok := args[i].(string); ok {
+			fields[key] = args[i+1]
+		}
+	}
+	return DefaultLogger.WithFields(fields)
 }
 
 // WithRequestID 返回一个带有请求 ID 的日志记录器
-func WithRequestID(requestID string) *slog.Logger {
+func WithRequestID(requestID string) *loggerkit.Logger {
 	if DefaultLogger == nil {
 		// 如果未初始化，使用默认配置初始化
-		Init(true, false, "", false)
+		_ = Init(true, false, "", false)
 	}
 	if requestID != "" {
-		return DefaultLogger.With("request_id", requestID)
+		return DefaultLogger.WithStr("request_id", requestID)
 	}
 	return DefaultLogger
 }
 
 // WithContext 返回一个带有请求 ID 的日志记录器（从 context 中提取）
-// 注意：context 中必须包含通过 middleware.RequestIDKey 设置的请求 ID
-// 如果需要使用此函数，请确保 context 中已设置请求 ID
-func WithContext(ctx context.Context) *slog.Logger {
+func WithContext(ctx interface{}) *loggerkit.Logger {
 	if DefaultLogger == nil {
 		// 如果未初始化，使用默认配置初始化
-		Init(true, false, "", false)
+		_ = Init(true, false, "", false)
 	}
-	if ctx == nil {
-		return DefaultLogger
-	}
-	// 从 context 中提取请求 ID（使用与 middleware.RequestIDKey 相同的 key）
-	type ctxKeyRequestID int
-	const RequestIDKey ctxKeyRequestID = 0
-	if reqID, ok := ctx.Value(RequestIDKey).(string); ok && reqID != "" {
-		return DefaultLogger.With("request_id", reqID)
-	}
+	// logger-kit 的中间件会自动处理 context
 	return DefaultLogger
 }
 
 // DebugContext 使用 context 记录调试级别日志（自动包含请求 ID）
-func DebugContext(ctx context.Context, msg string, args ...any) {
+func DebugContext(ctx interface{}, msg string, args ...any) {
 	if DefaultLogger != nil {
 		logger := WithContext(ctx)
-		logger.Debug(msg, args...)
+		event := logger.Debug()
+		for i := 0; i < len(args)-1; i += 2 {
+			if key, ok := args[i].(string); ok {
+				event = event.Interface(key, args[i+1])
+			}
+		}
+		event.Msg(msg)
 	}
 }
 
 // InfoContext 使用 context 记录信息级别日志（自动包含请求 ID）
-func InfoContext(ctx context.Context, msg string, args ...any) {
+func InfoContext(ctx interface{}, msg string, args ...any) {
 	if DefaultLogger != nil {
 		logger := WithContext(ctx)
-		logger.Info(msg, args...)
+		event := logger.Info()
+		for i := 0; i < len(args)-1; i += 2 {
+			if key, ok := args[i].(string); ok {
+				event = event.Interface(key, args[i+1])
+			}
+		}
+		event.Msg(msg)
 	}
 }
 
 // WarnContext 使用 context 记录警告级别日志（自动包含请求 ID）
-func WarnContext(ctx context.Context, msg string, args ...any) {
+func WarnContext(ctx interface{}, msg string, args ...any) {
 	if DefaultLogger != nil {
 		logger := WithContext(ctx)
-		logger.Warn(msg, args...)
+		event := logger.Warn()
+		for i := 0; i < len(args)-1; i += 2 {
+			if key, ok := args[i].(string); ok {
+				event = event.Interface(key, args[i+1])
+			}
+		}
+		event.Msg(msg)
 	}
 }
 
 // ErrorContext 使用 context 记录错误级别日志（自动包含请求 ID）
-func ErrorContext(ctx context.Context, msg string, args ...any) {
+func ErrorContext(ctx interface{}, msg string, args ...any) {
 	if DefaultLogger != nil {
 		logger := WithContext(ctx)
-		logger.Error(msg, args...)
+		event := logger.Error()
+		for i := 0; i < len(args)-1; i += 2 {
+			if key, ok := args[i].(string); ok {
+				event = event.Interface(key, args[i+1])
+			}
+		}
+		event.Msg(msg)
 	}
 }
 
 // DebugfContext 使用 context 和格式化字符串记录调试级别日志（自动包含请求 ID）
-func DebugfContext(ctx context.Context, format string, args ...any) {
+func DebugfContext(ctx interface{}, format string, args ...any) {
 	if DefaultLogger != nil {
 		logger := WithContext(ctx)
-		logger.Debug(fmt.Sprintf(format, args...))
+		logger.Debug().Msgf(format, args...)
 	}
 }
 
 // InfofContext 使用 context 和格式化字符串记录信息级别日志（自动包含请求 ID）
-func InfofContext(ctx context.Context, format string, args ...any) {
+func InfofContext(ctx interface{}, format string, args ...any) {
 	if DefaultLogger != nil {
 		logger := WithContext(ctx)
-		logger.Info(fmt.Sprintf(format, args...))
+		logger.Info().Msgf(format, args...)
 	}
 }
 
 // WarnfContext 使用 context 和格式化字符串记录警告级别日志（自动包含请求 ID）
-func WarnfContext(ctx context.Context, format string, args ...any) {
+func WarnfContext(ctx interface{}, format string, args ...any) {
 	if DefaultLogger != nil {
 		logger := WithContext(ctx)
-		logger.Warn(fmt.Sprintf(format, args...))
+		logger.Warn().Msgf(format, args...)
 	}
 }
 
 // ErrorfContext 使用 context 和格式化字符串记录错误级别日志（自动包含请求 ID）
-func ErrorfContext(ctx context.Context, format string, args ...any) {
+func ErrorfContext(ctx interface{}, format string, args ...any) {
 	if DefaultLogger != nil {
 		logger := WithContext(ctx)
-		logger.Error(fmt.Sprintf(format, args...))
+		logger.Error().Msgf(format, args...)
 	}
 }
 
 // Debug 记录调试级别日志
 func Debug(msg string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Debug(msg, args...)
+		event := DefaultLogger.Debug()
+		for i := 0; i < len(args)-1; i += 2 {
+			if key, ok := args[i].(string); ok {
+				event = event.Interface(key, args[i+1])
+			}
+		}
+		event.Msg(msg)
 	}
 }
 
 // Info 记录信息级别日志
 func Info(msg string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Info(msg, args...)
+		event := DefaultLogger.Info()
+		for i := 0; i < len(args)-1; i += 2 {
+			if key, ok := args[i].(string); ok {
+				event = event.Interface(key, args[i+1])
+			}
+		}
+		event.Msg(msg)
 	}
 }
 
 // Warn 记录警告级别日志
 func Warn(msg string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Warn(msg, args...)
+		event := DefaultLogger.Warn()
+		for i := 0; i < len(args)-1; i += 2 {
+			if key, ok := args[i].(string); ok {
+				event = event.Interface(key, args[i+1])
+			}
+		}
+		event.Msg(msg)
 	}
 }
 
 // Error 记录错误级别日志
 func Error(msg string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Error(msg, args...)
+		event := DefaultLogger.Error()
+		for i := 0; i < len(args)-1; i += 2 {
+			if key, ok := args[i].(string); ok {
+				event = event.Interface(key, args[i+1])
+			}
+		}
+		event.Msg(msg)
 	}
 }
 
 // Debugf 使用格式化字符串记录调试级别日志
 func Debugf(format string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Debug(fmt.Sprintf(format, args...))
+		DefaultLogger.Debug().Msgf(format, args...)
 	}
 }
 
 // Infof 使用格式化字符串记录信息级别日志
 func Infof(format string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Info(fmt.Sprintf(format, args...))
+		DefaultLogger.Info().Msgf(format, args...)
 	}
 }
 
 // Warnf 使用格式化字符串记录警告级别日志
 func Warnf(format string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Warn(fmt.Sprintf(format, args...))
+		DefaultLogger.Warn().Msgf(format, args...)
 	}
 }
 
 // Errorf 使用格式化字符串记录错误级别日志
 func Errorf(format string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Error(fmt.Sprintf(format, args...))
+		DefaultLogger.Error().Msgf(format, args...)
 	}
 }
 
 // Fatal 记录错误级别日志并退出程序
 func Fatal(msg string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Error(msg, args...)
+		event := DefaultLogger.Fatal()
+		for i := 0; i < len(args)-1; i += 2 {
+			if key, ok := args[i].(string); ok {
+				event = event.Interface(key, args[i+1])
+			}
+		}
+		event.Msg(msg)
 	}
 	os.Exit(1)
 }
@@ -277,7 +324,7 @@ func Fatal(msg string, args ...any) {
 // Fatalf 使用格式化字符串记录错误级别日志并退出程序
 func Fatalf(format string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Error(fmt.Sprintf(format, args...))
+		DefaultLogger.Fatal().Msgf(format, args...)
 	}
 	os.Exit(1)
 }
@@ -286,7 +333,7 @@ func Fatalf(format string, args ...any) {
 func Fatalln(args ...any) {
 	if DefaultLogger != nil {
 		msg := fmt.Sprint(args...)
-		DefaultLogger.Error(msg)
+		DefaultLogger.Fatal().Msg(msg)
 	}
 	os.Exit(1)
 }
@@ -295,14 +342,14 @@ func Fatalln(args ...any) {
 func Print(args ...any) {
 	if DefaultLogger != nil {
 		msg := fmt.Sprint(args...)
-		DefaultLogger.Info(msg)
+		DefaultLogger.Info().Msg(msg)
 	}
 }
 
 // Printf 使用格式化字符串记录信息级别日志（兼容标准 log 包）
 func Printf(format string, args ...any) {
 	if DefaultLogger != nil {
-		DefaultLogger.Info(fmt.Sprintf(format, args...))
+		DefaultLogger.Info().Msgf(format, args...)
 	}
 }
 
@@ -310,71 +357,10 @@ func Printf(format string, args ...any) {
 func Println(args ...any) {
 	if DefaultLogger != nil {
 		msg := fmt.Sprintln(args...)
-		// 移除末尾的换行符，因为 slog 会自动添加
+		// 移除末尾的换行符，因为 zerolog 会自动添加
 		if len(msg) > 0 && msg[len(msg)-1] == '\n' {
 			msg = msg[:len(msg)-1]
 		}
-		DefaultLogger.Info(msg)
+		DefaultLogger.Info().Msg(msg)
 	}
-}
-
-// simpleTextHandler 是一个文本处理器，输出统一格式的日志（包含时间戳、级别、消息和属性）
-type simpleTextHandler struct {
-	writer io.Writer
-	level  slog.Level
-}
-
-func newSimpleTextHandler(writer io.Writer, level slog.Level) slog.Handler {
-	return &simpleTextHandler{
-		writer: writer,
-		level:  level,
-	}
-}
-
-func (h *simpleTextHandler) Enabled(ctx context.Context, level slog.Level) bool {
-	return level >= h.level
-}
-
-func (h *simpleTextHandler) Handle(ctx context.Context, record slog.Record) error {
-	// 统一日志格式：时间戳 | 级别 | 消息 | 属性
-	// 时间戳格式：2006-01-02T15:04:05.000Z07:00 (RFC3339 with milliseconds)
-	timestamp := record.Time.Format(time.RFC3339Nano)
-	levelStr := record.Level.String()
-
-	// 构建日志行
-	var buf []byte
-	buf = append(buf, timestamp...)
-	buf = append(buf, " | "...)
-	buf = append(buf, levelStr...)
-	buf = append(buf, " | "...)
-	buf = append(buf, record.Message...)
-
-	// 添加属性
-	record.Attrs(func(a slog.Attr) bool {
-		if a.Key != "" {
-			buf = append(buf, " | "...)
-			buf = append(buf, a.Key...)
-			buf = append(buf, "="...)
-			buf = append(buf, fmt.Sprintf("%v", a.Value.Any())...)
-		}
-		return true
-	})
-
-	buf = append(buf, '\n')
-	_, err := h.writer.Write(buf)
-	return err
-}
-
-func (h *simpleTextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	// 创建一个新的处理器，包含额外的属性
-	// 注意：slog 会在调用 Handle 时自动合并这些属性
-	return &simpleTextHandler{
-		writer: h.writer,
-		level:  h.level,
-	}
-}
-
-func (h *simpleTextHandler) WithGroup(name string) slog.Handler {
-	// 对于简单处理器，忽略分组
-	return h
 }

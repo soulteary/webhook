@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	loggerkit "github.com/soulteary/logger-kit"
 	tracingkit "github.com/soulteary/tracing-kit"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -123,8 +124,11 @@ func InjectTraceContext(ctx context.Context, header http.Header) {
 		return
 	}
 
-	// 注入请求 ID 到响应头
-	requestID := middleware.GetReqID(ctx)
+	// 注入请求 ID 到响应头（优先 logger-kit，否则本包 middleware）
+	requestID := loggerkit.RequestIDFromContext(ctx)
+	if requestID == "" {
+		requestID = middleware.GetReqID(ctx)
+	}
 	if requestID != "" {
 		header.Set("X-Request-Id", requestID)
 	}

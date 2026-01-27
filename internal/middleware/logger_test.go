@@ -30,43 +30,4 @@ func TestNewLogger(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-func TestLogger_NewLogEntry(t *testing.T) {
-	logger := &Logger{}
-	req := httptest.NewRequest("GET", "/test", nil)
-
-	entry := logger.NewLogEntry(req)
-	assert.NotNil(t, entry)
-
-	logEntry, ok := entry.(*LogEntry)
-	assert.True(t, ok)
-	assert.NotNil(t, logEntry.req)
-	assert.NotNil(t, logEntry.buf)
-}
-
-func TestLogEntry_Write(t *testing.T) {
-	logger := &Logger{}
-	req := httptest.NewRequest("GET", "/test", nil)
-	req = req.WithContext(context.WithValue(req.Context(), RequestIDKey, "test-123"))
-
-	entry := logger.NewLogEntry(req).(*LogEntry)
-	assert.NotNil(t, entry)
-
-	// Test Write with request ID
-	entry.Write(http.StatusOK, 100, http.Header{}, 0, nil)
-
-	// Test Write without request ID
-	req2 := httptest.NewRequest("POST", "/test2", nil)
-	entry2 := logger.NewLogEntry(req2).(*LogEntry)
-	entry2.Write(http.StatusCreated, 200, http.Header{}, 0, nil)
-}
-
-func TestLogEntry_Panic(t *testing.T) {
-	logger := &Logger{}
-	req := httptest.NewRequest("GET", "/test", nil)
-
-	entry := logger.NewLogEntry(req).(*LogEntry)
-	stack := []byte("test stack trace")
-
-	// Test Panic method
-	entry.Panic("test panic", stack)
-}
+// Logger 与 LogEntry 已由 logger-kit 实现，当前仅保留 NewLogger 的集成测试。

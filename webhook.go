@@ -100,8 +100,11 @@ func SetupLogger(appFlags flags.AppFlags, logQueue *[]string) error {
 func main() {
 	appFlags := flags.Parse()
 
-	i18n.GLOBAL_LOCALES = i18n.InitLocaleByFiles(i18n.LoadLocaleFiles(appFlags.I18nDir, WebhookLocales))
-	i18n.GLOBAL_LANG = appFlags.Lang
+	if err := i18n.InitLocaleByFiles(appFlags.I18nDir, WebhookLocales); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize i18n: %v\n", err)
+		os.Exit(1)
+	}
+	i18n.SetGlobalLocale(appFlags.Lang)
 
 	// check if we need to echo version info and quit app
 	NeedEchoVersionInfo(appFlags)

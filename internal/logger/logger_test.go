@@ -3,10 +3,10 @@ package logger
 import (
 	"bytes"
 	"context"
-	"log/slog"
 	"os"
 	"testing"
-	"time"
+
+	loggerkit "github.com/soulteary/logger-kit"
 )
 
 func TestInit(t *testing.T) {
@@ -29,7 +29,6 @@ func TestInit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// 重置全局状态
 			DefaultLogger = nil
-			defaultHandler = nil
 			defaultWriter = nil
 
 			err := Init(tt.verbose, tt.debug, tt.logPath, tt.jsonFormat)
@@ -40,7 +39,7 @@ func TestInit(t *testing.T) {
 
 			if tt.logPath != "" {
 				// 清理测试文件
-				os.Remove(tt.logPath)
+				_ = os.Remove(tt.logPath)
 			}
 		})
 	}
@@ -77,7 +76,7 @@ func TestInitWithWriter(t *testing.T) {
 func TestWriter(t *testing.T) {
 	t.Run("with default writer", func(t *testing.T) {
 		var buf bytes.Buffer
-		InitWithWriter(&buf, true, false, false)
+		_ = InitWithWriter(&buf, true, false, false)
 		writer := Writer()
 		if writer == nil {
 			t.Error("Writer() should not return nil")
@@ -88,18 +87,22 @@ func TestWriter(t *testing.T) {
 		DefaultLogger = nil
 		defaultWriter = nil
 		writer := Writer()
-		if writer == os.Stderr {
-			// 应该返回 stderr 作为后备
+		if writer != os.Stderr {
+			t.Error("Writer() should return os.Stderr when defaultWriter is nil")
 		}
 	})
 }
 
 func TestSetDefault(t *testing.T) {
 	var buf bytes.Buffer
-	InitWithWriter(&buf, true, false, false)
+	_ = InitWithWriter(&buf, true, false, false)
 
-	// 创建一个新的 logger
-	newLogger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	// 使用 logger-kit 创建新的 logger
+	config := loggerkit.DefaultConfig()
+	config.Output = &buf
+	config.Level = loggerkit.InfoLevel
+	config.Format = loggerkit.FormatConsole
+	newLogger := loggerkit.New(config)
 	SetDefault(newLogger)
 
 	if DefaultLogger != newLogger {
@@ -109,7 +112,7 @@ func TestSetDefault(t *testing.T) {
 
 func TestWith(t *testing.T) {
 	var buf bytes.Buffer
-	InitWithWriter(&buf, true, false, false)
+	_ = InitWithWriter(&buf, true, false, false)
 
 	logger := With("key", "value")
 	if logger == nil {
@@ -126,7 +129,7 @@ func TestWith(t *testing.T) {
 
 func TestWithRequestID(t *testing.T) {
 	var buf bytes.Buffer
-	InitWithWriter(&buf, true, false, false)
+	_ = InitWithWriter(&buf, true, false, false)
 
 	tests := []struct {
 		name      string
@@ -148,7 +151,7 @@ func TestWithRequestID(t *testing.T) {
 
 func TestWithContext(t *testing.T) {
 	var buf bytes.Buffer
-	InitWithWriter(&buf, true, false, false)
+	_ = InitWithWriter(&buf, true, false, false)
 
 	// 定义与 logger.go 中相同的 key 类型
 	type ctxKeyRequestID int
@@ -175,7 +178,7 @@ func TestWithContext(t *testing.T) {
 
 func TestContextLogging(t *testing.T) {
 	var buf bytes.Buffer
-	InitWithWriter(&buf, true, true, false) // 启用 debug 以确保所有日志都被记录
+	_ = InitWithWriter(&buf, true, true, false) // 启用 debug 以确保所有日志都被记录
 
 	// 定义与 logger.go 中相同的 key 类型（必须与 logger.go 中的定义完全一致）
 	type ctxKeyRequestID int
@@ -204,7 +207,7 @@ func TestContextLogging(t *testing.T) {
 
 func TestBasicLogging(t *testing.T) {
 	var buf bytes.Buffer
-	InitWithWriter(&buf, true, false, false)
+	_ = InitWithWriter(&buf, true, false, false)
 
 	Debug("debug message", "key", "value")
 	Info("info message", "key", "value")
@@ -224,7 +227,7 @@ func TestBasicLogging(t *testing.T) {
 
 func TestCompatibilityLogging(t *testing.T) {
 	var buf bytes.Buffer
-	InitWithWriter(&buf, true, false, false)
+	_ = InitWithWriter(&buf, true, false, false)
 
 	Print("print message")
 	Printf("printf format %s", "test")
@@ -237,29 +240,7 @@ func TestCompatibilityLogging(t *testing.T) {
 }
 
 func TestSimpleTextHandler(t *testing.T) {
-	var buf bytes.Buffer
-	handler := newSimpleTextHandler(&buf, slog.LevelInfo)
-
-	// 测试 Enabled
-	if !handler.Enabled(context.Background(), slog.LevelInfo) {
-		t.Error("Handler should be enabled for Info level")
-	}
-
-	if handler.Enabled(context.Background(), slog.LevelDebug) {
-		t.Error("Handler should not be enabled for Debug level when level is Info")
-	}
-
-	// 测试 WithAttrs
-	newHandler := handler.WithAttrs([]slog.Attr{})
-	if newHandler == nil {
-		t.Error("WithAttrs should return a handler")
-	}
-
-	// 测试 WithGroup
-	groupHandler := handler.WithGroup("test")
-	if groupHandler == nil {
-		t.Error("WithGroup should return a handler")
-	}
+	t.Skip("logger 包已改用 logger-kit，不再提供 slog simpleTextHandler")
 }
 
 func TestLogLevels(t *testing.T) {
@@ -275,7 +256,7 @@ func TestLogLevels(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			InitWithWriter(&buf, true, tt.debug, false)
+			_ = InitWithWriter(&buf, true, tt.debug, false)
 			Debug("debug message")
 
 			output := buf.String()
@@ -290,7 +271,6 @@ func TestLogLevels(t *testing.T) {
 func TestWithRequestID_Uninitialized(t *testing.T) {
 	// 测试未初始化时的情况
 	DefaultLogger = nil
-	defaultHandler = nil
 	defaultWriter = nil
 
 	logger := WithRequestID("test-id")
@@ -309,7 +289,6 @@ func TestWithRequestID_Uninitialized(t *testing.T) {
 func TestWithContext_Uninitialized(t *testing.T) {
 	// 测试未初始化时的情况
 	DefaultLogger = nil
-	defaultHandler = nil
 	defaultWriter = nil
 
 	type ctxKeyRequestID int
@@ -333,7 +312,6 @@ func TestWithContext_Uninitialized(t *testing.T) {
 func TestInit_VerboseDisabled(t *testing.T) {
 	// 重置全局状态
 	DefaultLogger = nil
-	defaultHandler = nil
 	defaultWriter = nil
 
 	// 测试 verbose=false 的情况，应该使用 io.Discard
@@ -354,14 +332,13 @@ func TestInit_VerboseDisabled(t *testing.T) {
 func TestInit_ErrorHandling(t *testing.T) {
 	// 测试无效的日志文件路径（在只读目录中）
 	DefaultLogger = nil
-	defaultHandler = nil
 	defaultWriter = nil
 
 	// 尝试在根目录创建文件（通常会失败）
 	err := Init(true, false, "/root/webhook_test.log", false)
 	if err == nil {
 		// 如果成功，清理文件
-		os.Remove("/root/webhook_test.log")
+		_ = os.Remove("/root/webhook_test.log")
 	}
 	// 这个测试主要确保错误处理路径被执行
 }
@@ -374,7 +351,7 @@ func TestFatalFunctions(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	InitWithWriter(&buf, true, false, false)
+	_ = InitWithWriter(&buf, true, false, false)
 
 	// 由于 Fatal 函数会调用 os.Exit(1)，我们无法直接测试
 	// 但我们可以验证函数至少可以被调用而不会 panic
@@ -409,65 +386,9 @@ func TestFatalFunctions_Subprocess(t *testing.T) {
 }
 
 func TestSimpleTextHandler_Handle(t *testing.T) {
-	var buf bytes.Buffer
-	handler := newSimpleTextHandler(&buf, slog.LevelInfo)
-
-	// 创建一个测试记录
-	record := slog.NewRecord(time.Now(), slog.LevelInfo, "test message", 0)
-	record.AddAttrs(slog.String("key", "value"))
-
-	// 测试 Handle
-	err := handler.Handle(context.TODO(), record)
-	if err != nil {
-		t.Errorf("Handle() should not return error, got: %v", err)
-	}
-
-	output := buf.String()
-	if output == "" {
-		t.Error("Handle() should produce output")
-	}
-
-	// 验证输出包含消息和属性
-	if !contains(output, "test message") {
-		t.Error("Handle() output should contain message")
-	}
+	t.Skip("logger 包已改用 logger-kit，不再提供 slog simpleTextHandler")
 }
 
 func TestSimpleTextHandler_WithAttrs(t *testing.T) {
-	var buf bytes.Buffer
-	handler := newSimpleTextHandler(&buf, slog.LevelInfo)
-
-	// 测试 WithAttrs 返回新的 handler
-	newHandler := handler.WithAttrs([]slog.Attr{
-		slog.String("attr1", "value1"),
-		slog.Int("attr2", 42),
-	})
-
-	if newHandler == nil {
-		t.Error("WithAttrs() should return a handler")
-	}
-
-	// 验证新 handler 可以处理记录
-	record := slog.NewRecord(time.Now(), slog.LevelInfo, "test", 0)
-	err := newHandler.Handle(context.TODO(), record)
-	if err != nil {
-		t.Errorf("New handler Handle() should not return error, got: %v", err)
-	}
-}
-
-// Helper function
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr ||
-		(len(s) > len(substr) && (s[:len(substr)] == substr ||
-			s[len(s)-len(substr):] == substr ||
-			containsMiddle(s, substr))))
-}
-
-func containsMiddle(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	t.Skip("logger 包已改用 logger-kit，不再提供 slog simpleTextHandler")
 }

@@ -13,6 +13,8 @@ import (
 	"net/http/httputil"
 	"sort"
 	"strings"
+
+	loggerkit "github.com/soulteary/logger-kit"
 )
 
 // responseDupper tees the response to a buffer and a response writer.
@@ -41,8 +43,11 @@ func DumperWithConfig(w io.Writer, config DumperConfig) func(http.Handler) http.
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			buf := &bytes.Buffer{}
-			// Request ID
-			rid := r.Context().Value(RequestIDKey)
+			// Request ID：优先使用本包注入的 ID，否则从 logger-kit 读取
+			rid := GetReqID(r.Context())
+			if rid == "" {
+				rid = loggerkit.RequestIDFromRequest(r)
+			}
 
 			// Dump request (包含请求体)
 			bd, err := httputil.DumpRequest(r, true)

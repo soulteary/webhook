@@ -9,112 +9,42 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	healthkit "github.com/soulteary/health-kit"
+	loggerkit "github.com/soulteary/logger-kit"
+	middlewarekit "github.com/soulteary/middleware-kit"
+	versionkit "github.com/soulteary/version-kit"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/link"
 	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/metrics"
 	"github.com/soulteary/webhook/internal/middleware"
+	"github.com/soulteary/webhook/internal/version"
 )
 
 // Server 管理 HTTP 服务器和优雅关闭
 type Server struct {
-	server   *http.Server
+	app      *fiber.App
 	listener net.Listener
 	mu       sync.Mutex
 	shutdown bool
 }
 
-// Launch 启动 HTTP 服务器并返回 Server 实例
+// Launch 启动 HTTP 服务器并返回 Server 实例（基于 fiber.App）
 func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
-	r := chi.NewRouter()
-
-	// 安全头中间件（来自 middleware-kit）
-	// 设置 X-Content-Type-Options, X-Frame-Options, X-XSS-Protection 等安全头
-	securityConfig := middleware.DefaultSecurityConfig()
-	if appFlags.StrictMode {
-		// 严格模式下使用更多安全头
-		securityConfig = middleware.StrictSecurityConfig()
-	}
-	r.Use(middleware.SecurityHeaders(securityConfig))
-
-	r.Use(middleware.RequestID(
-		middleware.UseXRequestIDHeaderOption(appFlags.UseXRequestID),
-		middleware.XRequestIDLimitOption(appFlags.XRequestIDLimit),
-	))
-	r.Use(middleware.NewLogger())
-	r.Use(chimiddleware.Recoverer)
-
-	// 添加限流中间件（如果启用）
-	if appFlags.RateLimitEnabled {
-		rateLimitConfig := middleware.RateLimitConfig{
-			Enabled:        appFlags.RateLimitEnabled,
-			RPS:            appFlags.RateLimitRPS,
-			Burst:          appFlags.RateLimitBurst,
-			RedisEnabled:   appFlags.RedisEnabled,
-			RedisAddr:      appFlags.RedisAddr,
-			RedisPassword:  appFlags.RedisPassword,
-			RedisDB:        appFlags.RedisDB,
-			RedisKeyPrefix: appFlags.RedisKeyPrefix,
-			WindowSeconds:  appFlags.RateLimitWindowSec,
-		}
-		r.Use(middleware.NewRateLimitMiddleware(rateLimitConfig))
-		if appFlags.RedisEnabled {
-			logger.Infof("rate limiting enabled with Redis: %d RPS, burst: %d, window: %ds, Redis: %s",
-				appFlags.RateLimitRPS, appFlags.RateLimitBurst, appFlags.RateLimitWindowSec, appFlags.RedisAddr)
-		} else {
-			logger.Infof("rate limiting enabled (in-memory): %d RPS, burst: %d", appFlags.RateLimitRPS, appFlags.RateLimitBurst)
-		}
-	}
-
-	if appFlags.Debug {
-		dumperConfig := middleware.DumperConfig{
-			IncludeRequestBody: appFlags.LogRequestBody,
-		}
-		r.Use(middleware.DumperWithConfig(logger.Writer(), dumperConfig))
-	}
-
 	// Clean up input
 	appFlags.HttpMethods = strings.ToUpper(strings.ReplaceAll(appFlags.HttpMethods, " ", ""))
 
-	hooksURL := link.MakeRoutePattern(&appFlags.HooksURLPrefix)
-
-	// 健康检查端点
-	r.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
-		startTime := time.Now()
-		defer func() {
-			duration := time.Since(startTime)
-			metrics.RecordHTTPRequest(req.Method, "200", "/health", duration)
-		}()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, `{"status":"ok"}`)
-	})
-
-	// Prometheus metrics 端点
-	r.Handle("/metrics", promhttp.Handler())
-
-	// 根路径
-	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		startTime := time.Now()
-		defer func() {
-			duration := time.Since(startTime)
-			metrics.RecordHTTPRequest(req.Method, "200", "/", duration)
-		}()
-
-		setResponseHeaders(w, appFlags.ResponseHeaders)
-		fmt.Fprint(w, "OK")
-	})
-
-	// Create common HTTP server settings
-	// 使用配置的超时参数（支持通过命令行参数或环境变量覆盖）
-	// 如果未配置，envs.go 中已设置默认值
+	bodyLimit := int(appFlags.MaxRequestBodySize)
+	if bodyLimit <= 0 {
+		bodyLimit = flags.DEFAULT_MAX_REQUEST_BODY_SIZE
+	}
 	readHeaderTimeout := time.Duration(appFlags.ReadHeaderTimeoutSeconds) * time.Second
 	if readHeaderTimeout == 0 {
-		readHeaderTimeout = 5 * time.Second // 额外保护，防止为 0
+		readHeaderTimeout = 5 * time.Second
 	}
 	readTimeout := time.Duration(appFlags.ReadTimeoutSeconds) * time.Second
 	if readTimeout == 0 {
@@ -128,42 +58,177 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	if idleTimeout == 0 {
 		idleTimeout = 90 * time.Second
 	}
-	maxHeaderBytes := appFlags.MaxHeaderBytes
-	if maxHeaderBytes == 0 {
-		maxHeaderBytes = 1 << 20 // 1MB
+
+	app := fiber.New(fiber.Config{
+		BodyLimit:             bodyLimit,
+		ReadTimeout:           readTimeout,
+		WriteTimeout:          writeTimeout,
+		IdleTimeout:           idleTimeout,
+		ReadBufferSize:        0,
+		WriteBufferSize:       0,
+		DisableStartupMessage: true,
+	})
+
+	// 安全头中间件（middleware-kit Fiber 版）
+	var kitSecurityCfg middlewarekit.SecurityHeadersConfig
+	if appFlags.StrictMode {
+		kitSecurityCfg = middlewarekit.StrictSecurityHeadersConfig()
+	} else {
+		kitSecurityCfg = middlewarekit.DefaultSecurityHeadersConfig()
+	}
+	app.Use(middlewarekit.SecurityHeaders(kitSecurityCfg))
+
+	// logger-kit Fiber 中间件
+	if logger.DefaultLogger == nil {
+		logger.Init(true, false, "", false)
+	}
+	loggerCfg := loggerkit.DefaultMiddlewareConfig()
+	loggerCfg.Logger = logger.DefaultLogger
+	loggerCfg.IncludeRequestID = true
+	loggerCfg.RequestIDHeader = "X-Request-Id"
+	if appFlags.UseXRequestID {
+		loggerCfg.GenerateRequestID = nil
+	}
+	app.Use(loggerkit.FiberMiddleware(loggerCfg))
+	app.Use(recover.New())
+
+	// 限流中间件（适配 Std 中间件）
+	if appFlags.RateLimitEnabled {
+		rateLimitConfig := middleware.RateLimitConfig{
+			Enabled:        appFlags.RateLimitEnabled,
+			RPS:            appFlags.RateLimitRPS,
+			Burst:          appFlags.RateLimitBurst,
+			RedisEnabled:   appFlags.RedisEnabled,
+			RedisAddr:      appFlags.RedisAddr,
+			RedisPassword:  appFlags.RedisPassword,
+			RedisDB:        appFlags.RedisDB,
+			RedisKeyPrefix: appFlags.RedisKeyPrefix,
+			WindowSeconds:  appFlags.RateLimitWindowSec,
+		}
+		app.Use(adaptor.HTTPMiddleware(middleware.NewRateLimitMiddleware(rateLimitConfig)))
+		if appFlags.RedisEnabled {
+			logger.Infof("rate limiting enabled with Redis: %d RPS, burst: %d, window: %ds, Redis: %s",
+				appFlags.RateLimitRPS, appFlags.RateLimitBurst, appFlags.RateLimitWindowSec, appFlags.RedisAddr)
+		} else {
+			logger.Infof("rate limiting enabled (in-memory): %d RPS, burst: %d", appFlags.RateLimitRPS, appFlags.RateLimitBurst)
+		}
 	}
 
-	svr := &http.Server{
-		Addr:              addr,
-		Handler:           r,
-		ReadHeaderTimeout: readHeaderTimeout,
-		ReadTimeout:       readTimeout,
-		WriteTimeout:      writeTimeout,
-		IdleTimeout:       idleTimeout,
-		MaxHeaderBytes:    maxHeaderBytes,
+	if appFlags.Debug {
+		dumperConfig := middleware.DumperConfig{
+			IncludeRequestBody: appFlags.LogRequestBody,
+		}
+		app.Use(adaptor.HTTPMiddleware(middleware.DumperWithConfig(logger.Writer(), dumperConfig)))
 	}
+
+	// 健康检查聚合器
+	healthConfig := healthkit.DefaultConfig().
+		WithServiceName("webhook").
+		WithTimeout(5 * time.Second).
+		WithDetails(true).
+		WithChecks(true)
+	healthAggregator := healthkit.NewAggregator(healthConfig)
+
+	var serverRef *Server
+
+	healthAggregator.AddChecker(healthkit.NewCustomChecker("service", func(ctx context.Context) error {
+		if serverRef != nil && serverRef.IsShuttingDown() {
+			return fmt.Errorf("server is shutting down")
+		}
+		return nil
+	}).WithMetadata(map[string]any{
+		"component": "webhook-server",
+	}))
+
+	if appFlags.RedisEnabled {
+		healthAggregator.AddChecker(healthkit.NewCustomChecker("redis", func(ctx context.Context) error {
+			return nil
+		}).WithMetadata(map[string]any{
+			"addr": appFlags.RedisAddr,
+		}))
+	}
+
+	// health / livez / readyz / version / metrics / 根路径：HTTP -> Fiber 适配器
+	healthHandler := func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		handler := healthkit.Handler(healthAggregator)
+		handler(w, r)
+		duration := time.Since(startTime)
+		result := healthAggregator.Check(r.Context())
+		statusCode := healthkit.HTTPStatusCode(result.Status)
+		metrics.RecordHTTPRequest(r.Method, fmt.Sprintf("%d", statusCode), "/health", duration)
+	}
+	app.All("/health", adaptor.HTTPHandlerFunc(healthHandler))
+
+	livezHandler := func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		handler := healthkit.LivenessHandler("webhook")
+		handler(w, r)
+		metrics.RecordHTTPRequest(r.Method, "200", "/livez", time.Since(startTime))
+	}
+	app.All("/livez", adaptor.HTTPHandlerFunc(livezHandler))
+
+	readyzHandler := func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		handler := healthkit.ReadinessHandler(healthAggregator)
+		handler(w, r)
+		duration := time.Since(startTime)
+		result := healthAggregator.Check(r.Context())
+		statusCode := healthkit.HTTPStatusCode(result.Status)
+		metrics.RecordHTTPRequest(r.Method, fmt.Sprintf("%d", statusCode), "/readyz", duration)
+	}
+	app.All("/readyz", adaptor.HTTPHandlerFunc(readyzHandler))
+
+	versionInfo := version.GetVersionInfo()
+	versionConfig := versionkit.HandlerConfig{
+		Info:           versionInfo,
+		Pretty:         true,
+		IncludeHeaders: true,
+		HeaderPrefix:   "X-",
+	}
+	versionHandler := func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		handler := versionkit.Handler(versionConfig)
+		handler(w, r)
+		metrics.RecordHTTPRequest(r.Method, "200", "/version", time.Since(startTime))
+	}
+	app.All("/version", adaptor.HTTPHandlerFunc(versionHandler))
+
+	app.All("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+
+	rootHandler := func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		defer func() {
+			metrics.RecordHTTPRequest(r.Method, "200", "/", time.Since(startTime))
+		}()
+		setResponseHeaders(w, appFlags.ResponseHeaders)
+		fmt.Fprint(w, "OK")
+	}
+	app.All("/", adaptor.HTTPHandlerFunc(rootHandler))
 
 	s := &Server{
-		server:   svr,
+		app:      app,
 		listener: ln,
 	}
+	serverRef = s
 
+	// Hook 路由：通过适配器调用现有 createHookHandler
 	hookHandler := createHookHandler(appFlags, s)
-	// Register both /{id} and /{id}/* routes to support:
-	// - Simple hook IDs: /hooks/github
-	// - Hook IDs with slashes: /hooks/sendgrid/dir
-	r.HandleFunc(hooksURL, hookHandler)
-	r.HandleFunc(hooksURL+"/*", hookHandler)
+	hookBase := link.MakeBaseURL(&appFlags.HooksURLPrefix)
+	if hookBase == "" {
+		hookBase = "/hooks"
+	}
+	app.All(hookBase+"/:id", adaptor.HTTPHandlerFunc(hookHandler))
+	app.All(hookBase+"/:id/*", adaptor.HTTPHandlerFunc(hookHandler))
 
-	// 启动系统指标收集器（每 10 秒更新一次）
 	metrics.StartSystemMetricsCollector(10 * time.Second)
 
-	// Serve HTTP in a goroutine
 	go func() {
 		logger.Infof("serving hooks on http://%s%s", addr, link.MakeHumanPattern(&appFlags.HooksURLPrefix))
-		logger.Infof("health check endpoint: http://%s/health", addr)
+		logger.Infof("health check endpoints: http://%s/health, http://%s/livez, http://%s/readyz", addr, addr, addr)
+		logger.Infof("version endpoint: http://%s/version", addr)
 		logger.Infof("metrics endpoint: http://%s/metrics", addr)
-		if err := svr.Serve(ln); err != nil && err != http.ErrServerClosed {
+		if err := app.Listener(ln); err != nil {
 			logger.Error(fmt.Sprintf("server error: %v", err))
 		}
 	}()
@@ -171,10 +236,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	return s
 }
 
-// Shutdown 优雅关闭服务器
-// 1. 停止接受新请求
-// 2. 等待正在执行的 hook 完成
-// 3. 设置最大等待时间
+// Shutdown 优雅关闭服务器：先等异步 hook WaitGroup，再关闭 Fiber
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.mu.Lock()
 	if s.shutdown {
@@ -184,16 +246,10 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	s.shutdown = true
 	s.mu.Unlock()
 
-	// 停止接受新请求
-	s.server.SetKeepAlivesEnabled(false)
-
-	// 等待正在执行的 hook 完成
 	done := make(chan error, 1)
 	go func() {
-		// 等待所有异步执行的 hook goroutine 完成
 		GetAsyncHookWaitGroup().Wait()
-		// 关闭 HTTP 服务器
-		done <- s.server.Shutdown(ctx)
+		done <- s.app.Shutdown()
 	}()
 
 	select {

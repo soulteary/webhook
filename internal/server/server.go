@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	loggerkit "github.com/soulteary/logger-kit"
 	"github.com/soulteary/webhook/internal/audit"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/fn"
@@ -22,7 +22,6 @@ import (
 	"github.com/soulteary/webhook/internal/link"
 	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/metrics"
-	"github.com/soulteary/webhook/internal/middleware"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/soulteary/webhook/internal/security"
 )
@@ -594,7 +593,7 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 
 		// 检查服务器是否正在关闭，如果是则拒绝新请求
 		if srv != nil && srv.IsShuttingDown() {
-			requestID := middleware.GetReqID(r.Context())
+			requestID := loggerkit.RequestIDFromRequest(r)
 			logger.Warnf("[%s] server is shutting down, rejecting new request", requestID)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			statusCode = http.StatusServiceUnavailable
@@ -603,7 +602,7 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 			return
 		}
 
-		requestID := middleware.GetReqID(r.Context())
+		requestID := loggerkit.RequestIDFromRequest(r)
 		req := &hook.Request{
 			ID:         requestID,
 			RawRequest: r,
@@ -619,16 +618,10 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 		if basePath == "" {
 			basePath = "/hooks"
 		}
-		// Remove the base path prefix to get the hook ID
+		// Remove the base path prefix to get the hook ID (Fiber 下由 path 解析，适配器传入的 r.URL.Path 已正确)
 		var hookID string
 		if strings.HasPrefix(path, basePath+"/") {
 			hookID = strings.TrimPrefix(path, basePath+"/")
-		} else {
-			// Fallback: try to get from URL params
-			hookID = strings.TrimSpace(chi.URLParam(r, "id"))
-			if wildcard := chi.URLParam(r, "*"); wildcard != "" {
-				hookID = hookID + "/" + wildcard
-			}
 		}
 		hookID = strings.TrimSpace(hookID)
 		hookID = fn.RemoveNewlinesAndTabs(hookID)
