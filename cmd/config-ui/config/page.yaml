@@ -1,0 +1,188 @@
+# Page data for webhook config generator UI.
+# i18n: zh/en; configSections: basic + optional form fields.
+
+i18n:
+  zh:
+    title: "Webhook - 配置生成"
+    subtitle: "填写 Hook 基础信息与可选项，点击生成后复制或下载 YAML/JSON 配置及调用示例。"
+    basicSection: "基础"
+    optionalSection: "可选"
+    idLabel: "Hook ID"
+    idDesc: "用于生成调用地址，如 my-hook。必填。"
+    executeCommandLabel: "执行命令"
+    executeCommandDesc: "触发时执行的命令路径。必填。"
+    commandWorkingDirectoryLabel: "工作目录"
+    commandWorkingDirectoryDesc: "命令执行时的工作目录，留空使用默认。"
+    responseMessageLabel: "响应消息"
+    responseMessageDesc: "成功时返回给调用方的消息文本。"
+    webhookBaseUrlLabel: "Webhook 服务地址"
+    webhookBaseUrlDesc: "生成调用 URL 时使用，如 http://localhost:9000；留空则使用当前页面的 host 与端口。"
+    httpMethodsLabel: "HTTP 方法"
+    httpMethodsDesc: "允许的请求方法，如 POST；留空表示不限制。"
+    successHttpResponseCodeLabel: "成功状态码"
+    successHttpResponseCodeDesc: "成功时返回的 HTTP 状态码，默认 200。"
+    includeCommandOutputLabel: "返回命令输出"
+    includeCommandOutputDesc: "是否将命令 stdout/stderr 作为响应体返回。"
+    responseHeadersLabel: "响应头"
+    responseHeadersDesc: "JSON 数组，如 [{\"name\":\"X-Custom\",\"value\":\"ok\"}]。"
+    passArgumentsLabel: "传递参数给命令"
+    passArgumentsDesc: "JSON 数组，如 [{\"source\":\"payload\",\"name\":\"repo\"}]。"
+    passEnvironmentLabel: "传递环境变量"
+    passEnvironmentDesc: "JSON 数组，如 [{\"source\":\"payload\",\"envname\":\"REPO\",\"name\":\"repo\"}]。"
+    triggerRuleLabel: "触发规则"
+    triggerRuleDesc: "JSON 对象，如 {\"match\":{\"type\":\"value\",\"parameter\":{\"source\":\"header\",\"name\":\"X-Key\"},\"value\":\"secret\"}}。"
+    incomingPayloadContentTypeLabel: "请求 Content-Type"
+    incomingPayloadContentTypeDesc: "期望的请求体类型，如 application/json。"
+    btnGenerate: "生成"
+    generating: "生成中..."
+    resultSuccess: "生成成功。可复制或下载："
+    resultErrorId: "请填写 Hook ID。"
+    resultErrorCommand: "请填写执行命令。"
+    requestFailed: "请求失败: "
+    copyYaml: "复制 YAML"
+    copyJson: "复制 JSON"
+    copyCurl: "复制 curl"
+    copySuccess: "已复制"
+    copyFailed: "复制失败"
+    copyAll: "复制全部"
+    outputCallUrl: "调用 URL"
+    outputCurl: "curl"
+    outputYaml: "YAML"
+    outputJson: "JSON"
+    downloadYaml: "下载 hooks.yaml 片段"
+    downloadJson: "下载 hooks.json 片段"
+    btnLoadExample: "加载示例"
+  en:
+    title: "Webhook - Config Generator"
+    subtitle: "Fill in hook basics and options, then click Generate to copy or download YAML/JSON config and call example."
+    basicSection: "Basic"
+    optionalSection: "Optional"
+    idLabel: "Hook ID"
+    idDesc: "Used for the call URL, e.g. my-hook. Required."
+    executeCommandLabel: "Execute command"
+    executeCommandDesc: "Command path to run when triggered. Required."
+    commandWorkingDirectoryLabel: "Working directory"
+    commandWorkingDirectoryDesc: "Working directory for the command; leave empty for default."
+    responseMessageLabel: "Response message"
+    responseMessageDesc: "Message returned to the caller on success."
+    webhookBaseUrlLabel: "Webhook base URL"
+    webhookBaseUrlDesc: "Base URL for generated call URL, e.g. http://localhost:9000; leave empty to use current host and port."
+    httpMethodsLabel: "HTTP methods"
+    httpMethodsDesc: "Allowed methods, e.g. POST; empty means no restriction."
+    successHttpResponseCodeLabel: "Success status code"
+    successHttpResponseCodeDesc: "HTTP status code on success, default 200."
+    includeCommandOutputLabel: "Include command output"
+    includeCommandOutputDesc: "Whether to return command stdout/stderr as response body."
+    responseHeadersLabel: "Response headers"
+    responseHeadersDesc: "JSON array, e.g. [{\"name\":\"X-Custom\",\"value\":\"ok\"}]."
+    passArgumentsLabel: "Pass arguments to command"
+    passArgumentsDesc: "JSON array, e.g. [{\"source\":\"payload\",\"name\":\"repo\"}]."
+    passEnvironmentLabel: "Pass environment to command"
+    passEnvironmentDesc: "JSON array, e.g. [{\"source\":\"payload\",\"envname\":\"REPO\",\"name\":\"repo\"}]."
+    triggerRuleLabel: "Trigger rule"
+    triggerRuleDesc: "JSON object, e.g. {\"match\":{\"type\":\"value\",\"parameter\":{\"source\":\"header\",\"name\":\"X-Key\"},\"value\":\"secret\"}}."
+    incomingPayloadContentTypeLabel: "Incoming Content-Type"
+    incomingPayloadContentTypeDesc: "Expected request body type, e.g. application/json."
+    btnGenerate: "Generate"
+    generating: "Generating..."
+    resultSuccess: "Done. Copy or download:"
+    resultErrorId: "Please fill in Hook ID."
+    resultErrorCommand: "Please fill in execute command."
+    requestFailed: "Request failed: "
+    copyYaml: "Copy YAML"
+    copyJson: "Copy JSON"
+    copyCurl: "Copy curl"
+    copySuccess: "Copied"
+    copyFailed: "Copy failed"
+    copyAll: "Copy all"
+    outputCallUrl: "Call URL"
+    outputCurl: "curl"
+    outputYaml: "YAML"
+    outputJson: "JSON"
+    downloadYaml: "Download hooks.yaml snippet"
+    downloadJson: "Download hooks.json snippet"
+    btnLoadExample: "Load example"
+
+configSections:
+  - titleKey: basicSection
+    options:
+      - type: text
+        id: id
+        name: id
+        labelKey: idLabel
+        descKey: idDesc
+        placeholder: "my-hook"
+      - type: text
+        id: execute-command
+        name: execute-command
+        labelKey: executeCommandLabel
+        descKey: executeCommandDesc
+        placeholder: "/path/to/script.sh"
+      - type: text
+        id: command-working-directory
+        name: command-working-directory
+        labelKey: commandWorkingDirectoryLabel
+        descKey: commandWorkingDirectoryDesc
+        placeholder: "/home/app"
+      - type: text
+        id: response-message
+        name: response-message
+        labelKey: responseMessageLabel
+        descKey: responseMessageDesc
+        placeholder: "OK"
+      - type: text
+        id: webhook_base_url
+        name: webhook_base_url
+        labelKey: webhookBaseUrlLabel
+        descKey: webhookBaseUrlDesc
+        placeholder: "http://localhost:9000"
+      - type: text
+        id: http-methods
+        name: http-methods
+        labelKey: httpMethodsLabel
+        descKey: httpMethodsDesc
+        placeholder: "POST"
+      - type: number
+        id: success-http-response-code
+        name: success-http-response-code
+        labelKey: successHttpResponseCodeLabel
+        descKey: successHttpResponseCodeDesc
+        default: "200"
+      - type: checkbox
+        id: include-command-output-in-response
+        name: include-command-output-in-response
+        labelKey: includeCommandOutputLabel
+        descKey: includeCommandOutputDesc
+  - titleKey: optionalSection
+    collapsible: true
+    options:
+      - type: textarea
+        id: response-headers
+        name: response-headers
+        labelKey: responseHeadersLabel
+        descKey: responseHeadersDesc
+        placeholder: "[{\"name\":\"X-Custom\",\"value\":\"ok\"}]"
+      - type: textarea
+        id: pass-arguments-to-command
+        name: pass-arguments-to-command
+        labelKey: passArgumentsLabel
+        descKey: passArgumentsDesc
+        placeholder: "[{\"source\":\"payload\",\"name\":\"repo\"}]"
+      - type: textarea
+        id: pass-environment-to-command
+        name: pass-environment-to-command
+        labelKey: passEnvironmentLabel
+        descKey: passEnvironmentDesc
+        placeholder: ""
+      - type: textarea
+        id: trigger-rule
+        name: trigger-rule
+        labelKey: triggerRuleLabel
+        descKey: triggerRuleDesc
+        placeholder: "{}"
+      - type: text
+        id: incoming-payload-content-type
+        name: incoming-payload-content-type
+        labelKey: incomingPayloadContentTypeLabel
+        descKey: incomingPayloadContentTypeDesc
+        placeholder: "application/json"

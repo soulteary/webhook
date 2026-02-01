@@ -1,0 +1,190 @@
+/* Webhook config generator – overrides on top of Pure CSS */
+.content {
+	max-width: 900px;
+	margin: 0 auto;
+	padding: 1rem;
+	box-sizing: border-box;
+}
+
+.page-header {
+	align-items: center;
+	margin-bottom: 0.5rem;
+}
+.page-title {
+	font-size: 1.5rem;
+	font-weight: 600;
+	margin: 0;
+}
+.lang-switch-wrap {
+	text-align: right;
+}
+@media (max-width: 567px) {
+	.lang-switch-wrap { text-align: left; }
+}
+.lang-switch .pure-link {
+	color: #0078e7;
+	text-decoration: none;
+}
+.lang-switch .pure-link:hover {
+	text-decoration: underline;
+}
+.lang-switch .pure-link.active {
+	font-weight: 600;
+	text-decoration: underline;
+}
+
+.subtitle {
+	color: #555;
+	margin: 0 0 1rem;
+	font-size: 0.9375rem;
+}
+
+.config-single-column {
+	width: 100%;
+}
+.pure-group {
+	margin-bottom: 1.5rem;
+}
+.pure-group legend {
+	font-weight: 600;
+	padding: 0 0.25rem;
+}
+.config-section .config-item {
+	margin-bottom: 1rem;
+}
+.config-item > label {
+	display: block;
+	margin-bottom: 0.25rem;
+}
+.config-item .config-label {
+	font-weight: 500;
+}
+.config-desc {
+	font-size: 0.8125rem;
+	color: #555;
+	margin: 0.25rem 0 0 0;
+	line-height: 1.4;
+}
+.config-textarea {
+	font-family: ui-monospace, monospace;
+	font-size: 0.875rem;
+	resize: vertical;
+	min-height: 80px;
+}
+
+.config-section-collapsible {
+	margin-bottom: 1.5rem;
+	border: 1px solid #e0e4e8;
+	border-radius: 4px;
+	background: #f5f8fa;
+}
+.config-section-summary {
+	padding: 0.5rem 0.75rem;
+	cursor: pointer;
+	font-weight: 600;
+	list-style: none;
+}
+.config-section-summary::-webkit-details-marker {
+	display: none;
+}
+.config-section-summary::before {
+	content: "\25B6 ";
+	font-size: 0.75em;
+}
+.config-section-collapsible[open] .config-section-summary::before {
+	content: "\25BC ";
+}
+.config-section-inner {
+	border: none;
+	margin: 0;
+	padding: 0 0.75rem 0.75rem;
+	background: transparent;
+}
+
+.form-actions {
+	margin-top: 1rem;
+	margin-bottom: 1rem;
+}
+
+.result-area {
+	margin-top: 1rem;
+	white-space: pre-wrap;
+	font-size: 0.875rem;
+	min-height: 1.5em;
+}
+.result-area.error {
+	color: #c00;
+}
+
+.output-area {
+	margin-top: 1rem;
+}
+.output-block {
+	margin-bottom: 1rem;
+}
+.output-block > label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 0.35rem;
+	font-size: 0.875rem;
+}
+.output-pre {
+	background: #f5f8fa;
+	border: 1px solid #e0e4e8;
+	border-radius: 4px;
+	padding: 0.75rem 1rem;
+	font-size: 0.8125rem;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	word-break: break-all;
+	margin: 0;
+}
+.output-yaml,
+.output-json {
+	font-family: ui-monospace, monospace;
+}
+
+.output-details {
+	margin-top: 0.35rem;
+	border: 1px solid #e0e4e8;
+	border-radius: 4px;
+	background: #fff;
+}
+.output-details summary {
+	padding: 0.4rem 0.75rem;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.875rem;
+	list-style: none;
+}
+.output-details summary::-webkit-details-marker {
+	display: none;
+}
+.output-details summary::before {
+	content: "\25B6 ";
+	font-size: 0.7em;
+	margin-right: 0.25rem;
+}
+.output-details[open] summary::before {
+	content: "\25BC ";
+}
+.output-details .output-pre {
+	margin: 0;
+	border-radius: 0 0 4px 4px;
+}
+
+.actions-area {
+	margin-top: 1rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+.actions-area .pure-button {
+	margin-right: 0.25rem;
+}
+
+button:focus-visible,
+.pure-link:focus-visible {
+	outline: 2px solid #0078e7;
+	outline-offset: 2px;
+}
