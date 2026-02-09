@@ -1,5 +1,7 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+github.com/DATA-DOG/go-sqlmock v1.5.2 h1:OcvFkGmslmlZibjAjaHm3L//6LiuBgolP7OputlJIzU=
+github.com/DATA-DOG/go-sqlmock v1.5.2/go.mod h1:88MAG/4G7SMwSE3CeA0ZKzrT5CiOU3OJ+JlNzwDqpNU=
 github.com/alicebob/miniredis/v2 v2.36.1 h1:Dvc5oAnNOr7BIfPn7tF269U8DvRW1dBG2D5n0WrfYMI=
 github.com/alicebob/miniredis/v2 v2.36.1/go.mod h1:TcL7YfarKPGDAthEtl5NBeHZfeUQj6OXMm/+iu5cLMM=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
@@ -92,8 +94,8 @@ github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7
 github.com/rs/xid v1.6.0/go.mod h1:7XoLgs4eV+QndskICGsho+ADou8ySMSjJKDIan90Nz0=
 github.com/rs/zerolog v1.34.0 h1:k43nTLIwcTVQAncfCw4KZ2VY6ukYoZaBPNOE8txlOeY=
 github.com/rs/zerolog v1.34.0/go.mod h1:bJsvje4Z08ROH4Nhs5iH600c3IkWhwp44iRc54W6wYQ=
-github.com/soulteary/audit-kit v1.0.0 h1:YT+KoL4+UjHsLUy9+YhpSL3voxf326Rk36h2DTKzCUY=
-github.com/soulteary/audit-kit v1.0.0/go.mod h1:yPvw+42wEhUFQvGaJGilEwS90L8zdBtawuec1OGlPx4=
+github.com/soulteary/audit-kit v1.1.0 h1:AFk6qtJgOYV1aEgNAF+hFKVm/bsGFHz1MBYfJxyWATY=
+github.com/soulteary/audit-kit v1.1.0/go.mod h1:eNTVQLZrj+UqA4Y4FApEBKLwwfaR6zWFb8Oba5XjvEI=
 github.com/soulteary/cli-kit v1.3.1 h1:8aFmxsCSPpwcFnFxTp4WY77jbIvXNykO//NDfUjhLTw=
 github.com/soulteary/cli-kit v1.3.1/go.mod h1:Z32KzEtl9FEFtKAsGhekTzPMUcg7Js7YvJzIyT/8Urk=
 github.com/soulteary/health-kit v1.1.0 h1:RVAV8ixbYtscQ2WyMwD42juksbjUgUJ/1QUD1Q5Q8PQ=
