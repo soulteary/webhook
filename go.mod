@@ -1,6 +1,6 @@
 module github.com/soulteary/webhook
 
-go 1.25.4
+go 1.26.0
 
 require (
 	github.com/clbanning/mxj/v2 v2.7.0
@@ -10,7 +10,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/soulteary/audit-kit v1.1.0
-	github.com/soulteary/cli-kit v1.4.0
+	github.com/soulteary/cli-kit v1.5.0
 	github.com/soulteary/health-kit v1.1.0
 	github.com/soulteary/i18n-kit v1.0.0
 	github.com/soulteary/logger-kit v1.3.0
