@@ -1,6 +1,6 @@
 module github.com/soulteary/webhook
 
-go 1.25.4
+go 1.26.0
 
 require (
 	github.com/clbanning/mxj/v2 v2.7.0
@@ -19,7 +19,7 @@ require (
 	github.com/soulteary/redis-kit v1.1.0
 	github.com/soulteary/secure-kit v1.2.0
 	github.com/soulteary/tracing-kit v1.0.1
-	github.com/soulteary/version-kit v1.1.0
+	github.com/soulteary/version-kit v1.2.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.40.0
 	go.opentelemetry.io/otel/trace v1.40.0

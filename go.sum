@@ -114,8 +114,8 @@ github.com/soulteary/secure-kit v1.2.0 h1:dNuMiLvb/GcEs/tSn6Wk3PiaBN84AY3yDc3GO/
 github.com/soulteary/secure-kit v1.2.0/go.mod h1:ropjgvnMJddZPdJvyfpBqkp0OYJkOHi+sqUUUmwdISM=
 github.com/soulteary/tracing-kit v1.0.1 h1:TksQHkDE4u79sqjEPP5sNmsIOeKrnYVtQN7FjPYowWk=
 github.com/soulteary/tracing-kit v1.0.1/go.mod h1:gYw/iBOq0hFtBFzkq+upnrFN7iAfjYe18cISCO/BYto=
-github.com/soulteary/version-kit v1.1.0 h1:K8RiqCzX8/sWEpkNO+0Se/kKm7xAM7buG+OiwZVhVnQ=
-github.com/soulteary/version-kit v1.1.0/go.mod h1:oIIYE4eTeAYIBZMvC8j4KCwHbJKn73cMrTC6Onw98PA=
+github.com/soulteary/version-kit v1.2.0 h1:2L5W3/lO22oRj1gpV04FzGURqIVune2msKLfgAB0mgU=
+github.com/soulteary/version-kit v1.2.0/go.mod h1:XQTv5vKqVTAM1Foa+tu/W7hezpes8DxIZWKmTk15hB8=
 github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
 github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
