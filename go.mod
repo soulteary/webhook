@@ -5,7 +5,7 @@ go 1.25.4
 require (
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/gofiber/fiber/v2 v2.52.11
+	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/invopop/yaml v0.3.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.18.0
