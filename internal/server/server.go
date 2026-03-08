@@ -225,8 +225,21 @@ func parseRequestBody(w http.ResponseWriter, r *http.Request, req *hook.Request,
 
 // handleMultipartForm 处理 multipart 表单数据
 func handleMultipartForm(w http.ResponseWriter, r *http.Request, req *hook.Request, matchedHook *hook.Hook, appFlags flags.AppFlags, requestID, hookID string) error {
+	// 限制请求体大小以防止内存耗尽（与 parseRequestBody 中非 multipart 路径一致）
+	maxBodySize := appFlags.MaxRequestBodySize
+	if maxBodySize <= 0 {
+		maxBodySize = flags.DEFAULT_MAX_REQUEST_BODY_SIZE
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+
 	err := r.ParseMultipartForm(appFlags.MaxMultipartMem)
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusRequestEntityTooLarge,
+				fmt.Sprintf("Request body too large: maximum size is %d bytes", maxBodySize), err), requestID, hookID)
+			return err
+		}
 		HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
 			"Error occurred while parsing multipart form.", err), requestID, hookID)
 		return err
