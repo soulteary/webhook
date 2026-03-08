@@ -14,7 +14,7 @@ var watcher *fsnotify.Watcher
 func ApplyWatcher(appFlags flags.AppFlags) {
 	// -hooks-dir: watch directory for new/changed/removed hook config files (including when dir is empty)
 	if appFlags.HooksDir != "" {
-		if err := os.MkdirAll(appFlags.HooksDir, 0755); err != nil {
+		if err := os.MkdirAll(appFlags.HooksDir, 0750); err != nil {
 			logger.Fatalf("error creating hooks-dir %s: %v", appFlags.HooksDir, err)
 		}
 		go WatchDir(appFlags.HooksDir, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic)
