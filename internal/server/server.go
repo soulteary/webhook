@@ -464,6 +464,7 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 			logger.Errorf("[%s] hook %s execution failed (command: %s): %v, output captured", requestID, hookID, matchedHook.ExecuteCommand, err)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusInternalServerError)
+			// #nosec G705 -- response is command stdout/stderr, returned as text/plain; not interpreted as HTML
 			_, _ = fmt.Fprint(w, response)
 		} else {
 			// 为了保持向后兼容性，使用特定的错误消息
@@ -484,10 +485,12 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 		// 记录审计日志：执行成功
 		audit.LogHookExecuted(requestID, hookID, ip, userAgent, durationMS)
 
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		// Check if a success return code is configured for the hook
 		if matchedHook.SuccessHttpResponseCode != 0 {
 			writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
 		}
+		// #nosec G705 -- response is command stdout/stderr, returned as text/plain; not interpreted as HTML
 		_, _ = fmt.Fprint(w, response)
 	}
 }
