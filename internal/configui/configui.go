@@ -364,7 +364,7 @@ func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
 		writeJSONError(w, http.StatusBadRequest, "invalid path")
 		return
 	}
-	if err := os.MkdirAll(writeDir, 0755); err != nil {
+	if err := os.MkdirAll(writeDir, 0750); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to create directory: "+err.Error())
 		return
 	}
