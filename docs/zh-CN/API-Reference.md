@@ -81,7 +81,33 @@ curl http://localhost:9000/metrics
 
 ---
 
-### 4. Hook 执行端点
+### 4. OpenAPI 规范端点（可选）
+
+**端点:** `GET /openapi`（或通过 `-openapi-path` 自定义路径）
+
+**可用性:** 仅当使用 `-openapi` 参数（或 `OPENAPI_ENABLED=true`）启动服务时可用。默认不暴露，建议仅在调试或内网使用。
+
+**描述:** 返回 Webhook HTTP API 的 OpenAPI 3.0.x 规范（JSON），可用于 Swagger UI、Swagger Editor 或客户端代码生成。
+
+**响应:**
+- **状态码:** `200 OK`
+- **Content-Type:** `application/json; charset=utf-8`
+- **响应体:** 描述 `/`、`/health`、`/livez`、`/readyz`、`/version`、`/metrics` 及 `/hooks/{id}`（或自定义 hook 前缀）的 OpenAPI 3.0.3 文档。
+
+**示例:**
+```bash
+# 启用 OpenAPI 后启动服务
+./webhook -hooks hooks.json -openapi
+
+# 获取规范
+curl http://localhost:9000/openapi
+```
+
+也可使用 `-openapi-print` 在启动时将规范打印到 stdout（例如 `./webhook -openapi -openapi-print > openapi.json`）。
+
+---
+
+### 5. Hook 执行端点
 
 **端点:** `POST|GET|PUT|DELETE /hooks/{hook-id}`
 

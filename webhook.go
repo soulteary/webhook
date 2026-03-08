@@ -13,6 +13,7 @@ import (
 	"github.com/soulteary/webhook/internal/i18n"
 	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/monitor"
+	"github.com/soulteary/webhook/internal/openapi"
 	"github.com/soulteary/webhook/internal/pidfile"
 	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/rules"
@@ -204,6 +205,15 @@ func main() {
 
 	if appFlags.HotReload {
 		monitor.ApplyWatcher(appFlags)
+	}
+
+	if appFlags.OpenAPIEnabled && appFlags.OpenAPIPrint {
+		spec, err := openapi.Spec(appFlags, "http://"+addr)
+		if err != nil {
+			logger.Warnf("openapi spec generation failed: %v", err)
+		} else {
+			fmt.Print(string(spec))
+		}
 	}
 
 	// 启动服务器

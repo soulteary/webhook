@@ -252,7 +252,7 @@ func buildWebhook(t *testing.T) (binPath string, cleanupFn func()) {
 		t.Fatalf("Building webhook: %v", err)
 	}
 
-	return binPath, func() { os.RemoveAll(tmp) }
+	return binPath, func() { _ = os.RemoveAll(tmp) }
 }
 
 func serverAddress(t *testing.T) (string, string) {
@@ -263,7 +263,7 @@ func serverAddress(t *testing.T) (string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 	host, port, err := net.SplitHostPort(ln.Addr().String())
 	if err != nil {
 		t.Fatalf("Failed to split network address: %v", err)
@@ -296,7 +296,7 @@ func waitForServer(t *testing.T, url string, status int, timeout time.Duration) 
 		}
 		// Always close the response body to prevent resource leaks
 		statusCode := res.StatusCode
-		res.Body.Close()
+		_ = res.Body.Close()
 
 		if statusCode == status {
 			return
@@ -314,8 +314,8 @@ func killAndWait(cmd *exec.Cmd) {
 		return
 	}
 
-	cmd.Process.Kill()
-	cmd.Wait()
+	_ = cmd.Process.Kill()
+	_ = cmd.Wait()
 }
 
 // webhookEnv returns the process environment without any existing hook

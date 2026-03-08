@@ -165,7 +165,7 @@ func HandleError(w http.ResponseWriter, r *http.Request, err error, requestID, h
 		// 如果JSON编码失败，回退到纯文本
 		logger.Errorf("[%s] error encoding error response to JSON: %v", requestID, jsonErr)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		fmt.Fprintf(w, "%s: %s", errorResp.Error, errorResp.Message)
+		_, _ = fmt.Fprintf(w, "%s: %s", errorResp.Error, errorResp.Message)
 	}
 }
 
@@ -185,7 +185,7 @@ func HandleErrorPlain(w http.ResponseWriter, err error, requestID, hookID string
 
 	// 写入状态码和响应体
 	w.WriteHeader(httpErr.Status)
-	fmt.Fprint(w, httpErr.Message)
+	_, _ = fmt.Fprint(w, httpErr.Message)
 }
 
 // HandleErrorWithCustomMessage 处理错误并使用自定义消息
@@ -208,7 +208,7 @@ func HandleErrorWithCustomMessage(w http.ResponseWriter, err error, requestID, h
 
 	// 写入状态码和响应体
 	w.WriteHeader(httpErr.Status)
-	fmt.Fprint(w, httpErr.Message)
+	_, _ = fmt.Fprint(w, httpErr.Message)
 }
 
 // logError 记录错误日志（使用结构化日志格式）

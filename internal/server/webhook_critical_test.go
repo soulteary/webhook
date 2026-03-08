@@ -126,7 +126,7 @@ func TestCreateHookHandler_ConfigFileError(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -212,7 +212,7 @@ func TestConcurrentHookExecution_SameHook(t *testing.T) {
 				results <- 0
 				return
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			results <- resp.StatusCode
 		}(i)
 	}
@@ -279,7 +279,7 @@ func TestConcurrentHookExecution_FileOperations(t *testing.T) {
 				errors <- err
 				return
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			if resp.StatusCode != http.StatusOK {
 				errors <- assert.AnError
 			}
@@ -324,8 +324,8 @@ func TestConcurrentHookExecution_ResourceContention(t *testing.T) {
 	app := testHookApp(handler)
 
 	counterFile := "/tmp/webhook-test-counter"
-	os.Remove(counterFile)
-	defer os.Remove(counterFile)
+	_ = os.Remove(counterFile)
+	defer func() { _ = os.Remove(counterFile) }()
 
 	numRequests := 20
 	var wg sync.WaitGroup
@@ -337,7 +337,7 @@ func TestConcurrentHookExecution_ResourceContention(t *testing.T) {
 			req := httptest.NewRequest("POST", "/hooks/resource-hook", nil)
 			resp, _ := app.Test(req, 5000)
 			if resp != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 		}()
 	}
@@ -404,7 +404,7 @@ func TestCommandInjection_Prevention(t *testing.T) {
 			app := testHookApp(handler)
 			resp, _ := app.Test(req, 5000)
 			if resp != nil {
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 				_ = resp.StatusCode
 			}
 		})
@@ -669,7 +669,7 @@ func BenchmarkConcurrentHookExecution(b *testing.B) {
 			req := httptest.NewRequest("POST", "/hooks/bench-hook", nil)
 			resp, err := app.Test(req, 5000)
 			if err == nil && resp != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 		}
 	})
@@ -725,7 +725,7 @@ func TestLoadTest_MultipleHooks(t *testing.T) {
 				if err != nil {
 					return
 				}
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 				if resp.StatusCode == http.StatusOK {
 					mu.Lock()
 					successCount++
@@ -787,7 +787,7 @@ func TestStressTest_HighConcurrency(t *testing.T) {
 				results <- 0
 				return
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			results <- resp.StatusCode
 		}()
 	}

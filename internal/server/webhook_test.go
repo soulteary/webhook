@@ -183,7 +183,7 @@ func TestCreateHookHandler_HookNotFound(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -208,7 +208,7 @@ func TestCreateHookHandler_MethodNotAllowed(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
 }
@@ -234,14 +234,14 @@ func TestCreateHookHandler_AppFlagsHttpMethods(t *testing.T) {
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	assert.NotEqual(t, http.StatusMethodNotAllowed, resp.StatusCode)
 
 	// Test with disallowed method
 	req2 := httptest.NewRequest("GET", "/hooks/test-hook", nil)
 	resp2, err := app.Test(req2, 5000)
 	require.NoError(t, err)
-	defer resp2.Body.Close()
+	defer func() { _ = resp2.Body.Close() }()
 	assert.Equal(t, http.StatusMethodNotAllowed, resp2.StatusCode)
 }
 
@@ -374,7 +374,7 @@ func TestCreateHookHandler_JSONContentType(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -399,7 +399,7 @@ func TestCreateHookHandler_XMLContentType(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -424,7 +424,7 @@ func TestCreateHookHandler_FormUrlEncodedContentType(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -449,7 +449,7 @@ func TestCreateHookHandler_UnsupportedContentType(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -474,7 +474,7 @@ func TestCreateHookHandler_WithTriggerRule(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 
 	assert.Contains(t, string(body), "success")
@@ -502,7 +502,7 @@ func TestCreateHookHandler_WithResponseHeaders(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, "custom-value", resp.Header.Get("X-Custom-Header"))
 }
@@ -670,8 +670,8 @@ func TestCreateHookHandler_MultipartForm(t *testing.T) {
 	// Create multipart form data
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("key", "value")
-	writer.Close()
+	_ = writer.WriteField("key", "value")
+	_ = writer.Close()
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -679,7 +679,7 @@ func TestCreateHookHandler_MultipartForm(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -710,8 +710,8 @@ func TestCreateHookHandler_MultipartFormWithFile(t *testing.T) {
 
 	// Add a JSON file part
 	part, _ := writer.CreateFormFile("payload", "payload.json")
-	part.Write([]byte(`{"key":"value"}`))
-	writer.Close()
+	_, _ = part.Write([]byte(`{"key":"value"}`))
+	_ = writer.Close()
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -719,7 +719,7 @@ func TestCreateHookHandler_MultipartFormWithFile(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -746,8 +746,8 @@ func TestCreateHookHandler_MultipartFormError(t *testing.T) {
 	writer := multipart.NewWriter(body)
 	// Write a large field that will exceed the 1 byte limit
 	largeData := strings.Repeat("x", 10000)
-	writer.WriteField("key", largeData)
-	writer.Close()
+	_ = writer.WriteField("key", largeData)
+	_ = writer.Close()
 
 	req := httptest.NewRequest("POST", "/hooks/test-hook", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -755,7 +755,7 @@ func TestCreateHookHandler_MultipartFormError(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	bodyBytes, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode == http.StatusInternalServerError {
@@ -788,7 +788,7 @@ func TestCreateHookHandler_ReadBodyError(t *testing.T) {
 		t.Skip("app.Test fails when body reader returns error:", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -820,7 +820,7 @@ func TestCreateHookHandler_TriggerRuleError(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -858,7 +858,7 @@ func TestCreateHookHandler_StreamCommandOutputError(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 }
@@ -897,7 +897,7 @@ func TestCreateHookHandler_CaptureOutputOnError(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -934,7 +934,7 @@ func TestCreateHookHandler_TriggerRuleMismatchHttpResponseCode(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 
 	assert.Equal(t, 400, resp.StatusCode)
@@ -962,7 +962,7 @@ func TestCreateHookHandler_SuccessHttpResponseCode(t *testing.T) {
 	app := testHookApp(handler)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 201, resp.StatusCode)
 }
@@ -1053,7 +1053,7 @@ func TestTrackingResponseWriter(t *testing.T) {
 	// WriteHeader after Write should not change status
 	w3 := httptest.NewRecorder()
 	trw3 := &trackingResponseWriter{ResponseWriter: w3}
-	trw3.Write([]byte("test"))
+	_, _ = trw3.Write([]byte("test"))
 	trw3.WriteHeader(http.StatusInternalServerError)
 	assert.Equal(t, http.StatusOK, w3.Code) // Should remain 200
 }

@@ -81,7 +81,33 @@ curl http://localhost:9000/metrics
 
 ---
 
-### 4. Hook Execution Endpoint
+### 4. OpenAPI Specification Endpoint (Optional)
+
+**Endpoint:** `GET /openapi` (or custom path via `-openapi-path`)
+
+**Availability:** Only when the server is started with the `-openapi` flag (or `OPENAPI_ENABLED=true`). Not exposed by default. Recommend use only for debugging or intranet.
+
+**Description:** Returns the OpenAPI 3.0.x specification (JSON) for the webhook HTTP API. Use with Swagger UI, Swagger Editor, or client code generators.
+
+**Response:**
+- **Status Code:** `200 OK`
+- **Content-Type:** `application/json; charset=utf-8`
+- **Body:** OpenAPI 3.0.3 document describing `/`, `/health`, `/livez`, `/readyz`, `/version`, `/metrics`, and `/hooks/{id}` (or custom hook prefix).
+
+**Example:**
+```bash
+# Start server with OpenAPI enabled
+./webhook -hooks hooks.json -openapi
+
+# Fetch the spec
+curl http://localhost:9000/openapi
+```
+
+You can also print the spec to stdout at startup with `-openapi-print` (e.g. `./webhook -openapi -openapi-print > openapi.json`).
+
+---
+
+### 5. Hook Execution Endpoint
 
 **Endpoint:** `POST|GET|PUT|DELETE /hooks/{hook-id}`
 

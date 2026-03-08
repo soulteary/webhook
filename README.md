@@ -13,7 +13,7 @@
 - ⚡ **High Performance**: Configurable concurrency, rate limiting (including Redis-backed distributed), and optimized request handling
 - 🎯 **Flexible Configuration**: Support for JSON and YAML configuration files with Go template support
 - 🔐 **Advanced Authentication**: Multiple trigger rule types including HMAC signature validation, IP whitelisting, and custom rules
-- 📊 **Observability**: Built-in Prometheus metrics, health check endpoint, OpenTelemetry tracing, audit logging, and comprehensive logging
+- 📊 **Observability**: Built-in Prometheus metrics, health check endpoint, optional OpenAPI spec (for Swagger/client generation), OpenTelemetry tracing, audit logging, and comprehensive logging
 - 🐳 **Container Ready**: Official Docker images with multiple variants
 - 🌍 **Internationalization**: Full support for English and Chinese documentation
 - 🔄 **Hot Reload**: Update hook configurations without restarting the server

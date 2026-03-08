@@ -34,41 +34,41 @@ const (
 )
 
 type pageData struct {
-	I18N            template.JS
-	Title           string
-	Lang            string
-	ConfigSections  []configSection
+	I18N           template.JS
+	Title          string
+	Lang           string
+	ConfigSections []configSection
 }
 
 type configSection struct {
-	TitleKey   string         `yaml:"titleKey"`
-	Options    []configOption `yaml:"options"`
-	Collapsible bool         `yaml:"collapsible"`
+	TitleKey    string         `yaml:"titleKey"`
+	Options     []configOption `yaml:"options"`
+	Collapsible bool           `yaml:"collapsible"`
 }
 
 type configOption struct {
-	Type       string `yaml:"type"`
-	ID         string `yaml:"id"`
-	Name       string `yaml:"name"`
-	LabelKey   string `yaml:"labelKey"`
-	DescKey    string `yaml:"descKey"`
+	Type        string `yaml:"type"`
+	ID          string `yaml:"id"`
+	Name        string `yaml:"name"`
+	LabelKey    string `yaml:"labelKey"`
+	DescKey     string `yaml:"descKey"`
 	Placeholder string `yaml:"placeholder"`
-	Default    string `yaml:"default"`
+	Default     string `yaml:"default"`
 }
 
 type pageYAML struct {
 	I18N           map[string]map[string]string `yaml:"i18n"`
-	ConfigSections []configSection             `yaml:"configSections"`
+	ConfigSections []configSection              `yaml:"configSections"`
 }
 
 type generateRequest struct {
-	ID                              string `json:"id"`
-	ExecuteCommand                  string `json:"execute-command"`
+	ID                             string `json:"id"`
+	ExecuteCommand                 string `json:"execute-command"`
 	CommandWorkingDirectory        string `json:"command-working-directory"`
 	ResponseMessage                string `json:"response-message"`
 	HTTPMethods                    string `json:"http-methods"` // comma-separated or single
 	SuccessHTTPResponseCode        int    `json:"success-http-response-code"`
-	IncludeCommandOutputInResponse  bool   `json:"include-command-output-in-response"`
+	IncludeCommandOutputInResponse bool   `json:"include-command-output-in-response"`
 	WebhookBaseURL                 string `json:"webhook_base_url"` // e.g. http://localhost:9000
 	ResponseHeadersJSON            string `json:"response-headers"`
 	PassArgumentsToCommandJSON     string `json:"pass-arguments-to-command"`
@@ -181,14 +181,14 @@ func requestToHook(req *generateRequest) *hook.Hook {
 		return nil
 	}
 	h := &hook.Hook{
-		ID:                          strings.TrimSpace(req.ID),
-		ExecuteCommand:              strings.TrimSpace(req.ExecuteCommand),
-		CommandWorkingDirectory:     strings.TrimSpace(req.CommandWorkingDirectory),
-		ResponseMessage:             strings.TrimSpace(req.ResponseMessage),
-		HTTPMethods:                 parseHTTPMethods(req.HTTPMethods),
-		SuccessHttpResponseCode:     successCode(req.SuccessHTTPResponseCode),
-		CaptureCommandOutput:        req.IncludeCommandOutputInResponse,
-		IncomingPayloadContentType:  strings.TrimSpace(req.IncomingPayloadContentType),
+		ID:                         strings.TrimSpace(req.ID),
+		ExecuteCommand:             strings.TrimSpace(req.ExecuteCommand),
+		CommandWorkingDirectory:    strings.TrimSpace(req.CommandWorkingDirectory),
+		ResponseMessage:            strings.TrimSpace(req.ResponseMessage),
+		HTTPMethods:                parseHTTPMethods(req.HTTPMethods),
+		SuccessHttpResponseCode:    successCode(req.SuccessHTTPResponseCode),
+		CaptureCommandOutput:       req.IncludeCommandOutputInResponse,
+		IncomingPayloadContentType: strings.TrimSpace(req.IncomingPayloadContentType),
 	}
 	if req.ResponseHeadersJSON != "" {
 		var headers []hook.Header

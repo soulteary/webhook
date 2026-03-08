@@ -75,6 +75,11 @@ const (
 	DEFAULT_AUDIT_QUEUE_SIZE   = 1000
 	DEFAULT_AUDIT_WORKERS      = 2
 	DEFAULT_AUDIT_MASK_IP      = true
+
+	// OpenAPI defaults
+	DEFAULT_OPENAPI_ENABLED = false
+	DEFAULT_OPENAPI_PATH    = "/openapi"
+	DEFAULT_OPENAPI_PRINT   = false
 )
 
 const (
@@ -149,6 +154,11 @@ const (
 	ENV_KEY_AUDIT_QUEUE_SIZE   = "AUDIT_QUEUE_SIZE"
 	ENV_KEY_AUDIT_WORKERS      = "AUDIT_WORKERS"
 	ENV_KEY_AUDIT_MASK_IP      = "AUDIT_MASK_IP"
+
+	// OpenAPI environment keys
+	ENV_KEY_OPENAPI_ENABLED = "OPENAPI_ENABLED"
+	ENV_KEY_OPENAPI_PATH    = "OPENAPI_PATH"
+	ENV_KEY_OPENAPI_PRINT   = "OPENAPI_PRINT"
 )
 
 type AppFlags struct {
@@ -225,4 +235,9 @@ type AppFlags struct {
 	AuditQueueSize   int    // 异步写入队列大小
 	AuditWorkers     int    // 异步写入工作协程数
 	AuditMaskIP      bool   // 是否对 IP 地址进行脱敏
+
+	// OpenAPI settings
+	OpenAPIEnabled bool   // 是否启用 OpenAPI 规范（GET 路径或打印）
+	OpenAPIPath    string // OpenAPI 规范 HTTP 路径（默认 /openapi）
+	OpenAPIPrint   bool   // 是否在启动时将规范打印到 stdout
 }

@@ -261,7 +261,7 @@ func handleMultipartForm(w http.ResponseWriter, r *http.Request, req *hook.Reque
 
 				var part map[string]interface{}
 				err = decoder.Decode(&part)
-				f.Close() // 立即关闭文件句柄
+				_ = f.Close() // 立即关闭文件句柄
 
 				if err != nil {
 					logger.Warnf("[%s] error parsing JSON payload file %q[%d] for hook %s: %v", requestID, k, i, hookID, err)
@@ -320,7 +320,7 @@ func evaluateTriggerRules(w http.ResponseWriter, matchedHook *hook.Hook, req *ho
 			logger.Errorf("[%s] error evaluating hook %s trigger rules: %v", requestID, hookID, err)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "Error occurred while evaluating hook rules.")
+			_, _ = fmt.Fprint(w, "Error occurred while evaluating hook rules.")
 			return false, err
 		}
 		// 参数节点错误只记录日志，不阻止请求继续（可能是可选参数）
@@ -399,17 +399,17 @@ func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 				logger.Errorf("[%s] hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
 				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 				w.WriteHeader(http.StatusRequestTimeout)
-				fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
+				_, _ = fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
 			} else if errors.Is(err, context.Canceled) {
 				logger.Warnf("[%s] hook %s execution cancelled (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 				w.WriteHeader(http.StatusRequestTimeout)
-				fmt.Fprint(w, "Hook execution cancelled. Please check your logs for more details.")
+				_, _ = fmt.Fprint(w, "Hook execution cancelled. Please check your logs for more details.")
 			} else {
 				logger.Errorf("[%s] error executing hook %s (command: %s): %v", requestID, hookID, matchedHook.ExecuteCommand, err)
 				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
+				_, _ = fmt.Fprint(w, "Error occurred while executing the hook's stream command. Please check your logs for more details.")
 			}
 		} else {
 			// 如果已经开始输出，只能记录错误，无法设置状态码
@@ -464,7 +464,7 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 			logger.Errorf("[%s] hook %s execution failed (command: %s): %v, output captured", requestID, hookID, matchedHook.ExecuteCommand, err)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, response)
+			_, _ = fmt.Fprint(w, response)
 		} else {
 			// 为了保持向后兼容性，使用特定的错误消息
 			// 检查错误消息中是否包含 "exec:"，如果是，使用 "error in exec:" 格式以匹配测试期望
@@ -476,7 +476,7 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 			}
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
+			_, _ = fmt.Fprint(w, "Error occurred while executing the hook's command. Please check your logs for more details.")
 		}
 	} else {
 		// 记录成功的 hook 执行
@@ -488,7 +488,7 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 		if matchedHook.SuccessHttpResponseCode != 0 {
 			writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
 		}
-		fmt.Fprint(w, response)
+		_, _ = fmt.Fprint(w, response)
 	}
 }
 
@@ -542,7 +542,7 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 		writeHttpResponseCode(w, requestID, matchedHook.ID, matchedHook.SuccessHttpResponseCode)
 	}
 
-	fmt.Fprint(w, matchedHook.ResponseMessage)
+	_, _ = fmt.Fprint(w, matchedHook.ResponseMessage)
 }
 
 func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.ResponseWriter, r *http.Request) {
@@ -593,7 +593,7 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			statusCode = http.StatusServiceUnavailable
 			wrappedWriter.WriteHeader(statusCode)
-			fmt.Fprint(w, "Server is shutting down. Please try again later.")
+			_, _ = fmt.Fprint(w, "Server is shutting down. Please try again later.")
 			return
 		}
 
@@ -685,7 +685,7 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 		// 记录审计日志：触发规则不满足
 		audit.LogRulesNotSatisfied(requestID, matchedHook.ID, r.RemoteAddr, r.UserAgent())
 
-		fmt.Fprint(wrappedWriter, "Hook rules were not satisfied.")
+		_, _ = fmt.Fprint(wrappedWriter, "Hook rules were not satisfied.")
 	}
 }
 

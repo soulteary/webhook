@@ -87,6 +87,11 @@ func ParseConfig() AppFlags {
 	fs.Int("audit-workers", DEFAULT_AUDIT_WORKERS, "number of audit async write workers (default 2)")
 	fs.Bool("audit-mask-ip", DEFAULT_AUDIT_MASK_IP, "mask IP addresses in audit logs (default true)")
 
+	// OpenAPI flags (recommend only for debugging or intranet)
+	fs.Bool("openapi", DEFAULT_OPENAPI_ENABLED, "enable OpenAPI spec: serve at openapi-path and/or print to stdout; recommend only for debugging or intranet (default false)")
+	fs.String("openapi-path", DEFAULT_OPENAPI_PATH, "HTTP path for OpenAPI spec when openapi is enabled (default /openapi)")
+	fs.Bool("openapi-print", DEFAULT_OPENAPI_PRINT, "print OpenAPI spec to stdout at startup when openapi is enabled (default false)")
+
 	showVersion := fs.Bool("version", false, "display webhook version and quit")
 	validateConfig := fs.Bool("validate-config", false, "validate configuration and exit")
 
@@ -180,6 +185,11 @@ func ParseConfig() AppFlags {
 	flags.AuditQueueSize = configutil.ResolveInt(fs, "audit-queue-size", ENV_KEY_AUDIT_QUEUE_SIZE, DEFAULT_AUDIT_QUEUE_SIZE, false)
 	flags.AuditWorkers = configutil.ResolveInt(fs, "audit-workers", ENV_KEY_AUDIT_WORKERS, DEFAULT_AUDIT_WORKERS, false)
 	flags.AuditMaskIP = configutil.ResolveBool(fs, "audit-mask-ip", ENV_KEY_AUDIT_MASK_IP, DEFAULT_AUDIT_MASK_IP)
+
+	// OpenAPI settings
+	flags.OpenAPIEnabled = configutil.ResolveBool(fs, "openapi", ENV_KEY_OPENAPI_ENABLED, DEFAULT_OPENAPI_ENABLED)
+	flags.OpenAPIPath = configutil.ResolveString(fs, "openapi-path", ENV_KEY_OPENAPI_PATH, DEFAULT_OPENAPI_PATH, true)
+	flags.OpenAPIPrint = configutil.ResolveBool(fs, "openapi-print", ENV_KEY_OPENAPI_PRINT, DEFAULT_OPENAPI_PRINT)
 
 	// Special flags
 	flags.ShowVersion = *showVersion

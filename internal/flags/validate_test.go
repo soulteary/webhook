@@ -151,11 +151,11 @@ func TestValidate_LogPath(t *testing.T) {
 			hasError: true,
 			setup: func() string {
 				dir := filepath.Join(tempDir, "nowrite")
-				os.Mkdir(dir, 0400) // read-only
+				_ = os.Mkdir(dir, 0400) // read-only
 				return dir
 			},
 			cleanup: func(dir string) {
-				os.Chmod(dir, 0755)
+				_ = os.Chmod(dir, 0755)
 			},
 		},
 	}

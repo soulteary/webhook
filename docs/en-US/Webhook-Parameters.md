@@ -130,6 +130,16 @@ This document describes all available command-line parameters and environment va
 | `-audit-workers int` | Number of audit async write workers | `2` |
 | `-audit-mask-ip` | Mask IP addresses in audit logs | `true` |
 
+### OpenAPI
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-openapi` | Enable OpenAPI spec: serve at openapi-path and/or print to stdout; recommend only for debugging or intranet | `false` |
+| `-openapi-path string` | HTTP path for OpenAPI spec when openapi is enabled | `/openapi` |
+| `-openapi-print` | Print OpenAPI spec to stdout at startup when openapi is enabled | `false` |
+
+*Note:* When `-openapi` is set, the spec is available via GET at `-openapi-path` (e.g. `/openapi`) and can be used with Swagger UI or client code generation. Use only in debugging or intranet environments. Do not set `-openapi-path` to a reserved path (e.g. `/`, `/health`, `/version`, `/metrics`, or the hooks prefix like `/hooks`); if you do, the OpenAPI route will not be registered and a warning will be logged.
+
 ### Other
 
 | Flag | Description | Default |
@@ -256,6 +266,14 @@ All command-line parameters can also be set via environment variables:
 | `AUDIT_WORKERS` | `-audit-workers` | Audit async workers | `2` |
 | `AUDIT_MASK_IP` | `-audit-mask-ip` | Mask IP in audit logs | `true` |
 
+### OpenAPI
+
+| Environment Variable | CLI Flag | Description | Default |
+|---------------------|----------|-------------|---------|
+| `OPENAPI_ENABLED` | `-openapi` | Enable OpenAPI spec | `false` |
+| `OPENAPI_PATH` | `-openapi-path` | HTTP path for OpenAPI spec | `/openapi` |
+| `OPENAPI_PRINT` | `-openapi-print` | Print OpenAPI spec to stdout at startup | `false` |
+
 ## Security Best Practices
 
 ### Command Path Whitelisting
@@ -321,6 +339,10 @@ Alternatively, use `-hotreload` (or `HOT_RELOAD=true`) for automatic hot reloadi
   -read-timeout-seconds=30 \
   -write-timeout-seconds=60 \
   -max-concurrent-hooks=20
+
+# With OpenAPI spec (for Swagger UI or client generation; recommend debugging/intranet only)
+./webhook -hooks hooks.json -openapi
+# Or print spec to stdout: ./webhook -hooks hooks.json -openapi -openapi-print > openapi.json
 
 # Using environment variables
 export PORT=8080

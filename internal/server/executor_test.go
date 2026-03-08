@@ -172,7 +172,7 @@ func TestHookExecutor_Execute_AcquisitionTimeout(t *testing.T) {
 
 	// First execution should succeed (acquires semaphore)
 	go func() {
-		executor.Execute(ctx, h, r, nil, 1*time.Second)
+		_, _ = executor.Execute(ctx, h, r, nil, 1*time.Second)
 	}()
 
 	// Give first execution time to acquire semaphore

@@ -86,10 +86,10 @@ func TestValidateOptionalJSON(t *testing.T) {
 
 func TestRequestToHook(t *testing.T) {
 	req := &generateRequest{
-		ID:                 "test-hook",
-		ExecuteCommand:     "/bin/true",
-		ResponseMessage:    "OK",
-		HTTPMethods:        "POST",
+		ID:                      "test-hook",
+		ExecuteCommand:          "/bin/true",
+		ResponseMessage:         "OK",
+		HTTPMethods:             "POST",
 		SuccessHTTPResponseCode: 200,
 	}
 	h := requestToHook(req)

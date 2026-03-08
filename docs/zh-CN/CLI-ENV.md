@@ -243,6 +243,21 @@
 - `-audit-mask-ip`
   在审计日志中脱敏 IP 地址（默认值：`true`）
 
+### OpenAPI
+
+以下参数用于可选地暴露 OpenAPI 规范（便于客户端集成或 Swagger 调试）；**建议仅在调试或内网环境使用**。
+
+- `-openapi`
+  启用 OpenAPI 规范：在 openapi-path 提供 GET 和/或启动时打印到 stdout（默认值：`false`）
+
+- `-openapi-path string`
+  启用 openapi 时，提供 OpenAPI 规范的 HTTP 路径（默认值：`/openapi`）
+  
+  请勿设置为与现有端点冲突的路径（如 `/`、`/health`、`/version`、`/metrics` 等）。
+
+- `-openapi-print`
+  启用 openapi 时，在启动时将规范打印到标准输出（默认值：`false`）
+
 ### 其他
 
 - `-version`
@@ -372,6 +387,14 @@
 | `AUDIT_WORKERS` | `-audit-workers` | 异步写入工作协程数 | `2` |
 | `AUDIT_MASK_IP` | `-audit-mask-ip` | 审计日志中脱敏 IP | `true` |
 
+### OpenAPI
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
+| `OPENAPI_ENABLED` | `-openapi` | 启用 OpenAPI 规范 | `false` |
+| `OPENAPI_PATH` | `-openapi-path` | OpenAPI 规范 HTTP 路径 | `/openapi` |
+| `OPENAPI_PRINT` | `-openapi-print` | 启动时打印规范到 stdout | `false` |
+
 ### 环境变量使用示例
 
 ```bash
@@ -401,6 +424,10 @@ export WRITE_TIMEOUT_SECONDS=60
 export ALLOWED_COMMAND_PATHS="/usr/bin,/opt/scripts"
 export MAX_ARG_LENGTH=1048576
 export STRICT_MODE=true
+
+# 可选：启用 OpenAPI 规范（仅建议在调试或内网使用）
+# export OPENAPI_ENABLED=true
+# export OPENAPI_PRINT=true   # 启动时打印到 stdout
 
 # 运行 webhook
 ./webhook

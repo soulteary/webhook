@@ -22,6 +22,7 @@ import (
 	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/metrics"
 	"github.com/soulteary/webhook/internal/middleware"
+	"github.com/soulteary/webhook/internal/openapi"
 	"github.com/soulteary/webhook/internal/version"
 )
 
@@ -81,7 +82,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 
 	// logger-kit Fiber 中间件
 	if logger.DefaultLogger == nil {
-		logger.Init(true, false, "", false)
+		_ = logger.Init(true, false, "", false)
 	}
 	loggerCfg := loggerkit.DefaultMiddlewareConfig()
 	loggerCfg.Logger = logger.DefaultLogger
@@ -203,9 +204,44 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 			metrics.RecordHTTPRequest(r.Method, "200", "/", time.Since(startTime))
 		}()
 		setResponseHeaders(w, appFlags.ResponseHeaders)
-		fmt.Fprint(w, "OK")
+		_, _ = fmt.Fprint(w, "OK")
 	}
 	app.All("/", adaptor.HTTPHandlerFunc(rootHandler))
+
+	var openapiPathLogged string
+	if appFlags.OpenAPIEnabled {
+		openapiPath := strings.TrimSpace(appFlags.OpenAPIPath)
+		if openapiPath == "" || !strings.HasPrefix(openapiPath, "/") {
+			openapiPath = "/openapi"
+		}
+		hookBaseForReserved := link.MakeBaseURL(&appFlags.HooksURLPrefix)
+		if hookBaseForReserved == "" {
+			hookBaseForReserved = "/hooks"
+		}
+		reservedPaths := []string{"/", "/health", "/livez", "/readyz", "/version", "/metrics", hookBaseForReserved}
+		isReserved := false
+		for _, p := range reservedPaths {
+			if openapiPath == p || (p != "/" && strings.HasPrefix(openapiPath, p+"/")) {
+				isReserved = true
+				break
+			}
+		}
+		if isReserved {
+			logger.Warnf("openapi-path %q conflicts with reserved path; skipping OpenAPI route", openapiPath)
+		} else {
+			specJSON, err := openapi.Spec(appFlags, "http://"+addr)
+			if err != nil {
+				logger.Warnf("openapi spec generation failed: %v", err)
+			} else {
+				body := specJSON
+				app.Get(openapiPath, func(c *fiber.Ctx) error {
+					c.Set("Content-Type", "application/json; charset=utf-8")
+					return c.Send(body)
+				})
+				openapiPathLogged = openapiPath
+			}
+		}
+	}
 
 	s := &Server{
 		app:      app,
@@ -229,6 +265,9 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		logger.Infof("health check endpoints: http://%s/health, http://%s/livez, http://%s/readyz", addr, addr, addr)
 		logger.Infof("version endpoint: http://%s/version", addr)
 		logger.Infof("metrics endpoint: http://%s/metrics", addr)
+		if openapiPathLogged != "" {
+			logger.Infof("openapi spec: http://%s%s", addr, openapiPathLogged)
+		}
 		if err := app.Listener(ln); err != nil {
 			logger.Error(fmt.Sprintf("server error: %v", err))
 		}
