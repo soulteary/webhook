@@ -183,6 +183,72 @@
 	margin-right: 0.25rem;
 }
 
+.next-steps {
+	margin-top: 1.25rem;
+	padding: 0.75rem 1rem;
+	background: #f0f4f8;
+	border: 1px solid #e0e4e8;
+	border-radius: 4px;
+	font-size: 0.875rem;
+}
+.next-steps-title {
+	font-weight: 600;
+	margin: 0 0 0.35rem 0;
+	font-size: 0.875rem;
+}
+.next-steps-list {
+	margin: 0;
+	padding-left: 1.25rem;
+	line-height: 1.5;
+	color: #444;
+}
+.config-item .btn-insert-json {
+	margin-bottom: 0.35rem;
+	font-size: 0.8125rem;
+}
+
+.save-to-dir-block {
+	margin-top: 0.75rem;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem;
+}
+.save-to-dir-block > label {
+	width: 100%;
+	margin-bottom: 0;
+	font-weight: 600;
+	font-size: 0.875rem;
+}
+.save-filename-input {
+	width: 12rem;
+	min-width: 8rem;
+}
+.save-format-select {
+	margin: 0 0.25rem 0 0;
+}
+.save-msg {
+	font-size: 0.875rem;
+	margin-left: 0.25rem;
+}
+@media (max-width: 567px) {
+	.save-to-dir-block {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	.save-to-dir-block > label {
+		width: 100%;
+	}
+	.save-filename-input {
+		width: 100%;
+		min-width: 0;
+	}
+	.save-format-select {
+		margin: 0;
+		width: 100%;
+	}
+}
+
 button:focus-visible,
 .pure-link:focus-visible {
 	outline: 2px solid #0078e7;

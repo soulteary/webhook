@@ -263,6 +263,8 @@
 
 ### Config UI（配置生成 Web UI）
 
+Config UI 是**配置生成器**：用于在浏览器中生成单条 hook 的 YAML/JSON 片段、调用 URL 与 curl 示例，并可（在启用 `-hooks-dir` 时）保存到该目录。不提供配置版本管理、回滚或多用户权限控制；适合本地或内网快速生成/调整配置，详见 [Config UI 说明](../../cmd/README.md)。
+
 以下参数用于启用配置生成 Web UI。运行模式由是否指定 `-hooks` 与是否启用 `-config-ui` 共同决定：
 
 - **仅 Config UI**：启用 `-config-ui` 且未指定 `-hooks`（CLI 与环境变量均无）时，仅启动 Config UI HTTP 服务，默认端口 9080。

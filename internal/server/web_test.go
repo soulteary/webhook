@@ -516,3 +516,117 @@ func TestLaunch_ConfigUIWithCustomURLPrefix(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, result.CallURL, "/events/test-id", "callUrl should use urlprefix 'events'")
 }
+
+func TestLaunch_ConfigUIDisabled_Returns404(t *testing.T) {
+	appFlags := flags.AppFlags{
+		Debug:           false,
+		HttpMethods:     "",
+		HooksURLPrefix:  "hooks",
+		ResponseHeaders: hook.ResponseHeaders{},
+		ConfigUIEnabled: false,
+		ConfigUIPath:    "/config-ui",
+	}
+
+	ln, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	defer func() { _ = ln.Close() }()
+
+	srv := Launch(appFlags, ln.Addr().String(), ln)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	req, err := http.NewRequest("GET", "http://"+ln.Addr().String()+"/config-ui", nil)
+	require.NoError(t, err)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode, "Config UI disabled: /config-ui should 404")
+}
+
+func TestLaunch_ConfigUIPathReserved_SkipsMount(t *testing.T) {
+	appFlags := flags.AppFlags{
+		Debug:           false,
+		HttpMethods:     "",
+		HooksURLPrefix:  "hooks",
+		ResponseHeaders: hook.ResponseHeaders{},
+		ConfigUIEnabled: true,
+		ConfigUIPath:    "/health", // reserved; Config UI must not be mounted
+	}
+
+	ln, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	defer func() { _ = ln.Close() }()
+
+	srv := Launch(appFlags, ln.Addr().String(), ln)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	base := "http://" + ln.Addr().String()
+
+	// /health must remain the health handler (JSON), not Config UI (HTML)
+	reqHealth, err := http.NewRequest("GET", base+"/health", nil)
+	require.NoError(t, err)
+	respHealth, err := client.Do(reqHealth)
+	require.NoError(t, err)
+	defer func() { _ = respHealth.Body.Close() }()
+	assert.Equal(t, http.StatusOK, respHealth.StatusCode)
+	assert.Contains(t, respHealth.Header.Get("Content-Type"), "application/json", "reserved path /health unchanged")
+
+	// /config-ui should 404 when Config UI was skipped due to conflict
+	reqUI, err := http.NewRequest("GET", base+"/config-ui", nil)
+	require.NoError(t, err)
+	respUI, err := client.Do(reqUI)
+	require.NoError(t, err)
+	defer func() { _ = respUI.Body.Close() }()
+	assert.Equal(t, http.StatusNotFound, respUI.StatusCode, "config-ui path was reserved so UI not mounted; /config-ui 404")
+}
+
+func TestLaunch_ConfigUICapabilities(t *testing.T) {
+	appFlags := flags.AppFlags{
+		Debug:           false,
+		HttpMethods:     "",
+		HooksURLPrefix:  "hooks",
+		ResponseHeaders: hook.ResponseHeaders{},
+		ConfigUIEnabled: true,
+		ConfigUIPath:    "/config-ui",
+		HooksDir:        t.TempDir(),
+	}
+
+	ln, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	defer func() { _ = ln.Close() }()
+
+	srv := Launch(appFlags, ln.Addr().String(), ln)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	req, err := http.NewRequest("GET", "http://"+ln.Addr().String()+"/config-ui/api/capabilities", nil)
+	require.NoError(t, err)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var cap map[string]bool
+	err = json.NewDecoder(resp.Body).Decode(&cap)
+	require.NoError(t, err)
+	assert.True(t, cap["saveToDir"], "with HooksDir set, saveToDir should be true")
+}

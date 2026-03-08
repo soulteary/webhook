@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -315,4 +317,142 @@ func firstLine(s string) string {
 		}
 	}
 	return s
+}
+
+func TestHandlerAPIGenerateMethodNotAllowed(t *testing.T) {
+	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "http://test/api/generate", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("GET /api/generate: status %d, want 405", w.Code)
+	}
+}
+
+func TestHandlerAPICapabilitiesMethodNotAllowed(t *testing.T) {
+	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://test/api/capabilities", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("POST /api/capabilities: status %d, want 405", w.Code)
+	}
+}
+
+func TestHandlerAPISaveMethodNotAllowed(t *testing.T) {
+	tmp := t.TempDir()
+	h, err := Handler("/", "http://localhost:9080", tmp, "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "http://test/api/save", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("GET /api/save: status %d, want 405", w.Code)
+	}
+}
+
+func TestHandlerAPISaveNoWriteDir(t *testing.T) {
+	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	body := `{"filename":"hook.yaml","content":"- id: x\n  execute-command: /bin/true"}`
+	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusNotImplemented {
+		t.Errorf("POST /api/save without writeDir: status %d, want 501", w.Code)
+	}
+	var errBody map[string]string
+	if err := json.NewDecoder(w.Body).Decode(&errBody); err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if !strings.Contains(errBody["error"], "hooks-dir") {
+		t.Errorf("error message should mention hooks-dir: %q", errBody["error"])
+	}
+}
+
+func TestHandlerAPISaveBadExtension(t *testing.T) {
+	tmp := t.TempDir()
+	h, err := Handler("/", "http://localhost:9080", tmp, "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	body := `{"filename":"hook.txt","content":"x"}`
+	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("POST /api/save with .txt: status %d, want 400", w.Code)
+	}
+}
+
+func TestHandlerAPISavePathTraversal(t *testing.T) {
+	tmp := t.TempDir()
+	h, err := Handler("/", "http://localhost:9080", tmp, "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	body := `{"filename":"../../../etc/passwd","content":"x"}`
+	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("POST /api/save with path traversal: status %d, want 400", w.Code)
+	}
+	_, err = os.Stat(filepath.Join(tmp, "../../../etc/passwd"))
+	if err == nil {
+		t.Error("path traversal must not create file outside writeDir")
+	}
+}
+
+func TestHandlerAPISaveSuccess(t *testing.T) {
+	tmp := t.TempDir()
+	h, err := Handler("/config-ui", "http://localhost:9000", tmp, "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	content := `- id: saved-hook
+  execute-command: /bin/true
+`
+	body := `{"filename":"my-hook.yaml","content":` + jsonEscape(content) + `}`
+	req := httptest.NewRequest(http.MethodPost, "http://test/config-ui/api/save", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("POST /config-ui/api/save: status %d, body: %s", w.Code, w.Body.Bytes())
+		return
+	}
+	var res map[string]string
+	if err := json.NewDecoder(w.Body).Decode(&res); err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if res["ok"] == "" {
+		t.Errorf("response missing ok path: %v", res)
+	}
+	target := filepath.Join(tmp, "my-hook.yaml")
+	if _, err := os.Stat(target); err != nil {
+		t.Errorf("file not created: %v", err)
+	}
+	data, _ := os.ReadFile(target)
+	if !strings.Contains(string(data), "saved-hook") {
+		t.Errorf("file content unexpected: %s", data)
+	}
+}
+
+func jsonEscape(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
 }

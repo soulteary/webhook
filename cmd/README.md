@@ -4,6 +4,12 @@
 
 **同一套 UI 也可在主程序中启用**：使用 `./webhook -hooks hooks.json -config-ui` 启动 webhook 后，访问 `http://localhost:9000/config-ui` 即可。详见 [配置参数](../docs/zh-CN/Webhook-Parameters.md)。
 
+## 能力边界与适用场景
+
+- **适合谁**：需要在本地或内网快速生成/调整 hook 配置的开发者或运维；希望用表单和「插入示例」减少手写 JSON/YAML 的情况。
+- **做什么**：生成单条 hook 的 YAML/JSON 片段、调用 URL 与 curl 示例；在启用 `-hooks-dir` 时可将生成结果保存到该目录。不提供配置版本管理、回滚、多用户或权限控制。
+- **不做啥**：Config UI 是**配置生成器**，不是完整的配置托管或管控平台；不会替代 `-hooks` 指定的文件、不会自动重载或校验已有配置的语法。
+
 ## 运行方式
 
 与主程序共用同一二进制，**仅根据参数决定模式**：
@@ -45,7 +51,8 @@ go build -o webhook .
    - 调用 URL（如 `http://localhost:9000/hooks/my-hook`）
    - curl 示例
    - YAML 与 JSON 配置片段
-5. 可复制或下载 YAML/JSON 片段，粘贴到 webhook 的 `hooks.yaml` / `hooks.json` 中使用。可选区块（响应头、传递参数、触发规则等）默认折叠，点击「可选」展开。YAML/JSON 结果块可折叠以节省空间。成功生成后会记住 Hook ID 与 Webhook 服务地址（localStorage），下次打开页面时自动回填（若为空）。
+5. 可复制或下载 YAML/JSON 片段，粘贴到 webhook 的 `hooks.yaml` / `hooks.json` 中使用。可选区块（响应头、传递参数、触发规则等）默认折叠，点击「可选」展开；高级 JSON 字段旁有「插入示例」可填入最小合法示例。YAML/JSON 结果块可折叠以节省空间。成功生成后会记住 Hook ID 与 Webhook 服务地址（localStorage），下次打开页面时自动回填（若为空）。
+6. **下一步**：将配置复制到 hooks 文件；若启动时使用了 `-hooks-dir`，可在结果区直接保存到该目录；请确认 `-urlprefix` 与页面上方生成的调用 URL 前缀一致，避免调用地址与真实端点不符。
 
 ## 与 webhook 同机部署
 

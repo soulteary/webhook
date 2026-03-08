@@ -55,6 +55,38 @@
 		applyLang(getLang());
 	} catch (e) { /* ensure rest of script runs */ }
 
+	var JSON_TEMPLATES = {
+		'response-headers': '[{"name":"X-Custom","value":"ok"}]',
+		'pass-arguments-to-command': '[{"source":"payload","name":"repo"}]',
+		'pass-environment-to-command': '[{"source":"payload","envname":"REPO","name":"repo"}]',
+		'trigger-rule': '{"match":{"type":"value","parameter":{"source":"header","name":"X-Key"},"value":"secret"}}'
+	};
+	function injectJsonTemplateButtons() {
+		var I18N = window.I18N;
+		var lang = getLang();
+		var t = (I18N && I18N[lang]) ? I18N[lang] : {};
+		var label = t.btnInsertExample || 'Insert example';
+		Object.keys(JSON_TEMPLATES).forEach(function (id) {
+			var el = document.getElementById(id);
+			if (!el || el.tagName !== 'TEXTAREA') return;
+			var wrap = el.closest('.config-item');
+			if (!wrap || wrap.querySelector('.btn-insert-json')) return;
+			var btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = 'pure-button btn-insert-json';
+			btn.setAttribute('data-i18n', 'btnInsertExample');
+			btn.setAttribute('data-target', id);
+			btn.textContent = label;
+			btn.addEventListener('click', function () {
+				var targetId = this.getAttribute('data-target');
+				var target = document.getElementById(targetId);
+				if (target && JSON_TEMPLATES[targetId]) target.value = JSON_TEMPLATES[targetId];
+			});
+			el.parentNode.insertBefore(btn, el);
+		});
+	}
+	injectJsonTemplateButtons();
+
 	var saveToDirEnabled = false;
 	fetch('api/capabilities').then(function (r) { return r.ok ? r.json() : {}; }).then(function (d) {
 		saveToDirEnabled = !!(d && d.saveToDir);
@@ -107,6 +139,25 @@
 			e.preventDefault();
 			setExample();
 		});
+	}
+
+	function isValidJson(s) {
+		if (!s || typeof s !== 'string' || !s.trim()) return { valid: true };
+		try {
+			JSON.parse(s.trim());
+			return { valid: true };
+		} catch (e) {
+			return { valid: false, error: e.message };
+		}
+	}
+	function isValidBaseUrl(s) {
+		if (!s || typeof s !== 'string' || !s.trim()) return true;
+		var t = s.trim();
+		return t.indexOf('http://') === 0 || t.indexOf('https://') === 0;
+	}
+	function isValidStatusCode(n) {
+		var num = parseInt(n, 10);
+		return !isNaN(num) && num >= 100 && num <= 999;
 	}
 
 	function collectForm() {
@@ -187,6 +238,28 @@
 			resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 			return;
 		}
+		var jsonFields = [
+			{ id: 'response-headers', key: 'responseHeadersLabel' },
+			{ id: 'pass-arguments-to-command', key: 'passArgumentsLabel' },
+			{ id: 'pass-environment-to-command', key: 'passEnvironmentLabel' },
+			{ id: 'trigger-rule', key: 'triggerRuleLabel' }
+		];
+		for (var i = 0; i < jsonFields.length; i++) {
+			var el = document.getElementById(jsonFields[i].id);
+			if (!el || !el.value || !el.value.trim()) continue;
+			var res = isValidJson(el.value);
+			if (!res.valid) {
+				resultEl = document.getElementById('result');
+				var label = (t[jsonFields[i].key] || jsonFields[i].id) + ': ';
+				resultEl.textContent = label + (t.validationJsonInvalid || 'Must be valid JSON.');
+				resultEl.className = 'result-area error';
+				resultEl.setAttribute('role', 'alert');
+				document.getElementById('output').innerHTML = '';
+				document.getElementById('actions').innerHTML = '';
+				resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+				return;
+			}
+		}
 		resultEl = document.getElementById('result');
 		var outputEl = document.getElementById('output');
 		var actionsEl = document.getElementById('actions');
@@ -216,8 +289,15 @@
 						if (text) data = JSON.parse(text);
 					} catch (e) { /* ignore */ }
 					if (!r.ok) {
-						var msg = (data && data.error) ? data.error : (r.statusText || text || 'Request failed');
-						throw new Error(msg);
+						var msg;
+						if (r.status === 413) {
+							msg = { type: 'bodyTooLarge', text: t.errorRequestBodyTooLarge || 'Request too large.' };
+						} else if (data && data.error) {
+							msg = { type: 'serverValidation', text: (t.errorServerValidation || 'Validation failed: ') + data.error };
+						} else {
+							msg = { type: 'requestFailed', text: (t.requestFailed || 'Request failed: ') + (r.statusText || text || 'Unknown error') };
+						}
+						throw msg;
 					}
 					return data;
 				});
@@ -242,6 +322,7 @@
 				if (data.json) {
 					html += '<div class="output-block"><details class="output-details" open><summary>' + escapeHtml(jsonLabel) + '</summary><pre class="output-pre output-json">' + escapeHtml(data.json) + '</pre></details></div>';
 				}
+				html += '<div class="next-steps" role="region" aria-labelledby="next-steps-title"><p class="next-steps-title" id="next-steps-title">' + escapeHtml(t.nextStepsTitle || 'Next steps') + '</p><ul class="next-steps-list"><li>' + escapeHtml(t.nextStepsCopy || 'Copy the generated config into your hooks file.') + '</li><li>' + escapeHtml(t.nextStepsHooksDir || 'With -hooks-dir you can save directly here.') + '</li><li>' + escapeHtml(t.nextStepsUrlPrefix || 'Ensure -urlprefix matches the call URL.') + '</li></ul></div>';
 				outputEl.innerHTML = html;
 				try {
 					if (payload.id) localStorage.setItem('webhook-config-ui-id', payload.id);
@@ -268,10 +349,10 @@
 					actions += '<a href="#" class="pure-button btn-download" data-dl="json">' + t.downloadJson + '</a>';
 				}
 				if (saveToDirEnabled && (data.yaml || data.json)) {
-					var saveLabel = (lang === 'zh' ? '保存到目录' : 'Save to directory');
-					var saveBtnLabel = (lang === 'zh' ? '保存' : 'Save');
+					var saveLabel = t.saveToDirLabel || (lang === 'zh' ? '保存到目录' : 'Save to directory');
+					var saveBtnLabel = t.saveBtnLabel || (lang === 'zh' ? '保存' : 'Save');
 					var defaultName = (payload.id || 'hook').replace(/[^a-zA-Z0-9_-]/g, '-') + '.yaml';
-					actions += '<div class="save-to-dir-block" style="margin-top:0.75rem;"><label>' + escapeHtml(saveLabel) + '</label> <input type="text" id="save-filename" class="pure-input" value="' + escapeHtml(defaultName) + '" style="width:12rem;margin:0 0.25rem;"> <select id="save-format"><option value="yaml">YAML</option><option value="json">JSON</option></select> <button type="button" class="pure-button btn-save-to-dir">' + escapeHtml(saveBtnLabel) + '</button> <span id="save-msg" class="save-msg"></span></div>';
+					actions += '<div class="save-to-dir-block"><label>' + escapeHtml(saveLabel) + '</label> <input type="text" id="save-filename" class="pure-input save-filename-input" value="' + escapeHtml(defaultName) + '" aria-describedby="save-msg"> <select id="save-format" class="save-format-select" aria-label="Format"><option value="yaml">YAML</option><option value="json">JSON</option></select> <button type="button" class="pure-button btn-save-to-dir" aria-live="polite">' + escapeHtml(saveBtnLabel) + '</button> <span id="save-msg" class="save-msg" role="status" aria-live="polite"></span></div>';
 				}
 				actionsEl.innerHTML = actions;
 
@@ -316,11 +397,11 @@
 						var format = (formatEl && formatEl.value) || 'yaml';
 						var content = format === 'json' ? lastData.json : lastData.yaml;
 						if (!filename || !content) {
-							if (saveMsg) saveMsg.textContent = lang === 'zh' ? '请先生成配置并填写文件名' : 'Generate first and enter filename';
+							if (saveMsg) { saveMsg.textContent = t.saveHintGenerateFirst || (lang === 'zh' ? '请先生成配置并填写文件名' : 'Generate first and enter filename'); saveMsg.style.color = ''; }
 							return;
 						}
 						btnSave.disabled = true;
-						if (saveMsg) saveMsg.textContent = '';
+						if (saveMsg) { saveMsg.textContent = t.saveSaving || (lang === 'zh' ? '保存中…' : 'Saving…'); saveMsg.style.color = ''; }
 						fetch('api/save', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
@@ -328,11 +409,10 @@
 						}).then(function (r) {
 							return r.json().then(function (body) {
 								if (!r.ok) throw new Error(body.error || r.statusText);
-								if (saveMsg) saveMsg.textContent = (lang === 'zh' ? '已保存: ' : 'Saved: ') + (body.ok || filename);
-								if (saveMsg) saveMsg.style.color = '';
+								if (saveMsg) { saveMsg.textContent = (t.saveSuccess || (lang === 'zh' ? '已保存: ' : 'Saved: ')) + (body.ok || filename); saveMsg.style.color = ''; }
 							});
 						}).catch(function (err) {
-							if (saveMsg) { saveMsg.textContent = (err && err.message) || 'Save failed'; saveMsg.style.color = '#c00'; }
+							if (saveMsg) { saveMsg.textContent = (err && err.message) || (t.saveFailed || 'Save failed'); saveMsg.style.color = '#c00'; }
 						}).finally(function () {
 							btnSave.disabled = false;
 						});
@@ -343,7 +423,19 @@
 				}
 			})
 			.catch(function (err) {
-				resultEl.textContent = (t.requestFailed || 'Request failed: ') + (err && err.message ? err.message : String(err));
+				var msg;
+				if (err && typeof err === 'object' && err.type === 'bodyTooLarge') {
+					msg = err.text;
+				} else if (err && typeof err === 'object' && err.type === 'serverValidation') {
+					msg = err.text;
+				} else if (err && typeof err === 'object' && err.type === 'requestFailed') {
+					msg = err.text;
+				} else if (err && (err.message === 'Failed to fetch' || (err.name === 'TypeError' && err.message && err.message.indexOf('fetch') !== -1))) {
+					msg = t.errorNetwork || 'Network error. Check connection and retry.';
+				} else {
+					msg = (t.requestFailed || 'Request failed: ') + (err && err.message ? err.message : String(err));
+				}
+				resultEl.textContent = msg;
 				resultEl.className = 'result-area error';
 				resultEl.setAttribute('role', 'alert');
 				resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
