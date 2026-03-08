@@ -403,7 +403,9 @@ func TestHandlerAPISavePathTraversal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
-	body := `{"filename":"../../../etc/passwd","content":"x"}`
+	// Use a unique name under a path traversal so we only fail if we created it (../etc/passwd exists on Unix)
+	traversalName := "webhook-path-traversal-" + filepath.Base(tmp) + ".yaml"
+	body := `{"filename":"../../../etc/` + traversalName + `","content":"x"}`
 	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -411,8 +413,9 @@ func TestHandlerAPISavePathTraversal(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("POST /api/save with path traversal: status %d, want 400", w.Code)
 	}
-	_, err = os.Stat(filepath.Join(tmp, "../../../etc/passwd"))
-	if err == nil {
+	// Resolve path: must not create file outside writeDir (this path would only exist if we had a bug)
+	targetPath := filepath.Clean(filepath.Join(tmp, "..", "..", "..", "etc", traversalName))
+	if _, err := os.Stat(targetPath); err == nil {
 		t.Error("path traversal must not create file outside writeDir")
 	}
 }
