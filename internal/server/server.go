@@ -34,6 +34,32 @@ func GetAsyncHookWaitGroup() *sync.WaitGroup {
 	return &asyncHookWaitGroup
 }
 
+// safeRemove 仅在 path 位于 baseDir 之下时删除文件，防止路径遍历。
+// 用于删除本进程创建的临时文件，满足 gosec 污点分析要求。
+func safeRemove(path, baseDir string) error {
+	cleaned := filepath.Clean(path)
+	baseCleaned := filepath.Clean(baseDir)
+	absPath, err := filepath.Abs(cleaned)
+	if err != nil {
+		return err
+	}
+	if baseCleaned == "" {
+		baseCleaned = os.TempDir()
+	}
+	absBase, err := filepath.Abs(baseCleaned)
+	if err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(absBase, absPath)
+	if err != nil {
+		return err
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("path %s is not under base %s", path, baseDir)
+	}
+	return os.Remove(absPath)
+}
+
 type flushWriter struct {
 	f http.Flusher
 	w io.Writer
@@ -885,7 +911,7 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 	defer func() {
 		for _, fileName := range tempFileNames {
 			logger.Debugf("[%s] removing temp file %s", r.ID, fileName)
-			err := os.Remove(fileName)
+			err := safeRemove(fileName, h.CommandWorkingDirectory)
 			if err != nil {
 				// 如果文件不存在（可能已经被删除），这是正常的，只记录警告
 				if !os.IsNotExist(err) {
@@ -909,7 +935,7 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 				}
 				if !found {
 					logger.Debugf("[%s] removing file %s (from files array)", r.ID, fileName)
-					if err := os.Remove(fileName); err != nil && !os.IsNotExist(err) {
+					if err := safeRemove(fileName, h.CommandWorkingDirectory); err != nil && !os.IsNotExist(err) {
 						logger.Warnf("[%s] error removing file for hook %s (file: %s): %v", r.ID, h.ID, fileName, err)
 					}
 				}
@@ -940,7 +966,7 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 			logger.Errorf("[%s] error writing temp file for hook %s (file: %s, env_name: %s, data_size: %d): %v", r.ID, h.ID, fileName, files[i].EnvName, len(files[i].Data), err)
 			// 确保文件关闭后再删除
 			_ = tmpfile.Close()
-			if removeErr := os.Remove(fileName); removeErr != nil {
+			if removeErr := safeRemove(fileName, h.CommandWorkingDirectory); removeErr != nil {
 				logger.Warnf("[%s] error removing failed temp file for hook %s (file: %s): %v", r.ID, h.ID, fileName, removeErr)
 			}
 			// 从列表中移除，避免 defer 中重复删除
@@ -951,7 +977,7 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		if err := tmpfile.Close(); err != nil {
 			logger.Errorf("[%s] error closing temp file for hook %s (file: %s, env_name: %s): %v", r.ID, h.ID, fileName, files[i].EnvName, err)
 			// 尝试删除文件（即使关闭失败）
-			if removeErr := os.Remove(fileName); removeErr != nil {
+			if removeErr := safeRemove(fileName, h.CommandWorkingDirectory); removeErr != nil {
 				logger.Warnf("[%s] error removing failed temp file for hook %s (file: %s): %v", r.ID, h.ID, fileName, removeErr)
 			}
 			// 从列表中移除，避免 defer 中重复删除
