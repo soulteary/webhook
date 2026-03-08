@@ -35,6 +35,7 @@ func Init(verbose, debug bool, logPath string, jsonFormat bool) error {
 			return fmt.Errorf("resolve log path: %w", err)
 		}
 		// 打开日志文件（使用解析后的绝对路径，避免通过变量直接包含任意路径）
+		// #nosec G304 -- absPath 已通过 filepath.Clean 与 filepath.Abs 规范化，路径遍历已缓解
 		logFile, err := os.OpenFile(absPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 		if err != nil {
 			return err

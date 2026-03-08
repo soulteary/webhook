@@ -47,3 +47,12 @@ func ApplyWatcher(appFlags flags.AppFlags) {
 	}
 	go WatchForFileChange(watcher, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, rules.ReloadHooks, removeHooksFn)
 }
+
+// closeWatcherForTest 关闭全局 watcher，仅用于测试以停止 goroutine、避免与后续测试产生竞态或泄漏。
+// 生产代码不应调用（watcher 进程生命周期内不关闭）。
+func closeWatcherForTest() {
+	if watcher != nil {
+		_ = watcher.Close()
+		watcher = nil
+	}
+}

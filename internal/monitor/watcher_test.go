@@ -33,6 +33,7 @@ func TestApplyWatcher(t *testing.T) {
 
 	// Apply watcher (this will start a goroutine)
 	ApplyWatcher(appFlags)
+	defer closeWatcherForTest() // 测试结束关闭 watcher，避免 goroutine 泄漏及与后续测试竞态
 
 	// Wait a bit for the watcher to be set up
 	// Note: This test mainly verifies that ApplyWatcher doesn't panic
@@ -54,4 +55,5 @@ func TestApplyWatcher_ErrorAddingFile(t *testing.T) {
 	// Apply watcher (should handle error gracefully)
 	// This should not panic, but will log an error
 	ApplyWatcher(appFlags)
+	defer closeWatcherForTest() // 即使 Add 失败也可能创建了 watcher，需关闭避免影响后续测试
 }
