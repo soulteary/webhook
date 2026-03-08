@@ -15,3 +15,4 @@ redeploy.sh
 
 OPTIMIZATION_REPORT.md
 test.log
+hooks/*

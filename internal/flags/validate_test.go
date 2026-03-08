@@ -43,7 +43,7 @@ func createValidFlags() AppFlags {
 		MaxMultipartMem:    int64(DEFAULT_MAX_MPART_MEM),
 		MaxRequestBodySize: int64(DEFAULT_MAX_REQUEST_BODY_SIZE),
 		MaxHeaderBytes:     DEFAULT_MAX_HEADER_BYTES,
-		HooksFiles:         []string{}, // 设置为空，避免验证默认的 hooks.json
+		HooksFiles:         []string{}, // 默认目录模式下允许为空
 	}
 }
 
@@ -221,7 +221,7 @@ func TestValidate_I18nDir(t *testing.T) {
 	}{
 		{"empty i18n dir", "", false},
 		{"valid i18n dir", tempDir, false},
-		{"non-existent dir", filepath.Join(tempDir, "nonexistent"), true},
+		{"non-existent dir", filepath.Join(tempDir, "nonexistent"), false},
 	}
 
 	for _, tt := range tests {

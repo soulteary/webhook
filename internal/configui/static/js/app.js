@@ -107,7 +107,7 @@
 
 	var EXAMPLE = {
 		id: 'example-hook',
-		'execute-command': '/bin/true',
+		'execute-command': 'true',
 		'command-working-directory': '',
 		'response-message': 'OK',
 		'webhook_base_url': 'http://localhost:9000',
@@ -390,6 +390,17 @@
 				var btnSave = actionsEl.querySelector('.btn-save-to-dir');
 				if (btnSave) {
 					var saveMsg = document.getElementById('save-msg');
+					var filenameElRef = document.getElementById('save-filename');
+					var formatElRef = document.getElementById('save-format');
+					if (filenameElRef && formatElRef) {
+						formatElRef.addEventListener('change', function () {
+							var filename = (filenameElRef.value || '').trim();
+							if (!filename) return;
+							var nextExt = this.value === 'json' ? '.json' : '.yaml';
+							var updated = filename.replace(/\.(json|ya?ml)$/i, '');
+							filenameElRef.value = updated + nextExt;
+						});
+					}
 					btnSave.addEventListener('click', function () {
 						var filenameEl = document.getElementById('save-filename');
 						var formatEl = document.getElementById('save-format');
@@ -400,12 +411,20 @@
 							if (saveMsg) { saveMsg.textContent = t.saveHintGenerateFirst || (lang === 'zh' ? '请先生成配置并填写文件名' : 'Generate first and enter filename'); saveMsg.style.color = ''; }
 							return;
 						}
+						if (format === 'json' && !/\.json$/i.test(filename)) {
+							filename = filename.replace(/\.(json|ya?ml)$/i, '') + '.json';
+							if (filenameEl) filenameEl.value = filename;
+						}
+						if (format === 'yaml' && !/\.ya?ml$/i.test(filename)) {
+							filename = filename.replace(/\.(json|ya?ml)$/i, '') + '.yaml';
+							if (filenameEl) filenameEl.value = filename;
+						}
 						btnSave.disabled = true;
 						if (saveMsg) { saveMsg.textContent = t.saveSaving || (lang === 'zh' ? '保存中…' : 'Saving…'); saveMsg.style.color = ''; }
 						fetch('api/save', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({ filename: filename, content: content })
+							body: JSON.stringify({ filename: filename, content: content, format: format })
 						}).then(function (r) {
 							return r.json().then(function (body) {
 								if (!r.ok) throw new Error(body.error || r.statusText);

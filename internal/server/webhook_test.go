@@ -558,6 +558,23 @@ func TestMakeSureCallable_CommandNotFound(t *testing.T) {
 	assert.Empty(t, cmdPath)
 }
 
+func TestMakeSureCallable_AbsolutePathFallbackToPATH(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	h := &hook.Hook{
+		ExecuteCommand:          "/bin/true",
+		CommandWorkingDirectory: "",
+	}
+	r := &hook.Request{ID: "test-request"}
+
+	appFlags := flags.AppFlags{AllowAutoChmod: false}
+	cmdPath, err := makeSureCallable(context.Background(), h, r, appFlags, nil)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, cmdPath)
+}
+
 func TestMakeSureCallable_CommandWithSpace(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping on Windows")

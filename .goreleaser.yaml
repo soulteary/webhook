@@ -18,7 +18,7 @@ builds:
       - "7"
       - "6"
 
-  # Config UI binary (same code as main binary; run with -config-ui and no -hooks for config-ui-only mode)
+  # Config UI binary (same code as main binary; run with -config-ui to enable UI on webhook server)
   - <<: *build_defaults
     id: config-ui-macos
     main: .

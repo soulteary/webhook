@@ -111,24 +111,20 @@ curl http://localhost:9000/openapi
 
 **端点:** `GET /config-ui`、`GET /config-ui/`、`POST /config-ui/api/generate`（或通过 `-config-ui-path` 自定义路径）
 
-**可用性:** 两种方式均可使用 Config UI：（1）仅 Config UI 模式：`-config-ui` 且不传 `-hooks`，默认端口 9080；（2）在主服务上挂载：`-hooks` 且 `-config-ui`，路径由 `-config-ui-path` 指定。默认不暴露，建议仅在调试或内网使用。
+**可用性:** 启用 `-config-ui` 后，Config UI 会挂载在 webhook 主服务上（路径由 `-config-ui-path` 指定，默认 `/config-ui`）。默认不暴露，建议仅在调试或内网使用。
 
-**描述:** 用于生成 hook 配置（YAML/JSON）及调用示例的 Web 页面与 API；与仅 Config UI 模式（不传 `-hooks` 且启用 `-config-ui`）功能一致。
+**描述:** 用于生成 hook 配置（YAML/JSON）及调用示例的 Web 页面与 API。
 
 - **GET** `{config-ui-path}` 或 `{config-ui-path}/`：返回配置生成器 HTML 页面。
 - **GET** `{config-ui-path}/static/*`：静态资源（CSS、JS）。
 - **POST** `{config-ui-path}/api/generate`：请求体为 JSON（字段如 `id`、`execute-command`、`response-message`、`trigger-rule`）。成功返回 `{ "yaml", "json", "callUrl", "curlExample" }`，校验失败返回 4xx 及 `{ "error": "..." }`。
-- **GET** `{config-ui-path}/api/capabilities`：返回 `{ "saveToDir": true|false }`。为 `true` 时 UI 显示「保存到目录」选项（需启用 `-hooks-dir`）。
-- **POST** `{config-ui-path}/api/save`：将生成的配置写入 `-hooks-dir` 指定目录。请求体：`{ "filename": "name.yaml", "content": "..." }`。成功返回 `{ "ok": "<绝对路径>" }`，未启用或非法请求（如路径穿越）返回 4xx 及 `{ "error": "..." }`。文件名须为 `.json`、`.yaml` 或 `.yml` 后缀。
+- **GET** `{config-ui-path}/api/capabilities`：返回 `{ "saveToDir": true|false }`。为 `true` 时 UI 显示「保存到目录」选项（目录模式：默认 `./hooks` 或显式 `-hooks-dir`）。
+- **POST** `{config-ui-path}/api/save`：将生成的配置写入 hooks 目录。请求体：`{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }`。成功返回 `{ "ok": "<绝对路径>" }`，未启用或非法请求（如路径穿越、格式不匹配、配置内容非法）返回 4xx 及 `{ "error": "..." }`。文件名须为 `.json`、`.yaml` 或 `.yml` 后缀。
 
 **示例:**
 ```bash
-# 仅 Config UI 模式（默认端口 9080）
+# 在 webhook 主服务上启用 Config UI（默认端口 9000）
 ./webhook -config-ui
-# 浏览器打开 http://localhost:9080
-
-# 或在 webhook 主服务上挂载 Config UI
-./webhook -hooks hooks.json -config-ui
 # 浏览器打开 http://localhost:9000/config-ui
 ```
 

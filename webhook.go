@@ -5,18 +5,12 @@ import (
 	"embed"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
-	"os/signal"
-	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/soulteary/webhook/internal/audit"
-	"github.com/soulteary/webhook/internal/configui"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/i18n"
-	"github.com/soulteary/webhook/internal/link"
 	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/monitor"
 	"github.com/soulteary/webhook/internal/openapi"
@@ -44,14 +38,8 @@ func NeedEchoVersionInfo(appFlags flags.AppFlags) {
 	}
 }
 
-// prepareHooksFilesAndValidate 加锁检查并填充默认 HooksFiles，然后执行配置验证，供 NeedValidateConfig 与 main 共用。
-// 当 -hooks-dir 已设置时，允许 HooksFiles 为空（目录扫描结果或待监控的空目录）。
+// prepareHooksFilesAndValidate 执行配置验证，供 NeedValidateConfig 与 main 共用。
 func prepareHooksFilesAndValidate(appFlags flags.AppFlags) *flags.ValidationResult {
-	rules.LockHooksFiles()
-	if len(rules.HooksFiles) == 0 && appFlags.HooksDir == "" {
-		rules.HooksFiles = append(rules.HooksFiles, "hooks.json")
-	}
-	rules.UnlockHooksFiles()
 	return flags.Validate(appFlags)
 }
 
@@ -106,39 +94,6 @@ func SetupLogger(appFlags flags.AppFlags, logQueue *[]string) error {
 	return nil
 }
 
-// runConfigUIOnly starts only the Config UI HTTP server (no webhook server). Used when -config-ui is set and no -hooks are provided.
-func runConfigUIOnly(appFlags flags.AppFlags) {
-	port := strconv.Itoa(appFlags.Port)
-	webhookBaseURL := "http://localhost:" + port
-	hookBase := link.MakeBaseURL(&appFlags.HooksURLPrefix)
-	if hookBase == "" {
-		hookBase = "/hooks"
-	}
-	handler, err := configui.Handler("/", webhookBaseURL, appFlags.HooksDir, hookBase)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "config-ui init: %v\n", err)
-		os.Exit(1)
-	}
-	addr := ":" + port
-	srv := &http.Server{Addr: addr, Handler: handler}
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Fprintf(os.Stderr, "serve: %v\n", err)
-		}
-	}()
-	fmt.Printf("Webhook Config UI: http://localhost%s\n", addr)
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	<-sigCh
-	fmt.Println("Shutting down...")
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownCancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		fmt.Fprintf(os.Stderr, "shutdown: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
 	appFlags := flags.Parse()
 
@@ -150,12 +105,6 @@ func main() {
 
 	// check if we need to echo version info and quit app
 	NeedEchoVersionInfo(appFlags)
-
-	// Config UI only mode: no hooks and config-ui enabled — start only Config UI server
-	if appFlags.ConfigUIEnabled && len(appFlags.HooksFiles) == 0 {
-		runConfigUIOnly(appFlags)
-		return
-	}
 
 	// check if we need to validate config and quit app
 	NeedValidateConfig(appFlags)

@@ -188,9 +188,9 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 		return
 	}
 
-	// 如果没有指定 Hook 文件且未使用 -hooks-dir，使用默认值
+	// 未提供 Hook 文件时跳过单文件校验（目录模式可在运行中发现新文件）。
 	if len(hooksFiles) == 0 {
-		hooksFiles = hook.HooksFiles{"hooks.json"}
+		return
 	}
 
 	// 合并命令行和环境的 Hook 文件

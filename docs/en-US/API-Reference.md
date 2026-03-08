@@ -111,24 +111,20 @@ You can also print the spec to stdout at startup with `-openapi-print` (e.g. `./
 
 **Endpoints:** `GET /config-ui`, `GET /config-ui/`, `POST /config-ui/api/generate` (or custom path via `-config-ui-path`)
 
-**Availability:** Config UI is available in two ways: (1) Config-ui-only mode: `-config-ui` without `-hooks` (default port 9080); (2) Mounted on webhook server: `-hooks` with `-config-ui` (path via `-config-ui-path`). Not exposed by default; recommend use only for debugging or intranet.
+**Availability:** Config UI is mounted on the webhook server when `-config-ui` is enabled (path via `-config-ui-path`, default `/config-ui`). Not exposed by default; recommend use only for debugging or intranet.
 
-**Description:** Web UI and API for generating hook configuration (YAML/JSON) and call examples. Same functionality as config-ui-only mode (run with `-config-ui` and no `-hooks`).
+**Description:** Web UI and API for generating hook configuration (YAML/JSON) and call examples.
 
 - **GET** `{config-ui-path}` or `{config-ui-path}/`: Returns the config generator HTML page.
 - **GET** `{config-ui-path}/static/*`: Static assets (CSS, JS).
 - **POST** `{config-ui-path}/api/generate`: Accepts JSON body with form fields (e.g. `id`, `execute-command`, `response-message`, `trigger-rule`). Returns `{ "yaml", "json", "callUrl", "curlExample" }` on success, or `{ "error": "..." }` with 4xx on validation error.
-- **GET** `{config-ui-path}/api/capabilities`: Returns `{ "saveToDir": true|false }`. When `true`, the UI shows a "Save to directory" option (requires `-hooks-dir`).
-- **POST** `{config-ui-path}/api/save`: Writes generated config to the directory set by `-hooks-dir`. Body: `{ "filename": "name.yaml", "content": "..." }`. Returns `{ "ok": "<absolute-path>" }` on success, or `{ "error": "..." }` with 4xx when disabled or invalid (e.g. path traversal). Filename must have extension `.json`, `.yaml`, or `.yml`.
+- **GET** `{config-ui-path}/api/capabilities`: Returns `{ "saveToDir": true|false }`. When `true`, the UI shows a "Save to directory" option (directory mode: default `./hooks` or explicit `-hooks-dir`).
+- **POST** `{config-ui-path}/api/save`: Writes generated config to hooks directory. Body: `{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }`. Returns `{ "ok": "<absolute-path>" }` on success, or `{ "error": "..." }` with 4xx when disabled or invalid (e.g. path traversal, format mismatch, invalid hook config). Filename must have extension `.json`, `.yaml`, or `.yml`.
 
 **Example:**
 ```bash
-# Config-ui-only mode (default port 9080)
+# Enable Config UI on webhook server (default port 9000)
 ./webhook -config-ui
-# Open http://localhost:9080 in a browser
-
-# Or mount Config UI on the webhook server
-./webhook -hooks hooks.json -config-ui
 # Open http://localhost:9000/config-ui in a browser
 ```
 

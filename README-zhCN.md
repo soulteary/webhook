@@ -78,7 +78,7 @@ go build
 
 ### 基础示例
 
-创建一个 `hooks.json` 文件（或使用 `hooks.yaml` 作为 YAML 格式）来定义你的 webhook：
+默认模式下，程序会使用 `./hooks` 目录扫描配置文件。你可以创建 `./hooks/hooks.yaml`（或 `./hooks/hooks.json`）来定义 webhook：
 
 **示例：简单的部署钩子**
 
@@ -100,16 +100,22 @@ go build
   command-working-directory: "/var/webhook"
 ```
 
-### 运行 WebHook
+### 运行 WebHook（默认目录模式）
 
 ```bash
-./webhook -hooks hooks.json -verbose
+./webhook -verbose
 ```
 
 服务器将在默认的 9000 端口启动。你的钩子将在以下地址可用：
 
 ```
 http://yourserver:9000/hooks/redeploy-webhook
+```
+
+如需继续使用单文件模式，仍可显式指定：
+
+```bash
+./webhook -hooks hooks.json -verbose
 ```
 
 ### 保护你的钩子
@@ -148,7 +154,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 - **表单数据支持**：解析 multipart 表单数据和文件上传 - 查看 [表单数据](docs/zh-CN/Referencing-Request-Values.md)
 - **模板支持**：使用 `-template` 标志在配置文件中使用 Go 模板 - 查看 [配置模版](docs/zh-CN/Templates.md)
-- **Config UI**：同一二进制，按参数切换。使用 `-config-ui` 启用配置生成 Web UI（建议仅在调试或内网使用）；仅 Config UI：`go run . -config-ui`（不传 `-hooks`，默认端口 9080）；或与 `-hooks` 同时使用在主服务上挂载。可用 `-config-ui-path` 修改路径（尾斜杠会归一化）。配合 `-hooks-dir` 时，UI 可将生成的配置保存到该目录。`-urlprefix` 会影响 UI 中展示的调用 URL。详见 [配置参数](docs/zh-CN/Webhook-Parameters.md) 与 [Config UI 说明](cmd/README.md)。
+- **Config UI**：同一二进制，按参数切换。使用 `-config-ui` 启用配置生成 Web UI（建议仅在调试或内网使用）；与主服务共用端口（默认 `9000`），可用 `-config-ui-path` 修改路径（尾斜杠会归一化）。目录模式（默认 `./hooks` 或显式 `-hooks-dir`）下，UI 可将生成的配置直接保存到目录，保存后可立即调用生成的 URL 验证；显式 `-hooks` 单文件模式下，仍可生成/下载但不会提供目录保存。`-urlprefix` 会影响 UI 中展示的调用 URL。详见 [配置参数](docs/zh-CN/Webhook-Parameters.md) 与 [Config UI 说明](cmd/README.md)。
 - **HTTPS**：使用反向代理（nginx、Traefik、Caddy）提供 HTTPS 支持
 - **CORS**：使用 `-header name=value` 设置自定义响应头，包括 CORS 响应头
 - **热重载**：使用 `-hotreload` 或 `kill -USR1` 无需重启即可更新配置
@@ -159,7 +165,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 ### 核心文档
 - [钩子定义](docs/zh-CN/Hook-Definition.md) - 完整的钩子配置参考
-- [Config UI](cmd/README.md) - 配置生成器（仅 Config UI 模式：运行 `go run . -config-ui`）
+- [Config UI](cmd/README.md) - 配置生成器（运行 `go run . -config-ui` 启用）
 - [钩子匹配规则](docs/zh-CN/Hook-Rules.md) - 触发规则和条件
 - [配置参数](docs/zh-CN/Webhook-Parameters.md) - 命令行参数和配置
 - [配置模版](docs/zh-CN/Templates.md) - 在配置中使用 Go 模板

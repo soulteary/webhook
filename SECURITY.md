@@ -32,7 +32,7 @@ Webhook includes several security features to help prevent command injection att
 - Set appropriate limits for argument length and count
 - Regularly review and update your whitelist
 - Never enable `--allow-auto-chmod` in production (it's a security risk)
-- Do not enable `--openapi` or `--config-ui` on publicly reachable servers (they have no authentication; use only for debugging or intranet). Config UI can run as config-ui-only (`-config-ui` without `-hooks`) or mounted on the webhook server; in both cases restrict access.
+- Do not enable `--openapi` or `--config-ui` on publicly reachable servers (they have no authentication; use only for debugging or intranet). Config UI is mounted on the webhook server; restrict access with firewall/reverse proxy.
 
 For more details, see the [Webhook Parameters (English)](docs/en-US/Webhook-Parameters.md) or [配置参数 (中文)](docs/zh-CN/Webhook-Parameters.md).
 

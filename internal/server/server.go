@@ -720,6 +720,32 @@ func createCommandValidator(appFlags flags.AppFlags) *security.CommandValidator 
 	return validator
 }
 
+// pathFallbackBasenames 为绝对路径「未找到」时允许按 basename 在 PATH 中查找的命令名（跨平台兼容，如 /bin/true → true）。
+var pathFallbackBasenames = map[string]bool{"true": true, "false": true}
+
+func resolveCommandLookPath(h *hook.Hook) []string {
+	if h == nil {
+		return nil
+	}
+	cmd := strings.TrimSpace(h.ExecuteCommand)
+	if cmd == "" {
+		return nil
+	}
+
+	if filepath.IsAbs(cmd) {
+		base := filepath.Base(cmd)
+		if pathFallbackBasenames[base] {
+			return []string{cmd, base}
+		}
+		return []string{cmd}
+	}
+
+	if h.CommandWorkingDirectory != "" {
+		return []string{filepath.Join(h.CommandWorkingDirectory, cmd)}
+	}
+	return []string{cmd}
+}
+
 func makeSureCallable(ctx context.Context, h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, validator *security.CommandValidator) (string, error) {
 	// 检查 context 是否已取消
 	select {
@@ -729,14 +755,40 @@ func makeSureCallable(ctx context.Context, h *hook.Hook, r *hook.Request, appFla
 	}
 
 	// check the command exists
-	var lookpath string
-	if filepath.IsAbs(h.ExecuteCommand) || h.CommandWorkingDirectory == "" {
-		lookpath = h.ExecuteCommand
-	} else {
-		lookpath = filepath.Join(h.CommandWorkingDirectory, h.ExecuteCommand)
+	lookpaths := resolveCommandLookPath(h)
+	if len(lookpaths) == 0 {
+		return "", fmt.Errorf("empty execute-command for hook %s", h.ID)
 	}
-
-	cmdPath, err := exec.LookPath(lookpath)
+	var (
+		cmdPath       string
+		err           error
+		lastLookPath  string
+		lookPathError error
+	)
+	for _, lp := range lookpaths {
+		lastLookPath = lp
+		cmdPath, err = exec.LookPath(lp)
+		if err == nil {
+			break
+		}
+		lookPathError = err
+		// 仅当「未找到」时尝试下一个路径；权限不足时立即处理，不尝试 basename
+		if strings.Contains(err.Error(), "permission denied") {
+			if !appFlags.AllowAutoChmod {
+				logger.Warnf("[%s] SECURITY WARNING: Command file '%s' for hook %s is not executable. Auto-chmod is disabled for security reasons. Please manually set correct file permissions (chmod +x) or enable auto-chmod with --allow-auto-chmod flag (NOT RECOMMENDED)", r.ID, lp, h.ID)
+				return "", fmt.Errorf("permission denied: file '%s' is not executable and auto-chmod is disabled: %w", lp, err)
+			}
+			logger.Warnf("[%s] SECURITY WARNING: Automatically modifying file permissions for '%s' (hook: %s, auto-chmod is enabled). This is a security risk and should be avoided in production.", r.ID, lp, h.ID)
+			// #nosec G302 - file permissions are intentionally modified when AllowAutoChmod is enabled
+			if err2 := os.Chmod(lp, 0o755); err2 != nil {
+				logger.Errorf("[%s] error making command script executable for hook %s (file: %s): %v", r.ID, h.ID, lp, err2)
+				return "", fmt.Errorf("failed to make file executable: %w", err)
+			}
+			logger.Debugf("[%s] make command script executable success", r.ID)
+			return makeSureCallable(ctx, h, r, appFlags, validator)
+		}
+		// 当前路径未找到，继续尝试下一个（如 basename 回退）
+	}
 	if err != nil {
 		// 检查 context 是否已取消
 		select {
@@ -752,30 +804,8 @@ func makeSureCallable(ctx context.Context, h *hook.Hook, r *hook.Request, appFla
 			logger.Errorf("[%s] error in exec: %v", r.ID, err)
 			logger.Warnf("[%s] use 'pass-arguments-to-command' to specify args for '%s'", r.ID, s)
 		} else {
-			logger.Errorf("[%s] error looking up command path for hook %s (command: %s, lookpath: %s): %v", r.ID, h.ID, h.ExecuteCommand, lookpath, err)
+			logger.Errorf("[%s] error looking up command path for hook %s (command: %s, lookpath: %s): %v", r.ID, h.ID, h.ExecuteCommand, lastLookPath, lookPathError)
 		}
-
-		if strings.Contains(err.Error(), "permission denied") {
-			if !appFlags.AllowAutoChmod {
-				logger.Warnf("[%s] SECURITY WARNING: Command file '%s' for hook %s is not executable. Auto-chmod is disabled for security reasons. Please manually set correct file permissions (chmod +x) or enable auto-chmod with --allow-auto-chmod flag (NOT RECOMMENDED)", r.ID, lookpath, h.ID)
-				return "", fmt.Errorf("permission denied: file '%s' is not executable and auto-chmod is disabled: %w", lookpath, err)
-			}
-
-			// SECURITY WARNING: Only modify permissions if explicitly enabled
-			logger.Warnf("[%s] SECURITY WARNING: Automatically modifying file permissions for '%s' (hook: %s, auto-chmod is enabled). This is a security risk and should be avoided in production.", r.ID, lookpath, h.ID)
-			// try to make the command executable
-			// #nosec G302 - file permissions are intentionally modified when AllowAutoChmod is enabled
-			err2 := os.Chmod(lookpath, 0o755)
-			if err2 != nil {
-				logger.Errorf("[%s] error making command script executable for hook %s (file: %s): %v", r.ID, h.ID, lookpath, err2)
-				return "", fmt.Errorf("failed to make file executable: %w", err)
-			}
-
-			logger.Debugf("[%s] make command script executable success", r.ID)
-			// retry
-			return makeSureCallable(ctx, h, r, appFlags, validator)
-		}
-
 		return "", err
 	}
 

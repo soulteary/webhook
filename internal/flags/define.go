@@ -82,12 +82,11 @@ const (
 	DEFAULT_OPENAPI_PRINT   = false
 
 	// Config UI defaults (config generator Web UI)
-	DEFAULT_CONFIG_UI_ENABLED   = false
-	DEFAULT_CONFIG_UI_PATH      = "/config-ui"
-	DEFAULT_PORT_CONFIG_UI_ONLY = 9080 // default port when running in config-ui-only mode (no -hooks)
+	DEFAULT_CONFIG_UI_ENABLED = false
+	DEFAULT_CONFIG_UI_PATH    = "/config-ui"
 
-	// Hooks directory: scan for *.json, *.yaml, *.yml and watch for changes when empty
-	DEFAULT_HOOKS_DIR = ""
+	// Hooks directory: default scan dir for hook configs
+	DEFAULT_HOOKS_DIR = "./hooks"
 )
 
 const (

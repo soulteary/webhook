@@ -78,7 +78,7 @@ go build
 
 ### Basic Example
 
-Create a `hooks.json` file (or `hooks.yaml` for YAML format) to define your webhooks:
+By default, webhook scans config files from the `./hooks` directory. Create `./hooks/hooks.yaml` (or `./hooks/hooks.json`) to define your webhooks:
 
 **Example: Simple Deployment Hook**
 
@@ -100,16 +100,22 @@ If you prefer YAML, the equivalent `hooks.yaml` file would look like this:
   command-working-directory: "/var/webhook"
 ```
 
-### Running WebHook
+### Running WebHook (default directory mode)
 
 ```bash
-./webhook -hooks hooks.json -verbose
+./webhook -verbose
 ```
 
 The server will start on port `9000` by default. Your hook will be available at:
 
 ```
 http://yourserver:9000/hooks/redeploy-webhook
+```
+
+Single-file mode is still supported when explicitly set:
+
+```bash
+./webhook -hooks hooks.json -verbose
 ```
 
 ### Securing Your Hooks
@@ -148,7 +154,7 @@ For more security options, see:
 
 - **Form Data Support**: Parse multipart form data and file uploads - see [Form Data](docs/en-US/Referencing-Request-Values.md)
 - **Template Support**: Use Go templates in configuration files with `-template` flag - see [Templates](docs/en-US/Templates.md)
-- **Config UI**: Same binary, behavior by flags. Enable config generator Web UI with `-config-ui` (recommend debugging or intranet only). Config-ui-only: `go run . -config-ui` (no `-hooks`, default port 9080); or mount on webhook server with `-hooks` and `-config-ui`. Use `-config-ui-path` to change the path (trailing slash is normalized). With `-hooks-dir`, the UI can save generated configs into that directory. The `-urlprefix` value is used for the call URL shown in the UI. See [Webhook Parameters](docs/en-US/Webhook-Parameters.md) and [Config UI](cmd/README.md).
+- **Config UI**: Same binary, behavior by flags. Enable config generator Web UI with `-config-ui` (recommend debugging or intranet only). It runs on the same server port (default `9000`) and can be mounted with `-config-ui-path` (trailing slash normalized). In directory mode (default `./hooks` or explicit `-hooks-dir`), the UI can save generated configs directly to that directory and you can validate by calling the generated endpoint immediately after save. In explicit single-file mode (`-hooks`), generation/download still works but save-to-directory is not exposed. The `-urlprefix` value is used for the call URL shown in the UI. See [Webhook Parameters](docs/en-US/Webhook-Parameters.md) and [Config UI](cmd/README.md).
 - **HTTPS**: Use a reverse proxy (nginx, Traefik, Caddy) for HTTPS support
 - **CORS**: Set custom headers including CORS headers with `-header name=value`
 - **Hot Reload**: Update configurations without restarting using `-hotreload` or `kill -USR1`
@@ -159,7 +165,7 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 
 ### Core Documentation
 - [Hook Definition](docs/en-US/Hook-Definition.md) - Complete hook configuration reference
-- [Config UI](cmd/README.md) - Config generator (run with `go run . -config-ui` for config-ui-only mode)
+- [Config UI](cmd/README.md) - Config generator (enable with `go run . -config-ui`)
 - [Hook Rules](docs/en-US/Hook-Rules.md) - Trigger rules and conditions
 - [Webhook Parameters](docs/en-US/Webhook-Parameters.md) - Command-line arguments and configuration
 - [Templates](docs/en-US/Templates.md) - Using Go templates in configurations

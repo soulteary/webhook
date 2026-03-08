@@ -3,6 +3,7 @@ package flags
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/soulteary/webhook/internal/rules"
@@ -213,4 +214,103 @@ func TestParseConfig_HooksFilesLocking(t *testing.T) {
 	// Should include new hooks
 	assert.GreaterOrEqual(t, len(result.HooksFiles), 1)
 	assert.Contains(t, result.HooksFiles, "new.json")
+}
+
+func TestParseConfig_DefaultUsesHooksDir(t *testing.T) {
+	oldArgs := os.Args
+	oldHooks := os.Getenv(ENV_KEY_HOOKS)
+	oldHooksDir := os.Getenv(ENV_KEY_HOOKS_DIR)
+	defer func() {
+		os.Args = oldArgs
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+		if oldHooks != "" {
+			_ = os.Setenv(ENV_KEY_HOOKS, oldHooks)
+		} else {
+			_ = os.Unsetenv(ENV_KEY_HOOKS)
+		}
+		if oldHooksDir != "" {
+			_ = os.Setenv(ENV_KEY_HOOKS_DIR, oldHooksDir)
+		} else {
+			_ = os.Unsetenv(ENV_KEY_HOOKS_DIR)
+		}
+		rules.LockHooksFiles()
+		rules.HooksFiles = nil
+		rules.UnlockHooksFiles()
+	}()
+
+	_ = os.Unsetenv(ENV_KEY_HOOKS)
+	_ = os.Unsetenv(ENV_KEY_HOOKS_DIR)
+	os.Args = []string{"webhook"}
+
+	result := ParseConfig()
+	assert.Equal(t, filepath.Clean(DEFAULT_HOOKS_DIR), result.HooksDir)
+	assert.Len(t, result.HooksFiles, 0)
+}
+
+func TestParseConfig_ExplicitHooksPreferSingleFile(t *testing.T) {
+	oldArgs := os.Args
+	oldHooks := os.Getenv(ENV_KEY_HOOKS)
+	oldHooksDir := os.Getenv(ENV_KEY_HOOKS_DIR)
+	defer func() {
+		os.Args = oldArgs
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+		if oldHooks != "" {
+			_ = os.Setenv(ENV_KEY_HOOKS, oldHooks)
+		} else {
+			_ = os.Unsetenv(ENV_KEY_HOOKS)
+		}
+		if oldHooksDir != "" {
+			_ = os.Setenv(ENV_KEY_HOOKS_DIR, oldHooksDir)
+		} else {
+			_ = os.Unsetenv(ENV_KEY_HOOKS_DIR)
+		}
+		rules.LockHooksFiles()
+		rules.HooksFiles = nil
+		rules.UnlockHooksFiles()
+	}()
+
+	_ = os.Unsetenv(ENV_KEY_HOOKS)
+	_ = os.Unsetenv(ENV_KEY_HOOKS_DIR)
+	os.Args = []string{"webhook", "-hooks", "single.json"}
+
+	result := ParseConfig()
+	assert.Equal(t, filepath.Clean(DEFAULT_HOOKS_DIR), result.HooksDir)
+	assert.Contains(t, result.HooksFiles, "single.json")
+}
+
+func TestParseConfig_ExplicitHooksDirOverridesHooks(t *testing.T) {
+	oldArgs := os.Args
+	oldHooks := os.Getenv(ENV_KEY_HOOKS)
+	oldHooksDir := os.Getenv(ENV_KEY_HOOKS_DIR)
+	defer func() {
+		os.Args = oldArgs
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+		if oldHooks != "" {
+			_ = os.Setenv(ENV_KEY_HOOKS, oldHooks)
+		} else {
+			_ = os.Unsetenv(ENV_KEY_HOOKS)
+		}
+		if oldHooksDir != "" {
+			_ = os.Setenv(ENV_KEY_HOOKS_DIR, oldHooksDir)
+		} else {
+			_ = os.Unsetenv(ENV_KEY_HOOKS_DIR)
+		}
+		rules.LockHooksFiles()
+		rules.HooksFiles = nil
+		rules.UnlockHooksFiles()
+	}()
+
+	tmpDir := t.TempDir()
+	inDir := filepath.Join(tmpDir, "dir-hook.yaml")
+	err := os.WriteFile(inDir, []byte("- id: x\n  execute-command: /bin/true\n"), 0644)
+	assert.NoError(t, err)
+
+	_ = os.Unsetenv(ENV_KEY_HOOKS)
+	_ = os.Unsetenv(ENV_KEY_HOOKS_DIR)
+	os.Args = []string{"webhook", "-hooks-dir", tmpDir, "-hooks", "single.json"}
+
+	result := ParseConfig()
+	assert.Equal(t, filepath.Clean(tmpDir), result.HooksDir)
+	assert.Contains(t, result.HooksFiles, inDir)
+	assert.NotContains(t, result.HooksFiles, "single.json")
 }

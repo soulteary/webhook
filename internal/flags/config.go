@@ -120,6 +120,12 @@ func ParseConfig() AppFlags {
 		os.Exit(1)
 	}
 
+	// Track explicitly set flags so we can distinguish defaults from user intent.
+	visited := map[string]bool{}
+	fs.Visit(func(f *flag.Flag) {
+		visited[f.Name] = true
+	})
+
 	// Build config using configutil with priority: CLI > ENV > Default
 	var flags AppFlags
 
@@ -215,8 +221,23 @@ func ParseConfig() AppFlags {
 	flags.ShowVersion = *showVersion
 	flags.ValidateConfig = *validateConfig
 
-	// Resolve HooksFiles: -hooks-dir takes precedence over -hooks
-	if flags.HooksDir != "" {
+	// Resolve HooksFiles:
+	// 1) explicit -hooks-dir / HOOKS_DIR (non-empty) => directory mode
+	// 2) explicit -hooks / HOOKS => single-file mode
+	// 3) otherwise => default directory mode
+	hooksDirEnvRaw, hooksDirEnvSet := os.LookupEnv(ENV_KEY_HOOKS_DIR)
+	hooksDirExplicit := visited["hooks-dir"] || (hooksDirEnvSet && strings.TrimSpace(hooksDirEnvRaw) != "")
+	hooksEnv := env.GetTrimmed(ENV_KEY_HOOKS, "")
+	hooksExplicit := visited["hooks"] || hooksEnv != ""
+
+	useHooksDir := false
+	if hooksDirExplicit && flags.HooksDir != "" {
+		useHooksDir = true
+	} else if !hooksExplicit && flags.HooksDir != "" {
+		useHooksDir = true
+	}
+
+	if useHooksDir {
 		// Scan directory for *.json, *.yaml, *.yml
 		scanned, err := hooksdir.ScanHookFiles(flags.HooksDir)
 		if err != nil {
@@ -232,7 +253,6 @@ func ParseConfig() AppFlags {
 		flags.HooksFiles = hooksFiles
 	} else {
 		// Try environment variable
-		hooksEnv := env.GetTrimmed(ENV_KEY_HOOKS, "")
 		if hooksEnv != "" {
 			hooks := strings.Split(hooksEnv, ",")
 			for _, hookPath := range hooks {
@@ -250,11 +270,6 @@ func ParseConfig() AppFlags {
 	rules.LockHooksFiles()
 	rules.HooksFiles = flags.HooksFiles
 	rules.UnlockHooksFiles()
-
-	// When running in config-ui-only mode (no hooks), use dedicated default port
-	if flags.ConfigUIEnabled && len(flags.HooksFiles) == 0 && flags.Port == DEFAULT_PORT {
-		flags.Port = DEFAULT_PORT_CONFIG_UI_ONLY
-	}
 
 	if len(responseHeaders) > 0 {
 		flags.ResponseHeaders = responseHeaders

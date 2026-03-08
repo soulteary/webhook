@@ -162,7 +162,7 @@ func TestHandler(t *testing.T) {
 }
 
 func TestHandlerRootAPIGenerate(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	h, err := Handler("/", "http://localhost:9000", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestHandlerRootAPIGenerate(t *testing.T) {
 }
 
 func TestHandlerRootAPIGenerateBadRequest(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	h, err := Handler("/", "http://localhost:9000", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -222,7 +222,7 @@ func TestHandlerRootAPIGenerateBadRequest(t *testing.T) {
 
 // TestHandlerRootBasePathNoDoubleSlash ensures root basePath does not render <base href="//">.
 func TestHandlerRootBasePathNoDoubleSlash(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	h, err := Handler("/", "http://localhost:9000", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestHandlerRootBasePathNoDoubleSlash(t *testing.T) {
 
 // TestHandlerRootStaticAndCapabilities ensures /static/ and /api/capabilities are reachable when basePath is "/".
 func TestHandlerRootStaticAndCapabilities(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	h, err := Handler("/", "http://localhost:9000", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -289,7 +289,7 @@ func TestHandlerBasePathTrailingSlashNormalized(t *testing.T) {
 
 // TestHandlerGenerateUsesCustomHooksPrefix ensures callUrl uses the provided hooks URL prefix.
 func TestHandlerGenerateUsesCustomHooksPrefix(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080", "", "/events")
+	h, err := Handler("/", "http://localhost:9000", "", "/events")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -320,7 +320,7 @@ func firstLine(s string) string {
 }
 
 func TestHandlerAPIGenerateMethodNotAllowed(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	h, err := Handler("/", "http://localhost:9000", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -333,7 +333,7 @@ func TestHandlerAPIGenerateMethodNotAllowed(t *testing.T) {
 }
 
 func TestHandlerAPICapabilitiesMethodNotAllowed(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	h, err := Handler("/", "http://localhost:9000", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -347,7 +347,7 @@ func TestHandlerAPICapabilitiesMethodNotAllowed(t *testing.T) {
 
 func TestHandlerAPISaveMethodNotAllowed(t *testing.T) {
 	tmp := t.TempDir()
-	h, err := Handler("/", "http://localhost:9080", tmp, "/hooks")
+	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -360,7 +360,7 @@ func TestHandlerAPISaveMethodNotAllowed(t *testing.T) {
 }
 
 func TestHandlerAPISaveNoWriteDir(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	h, err := Handler("/", "http://localhost:9000", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -376,14 +376,14 @@ func TestHandlerAPISaveNoWriteDir(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&errBody); err != nil {
 		t.Fatalf("Decode: %v", err)
 	}
-	if !strings.Contains(errBody["error"], "hooks-dir") {
-		t.Errorf("error message should mention hooks-dir: %q", errBody["error"])
+	if !strings.Contains(errBody["error"], "single-file mode") {
+		t.Errorf("error message should mention single-file mode: %q", errBody["error"])
 	}
 }
 
 func TestHandlerAPISaveBadExtension(t *testing.T) {
 	tmp := t.TempDir()
-	h, err := Handler("/", "http://localhost:9080", tmp, "/hooks")
+	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -399,7 +399,7 @@ func TestHandlerAPISaveBadExtension(t *testing.T) {
 
 func TestHandlerAPISavePathTraversal(t *testing.T) {
 	tmp := t.TempDir()
-	h, err := Handler("/", "http://localhost:9080", tmp, "/hooks")
+	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -449,6 +449,38 @@ func TestHandlerAPISaveSuccess(t *testing.T) {
 	data, _ := os.ReadFile(target)
 	if !strings.Contains(string(data), "saved-hook") {
 		t.Errorf("file content unexpected: %s", data)
+	}
+}
+
+func TestHandlerAPISaveFormatMismatch(t *testing.T) {
+	tmp := t.TempDir()
+	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	body := `{"filename":"my-hook.json","format":"yaml","content":"- id: saved-hook\n  execute-command: /bin/true\n"}`
+	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("POST /api/save with format mismatch: status %d, want 400", w.Code)
+	}
+}
+
+func TestHandlerAPISaveInvalidJSONContent(t *testing.T) {
+	tmp := t.TempDir()
+	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	body := `{"filename":"my-hook.json","format":"json","content":"not-json"}`
+	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("POST /api/save with invalid json content: status %d, want 400", w.Code)
 	}
 }
 

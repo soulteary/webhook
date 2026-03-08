@@ -275,6 +275,7 @@ const maxSaveBytes = 64 * 1024 // 64KB
 type saveRequest struct {
 	Filename string `json:"filename"`
 	Content  string `json:"content"`
+	Format   string `json:"format"`
 }
 
 func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
@@ -283,7 +284,7 @@ func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
 		return
 	}
 	if writeDir == "" {
-		writeJSONError(w, http.StatusNotImplemented, "save to directory is not enabled (start webhook with -hooks-dir)")
+		writeJSONError(w, http.StatusNotImplemented, "save to directory is not enabled in single-file mode")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxSaveBytes)
@@ -301,6 +302,44 @@ func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
 	if !hooksdir.HookExts[ext] {
 		writeJSONError(w, http.StatusBadRequest, "filename must have extension .json, .yaml or .yml")
 		return
+	}
+	format := strings.ToLower(strings.TrimSpace(req.Format))
+	if format == "" {
+		if ext == ".json" {
+			format = "json"
+		} else {
+			format = "yaml"
+		}
+	}
+	if format != "json" && format != "yaml" {
+		writeJSONError(w, http.StatusBadRequest, "format must be json or yaml")
+		return
+	}
+	if format == "json" && ext != ".json" {
+		writeJSONError(w, http.StatusBadRequest, "json format requires .json filename")
+		return
+	}
+	if format == "yaml" && ext == ".json" {
+		writeJSONError(w, http.StatusBadRequest, "yaml format requires .yaml or .yml filename")
+		return
+	}
+	content := strings.TrimSpace(req.Content)
+	if content == "" {
+		writeJSONError(w, http.StatusBadRequest, "content is required")
+		return
+	}
+	var hooks hook.Hooks
+	switch format {
+	case "json":
+		if err := json.Unmarshal([]byte(content), &hooks); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid hook json: "+err.Error())
+			return
+		}
+	default:
+		if err := yaml.Unmarshal([]byte(content), &hooks); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid hook yaml: "+err.Error())
+			return
+		}
 	}
 	// Prevent path traversal
 	if strings.Contains(base, "..") {
@@ -325,7 +364,34 @@ func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
 		writeJSONError(w, http.StatusBadRequest, "invalid path")
 		return
 	}
-	if err := os.WriteFile(target, []byte(req.Content), 0644); err != nil {
+	if err := os.MkdirAll(writeDir, 0755); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to create directory: "+err.Error())
+		return
+	}
+	tmp, err := os.CreateTemp(writeDir, "."+base+".tmp-*")
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to create temp file: "+err.Error())
+		return
+	}
+	tmpPath := tmp.Name()
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
+	if _, err := tmp.WriteString(req.Content); err != nil {
+		_ = tmp.Close()
+		writeJSONError(w, http.StatusInternalServerError, "failed to write file: "+err.Error())
+		return
+	}
+	if err := tmp.Chmod(0644); err != nil {
+		_ = tmp.Close()
+		writeJSONError(w, http.StatusInternalServerError, "failed to set file mode: "+err.Error())
+		return
+	}
+	if err := tmp.Close(); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to finalize file: "+err.Error())
+		return
+	}
+	if err := os.Rename(tmpPath, target); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to write file: "+err.Error())
 		return
 	}
