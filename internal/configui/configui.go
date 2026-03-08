@@ -293,7 +293,12 @@ func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
 		writeJSONError(w, http.StatusBadRequest, "invalid json: "+err.Error())
 		return
 	}
-	base := filepath.Base(strings.TrimSpace(req.Filename))
+	trimmed := strings.TrimSpace(req.Filename)
+	if strings.Contains(trimmed, "..") {
+		writeJSONError(w, http.StatusBadRequest, "invalid filename")
+		return
+	}
+	base := filepath.Base(trimmed)
 	if base == "" || base == "." {
 		writeJSONError(w, http.StatusBadRequest, "filename is required")
 		return
