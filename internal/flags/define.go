@@ -82,8 +82,12 @@ const (
 	DEFAULT_OPENAPI_PRINT   = false
 
 	// Config UI defaults (config generator Web UI)
-	DEFAULT_CONFIG_UI_ENABLED = false
-	DEFAULT_CONFIG_UI_PATH    = "/config-ui"
+	DEFAULT_CONFIG_UI_ENABLED   = false
+	DEFAULT_CONFIG_UI_PATH      = "/config-ui"
+	DEFAULT_PORT_CONFIG_UI_ONLY = 9080 // default port when running in config-ui-only mode (no -hooks)
+
+	// Hooks directory: scan for *.json, *.yaml, *.yml and watch for changes when empty
+	DEFAULT_HOOKS_DIR = ""
 )
 
 const (
@@ -167,6 +171,9 @@ const (
 	// Config UI environment keys
 	ENV_KEY_CONFIG_UI_ENABLED = "CONFIG_UI_ENABLED"
 	ENV_KEY_CONFIG_UI_PATH    = "CONFIG_UI_PATH"
+
+	// Hooks directory
+	ENV_KEY_HOOKS_DIR = "HOOKS_DIR"
 )
 
 type AppFlags struct {
@@ -252,4 +259,7 @@ type AppFlags struct {
 	// Config UI settings (config generator Web UI)
 	ConfigUIEnabled bool   // 是否启用配置生成 Web UI
 	ConfigUIPath    string // Config UI 的 HTTP 路径（默认 /config-ui）
+
+	// Hooks directory: when set, scan for hook config files (*.json, *.yaml); if empty, watch for new files
+	HooksDir string
 }

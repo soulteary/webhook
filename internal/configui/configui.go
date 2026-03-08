@@ -9,12 +9,22 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/invopop/yaml"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/hooksdir"
 )
+
+func init() {
+	// Ensure CSS/JS from embed are served with correct MIME types (some environments default to text/plain).
+	_ = mime.AddExtensionType(".css", "text/css")
+	_ = mime.AddExtensionType(".js", "application/javascript")
+}
 
 //go:embed static
 var staticFS embed.FS
@@ -103,7 +113,7 @@ func loadPageData(fromFS fs.FS, path string) (*pageData, error) {
 		title = t
 	}
 	return &pageData{
-		I18N:           template.JS(jsonI18N),
+		I18N:           template.JS(string(jsonI18N)),
 		Title:          title,
 		Lang:           "zh-CN",
 		BasePath:       "",
@@ -205,7 +215,7 @@ func requestToHook(req *generateRequest) *hook.Hook {
 	return h
 }
 
-func runGenerate(w http.ResponseWriter, r *http.Request, webhookBaseURL string) {
+func runGenerate(w http.ResponseWriter, r *http.Request, webhookBaseURL string, hooksURLPrefix string) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -244,7 +254,11 @@ func runGenerate(w http.ResponseWriter, r *http.Request, webhookBaseURL string) 
 	if baseURL == "" || (!strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://")) {
 		baseURL = webhookBaseURL
 	}
-	callURL := fmt.Sprintf("%s/hooks/%s", baseURL, h.ID)
+	prefix := strings.TrimSuffix(strings.TrimSpace(hooksURLPrefix), "/")
+	if prefix == "" || !strings.HasPrefix(prefix, "/") {
+		prefix = "/hooks"
+	}
+	callURL := fmt.Sprintf("%s%s/%s", baseURL, prefix, h.ID)
 	curlExample := fmt.Sprintf("curl -X POST %s -H \"Content-Type: application/json\" -d '{}'", callURL)
 	res := generateResponse{
 		YAML:        string(yamlOut),
@@ -256,26 +270,104 @@ func runGenerate(w http.ResponseWriter, r *http.Request, webhookBaseURL string) 
 	_ = json.NewEncoder(w).Encode(res)
 }
 
+const maxSaveBytes = 64 * 1024 // 64KB
+
+type saveRequest struct {
+	Filename string `json:"filename"`
+	Content  string `json:"content"`
+}
+
+func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if writeDir == "" {
+		writeJSONError(w, http.StatusNotImplemented, "save to directory is not enabled (start webhook with -hooks-dir)")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxSaveBytes)
+	var req saveRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid json: "+err.Error())
+		return
+	}
+	base := filepath.Base(strings.TrimSpace(req.Filename))
+	if base == "" || base == "." {
+		writeJSONError(w, http.StatusBadRequest, "filename is required")
+		return
+	}
+	ext := strings.ToLower(filepath.Ext(base))
+	if !hooksdir.HookExts[ext] {
+		writeJSONError(w, http.StatusBadRequest, "filename must have extension .json, .yaml or .yml")
+		return
+	}
+	// Prevent path traversal
+	if strings.Contains(base, "..") {
+		writeJSONError(w, http.StatusBadRequest, "invalid filename")
+		return
+	}
+	target := filepath.Join(writeDir, base)
+	// Ensure target is under writeDir
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+	absDir, err := filepath.Abs(writeDir)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	cleanDir := filepath.Clean(absDir)
+	dirWithSep := cleanDir + string(filepath.Separator)
+	if absTarget != cleanDir && !strings.HasPrefix(absTarget, dirWithSep) {
+		writeJSONError(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+	if err := os.WriteFile(target, []byte(req.Content), 0644); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to write file: "+err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"ok": absTarget})
+}
+
+// normalizeBasePath returns a normalized base path (no trailing slash; empty input becomes "/").
+// For template use: when result is "/", pass empty string so <base> is not rendered (avoids "//").
+func normalizeBasePath(raw string) (normalized string, forTemplate string) {
+	normalized = strings.TrimSpace(raw)
+	normalized = strings.TrimSuffix(normalized, "/")
+	if normalized == "" {
+		normalized = "/"
+	}
+	forTemplate = normalized
+	if normalized == "/" {
+		forTemplate = ""
+	}
+	return normalized, forTemplate
+}
+
 // Handler returns an http.Handler that serves the config UI and API under the given basePath.
-// basePath must be a path like "/config-ui" (no trailing slash). webhookBaseURL is used when
+// basePath may be "/", "/config-ui", or "/config-ui/" (trailing slash is normalized). webhookBaseURL is used when
 // the client does not provide a base URL (e.g. "http://localhost:9000").
-func Handler(basePath string, webhookBaseURL string) (http.Handler, error) {
+// hooksURLPrefix is the URL path prefix for hooks (e.g. "/hooks" or "/events"); used when generating callUrl; if empty, "/hooks" is used.
+// When writeDir is non-empty (e.g. -hooks-dir), the save API is enabled and configs can be written to that directory.
+func Handler(basePath string, webhookBaseURL string, writeDir string, hooksURLPrefix string) (http.Handler, error) {
+	basePath, baseForTemplate := normalizeBasePath(basePath)
+
 	page, err := loadPageData(configFS, pageYAMLPath)
 	if err != nil {
 		return nil, fmt.Errorf("load config-ui page config: %w", err)
 	}
-	page.BasePath = basePath
+	page.BasePath = baseForTemplate
 	tmpl, err := template.ParseFS(staticFS, "static/index.html.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("parse config-ui template: %w", err)
 	}
 	subFS, _ := fs.Sub(staticFS, "static")
 	staticHandler := http.FileServer(http.FS(subFS))
-
-	basePath = strings.TrimSuffix(basePath, "/")
-	if basePath == "" {
-		basePath = "/"
-	}
 
 	// When basePath is "/", subpaths must be "/static/" and "/api/generate" (no "//").
 	pathPrefix := basePath
@@ -287,11 +379,27 @@ func Handler(basePath string, webhookBaseURL string) (http.Handler, error) {
 
 	// Register more specific routes before "/" so they match when basePath is "/".
 	// Static files: basePath/static/ or /static/ when basePath is "/"
-	mux.Handle(pathPrefix+"/static/", http.StripPrefix(pathPrefix+"/", staticHandler))
+	// Strip pathPrefix+"/static/" so path becomes "css/..." or "js/..." for subFS (root is static dir).
+	mux.Handle(pathPrefix+"/static/", http.StripPrefix(pathPrefix+"/static/", staticHandler))
 
 	// API: basePath/api/generate or /api/generate when basePath is "/"
 	mux.HandleFunc(pathPrefix+"/api/generate", func(w http.ResponseWriter, r *http.Request) {
-		runGenerate(w, r, webhookBaseURL)
+		runGenerate(w, r, webhookBaseURL, hooksURLPrefix)
+	})
+
+	// API: basePath/api/save — write generated config to writeDir (when -hooks-dir is set)
+	mux.HandleFunc(pathPrefix+"/api/save", func(w http.ResponseWriter, r *http.Request) {
+		runSave(w, r, writeDir)
+	})
+
+	// API: basePath/api/capabilities — whether save-to-dir is available
+	mux.HandleFunc(pathPrefix+"/api/capabilities", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(map[string]bool{"saveToDir": writeDir != ""})
 	})
 
 	// Index: exact basePath or basePath/

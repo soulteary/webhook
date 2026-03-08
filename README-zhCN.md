@@ -148,7 +148,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 - **表单数据支持**：解析 multipart 表单数据和文件上传 - 查看 [表单数据](docs/zh-CN/Referencing-Request-Values.md)
 - **模板支持**：使用 `-template` 标志在配置文件中使用 Go 模板 - 查看 [配置模版](docs/zh-CN/Templates.md)
-- **Config UI**：使用 `-config-ui` 启用内置配置生成 Web UI（建议仅在调试或内网使用）；独立运行：`go run ./cmd` — 查看 [配置参数](docs/zh-CN/Webhook-Parameters.md) 与 [Config UI 说明](cmd/README.md)
+- **Config UI**：同一二进制，按参数切换。使用 `-config-ui` 启用配置生成 Web UI（建议仅在调试或内网使用）；仅 Config UI：`go run . -config-ui`（不传 `-hooks`，默认端口 9080）；或与 `-hooks` 同时使用在主服务上挂载。可用 `-config-ui-path` 修改路径（尾斜杠会归一化）。配合 `-hooks-dir` 时，UI 可将生成的配置保存到该目录。`-urlprefix` 会影响 UI 中展示的调用 URL。详见 [配置参数](docs/zh-CN/Webhook-Parameters.md) 与 [Config UI 说明](cmd/README.md)。
 - **HTTPS**：使用反向代理（nginx、Traefik、Caddy）提供 HTTPS 支持
 - **CORS**：使用 `-header name=value` 设置自定义响应头，包括 CORS 响应头
 - **热重载**：使用 `-hotreload` 或 `kill -USR1` 无需重启即可更新配置
@@ -159,7 +159,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 ### 核心文档
 - [钩子定义](docs/zh-CN/Hook-Definition.md) - 完整的钩子配置参考
-- [Config UI](cmd/README.md) - 独立配置生成器（运行 `go run ./cmd`）
+- [Config UI](cmd/README.md) - 配置生成器（仅 Config UI 模式：运行 `go run . -config-ui`）
 - [钩子匹配规则](docs/zh-CN/Hook-Rules.md) - 触发规则和条件
 - [配置参数](docs/zh-CN/Webhook-Parameters.md) - 命令行参数和配置
 - [配置模版](docs/zh-CN/Templates.md) - 在配置中使用 Go 模板

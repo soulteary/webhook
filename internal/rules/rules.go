@@ -16,7 +16,9 @@ var (
 	hooksIndex = make(map[string]*hook.Hook)
 )
 
-func RemoveHooks(hooksFilePath string, verbose bool, noPanic bool) {
+// RemoveHooks removes hooks loaded from the given file. When allowZeroHooks is true (e.g. -hooks-dir mode),
+// having zero hooks after removal does not cause exit.
+func RemoveHooks(hooksFilePath string, verbose bool, noPanic bool, allowZeroHooks bool) {
 	hooksMutex.Lock()
 	defer hooksMutex.Unlock()
 
@@ -42,7 +44,7 @@ func RemoveHooks(hooksFilePath string, verbose bool, noPanic bool) {
 
 	logger.Infof("removed %d hook(s) that were loaded from file %s", removedHooksCount, hooksFilePath)
 
-	if !verbose && !noPanic && lenLoadedHooksLocked() == 0 {
+	if !allowZeroHooks && !verbose && !noPanic && lenLoadedHooksLocked() == 0 {
 		logger.Fatalln("couldn't load any hooks from file!\naborting webhook execution since the -verbose flag is set to false.\nIf, for some reason, you want webhook to run without the hooks, either use -verbose flag, or -nopanic")
 	}
 }

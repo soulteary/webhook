@@ -2,27 +2,36 @@
 
 在网页中快速生成可调用的 webhook 配置（YAML/JSON 片段）及调用 URL、curl 示例，便于复制到 `hooks.yaml` / `hooks.json` 或直接调用。
 
-**同一套 UI 也可在主程序中启用**：使用 `./webhook -config-ui`（或 `CONFIG_UI_ENABLED=true`）启动 webhook 后，访问 `http://localhost:9000/config-ui` 即可，无需单独运行本二进制。详见 [配置参数](../docs/zh-CN/Webhook-Parameters.md)。
+**同一套 UI 也可在主程序中启用**：使用 `./webhook -hooks hooks.json -config-ui` 启动 webhook 后，访问 `http://localhost:9000/config-ui` 即可。详见 [配置参数](../docs/zh-CN/Webhook-Parameters.md)。
 
 ## 运行方式
 
-```bash
-# 使用默认端口 9080
-go run ./cmd
+与主程序共用同一二进制，**仅根据参数决定模式**：
 
-# 指定端口
-go run ./cmd -port 9080
-
-# 或通过环境变量
-PORT=9080 go run ./cmd
-```
-
-编译为独立二进制后：
+- **仅 Config UI 模式**：不指定 `-hooks` 且启用 `-config-ui` 时，只启动 Config UI 服务（默认端口 9080）。
+- **Webhook + Config UI**：指定 `-hooks` 并启用 `-config-ui` 时，在主服务上挂载 Config UI（如 `http://localhost:9000/config-ui`）。
 
 ```bash
-go build -o webhook-config-ui ./cmd
-./webhook-config-ui -port 9080
+# 仅 Config UI：使用默认端口 9080（不传 -hooks）
+go run . -config-ui
+
+# 仅 Config UI，指定端口
+go run . -config-ui -port 9090
+
+# 通过环境变量（不设置 HOOKS 时即为仅 Config UI 模式，默认端口 9080）
+CONFIG_UI_ENABLED=true go run .
+PORT=9090 CONFIG_UI_ENABLED=true go run .
 ```
+
+编译后使用同一二进制：
+
+```bash
+go build -o webhook .
+./webhook -config-ui
+./webhook -config-ui -port 9080
+```
+
+发布产物中的 `webhook-config-ui` 与 `webhook` 为同一程序，用法一致。仅 Config UI 时运行 `./webhook -config-ui` 或 `./webhook-config-ui -config-ui`（均不传 `-hooks`）即可，默认监听 9080。
 
 ## 使用说明
 
@@ -40,10 +49,10 @@ go build -o webhook-config-ui ./cmd
 
 ## 与 webhook 同机部署
 
-config-ui 为独立服务，与 webhook 主程序分开运行。若需同机部署：
+仅 Config UI 与 webhook 主程序可分开监听端口（同一二进制不同参数）：
 
-- webhook 主服务：例如 `:9000`（hooks 端点 `/hooks/:id`）
-- config-ui：例如 `:9080`（仅提供配置生成页）
+- webhook 主服务：例如 `./webhook -hooks hooks.json` → `:9000`（hooks 端点 `/hooks/:id`）
+- 仅 Config UI：例如 `./webhook -config-ui` → `:9080`（仅提供配置生成页）
 
 可编写 `docker-compose.yml` 或 systemd 单元，分别启动两个进程；生成结果中的「调用 URL」需与 webhook 实际监听地址一致（可在生成后手动替换 host/port）。
 

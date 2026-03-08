@@ -60,3 +60,48 @@ func ParseAndLoadHooks(isAsTemplate bool) {
 	HooksFiles = newHooksFiles
 	hooksMutex.Unlock()
 }
+
+// AddAndLoadHooksFile adds a hook config file path to HooksFiles and loads it.
+// If the path is already in HooksFiles, ReloadHooks is not called by this function (caller may call ReloadHooks separately).
+// Used when watching -hooks-dir and a new file appears.
+func AddAndLoadHooksFile(hooksFilePath string, isAsTemplate bool) {
+	hooksMutex.Lock()
+	for _, p := range HooksFiles {
+		if p == hooksFilePath {
+			hooksMutex.Unlock()
+			ReloadHooks(hooksFilePath, isAsTemplate)
+			return
+		}
+	}
+	HooksFiles = append(HooksFiles, hooksFilePath)
+	hooksMutex.Unlock()
+
+	logger.Infof("attempting to load hooks from %s", hooksFilePath)
+	newHooks := hook.Hooks{}
+	err := newHooks.LoadFromFile(hooksFilePath, isAsTemplate)
+	if err != nil {
+		logger.Errorf("couldn't load hooks from file! %+v", err)
+		return
+	}
+	logger.Infof("found %d hook(s) in file", len(newHooks))
+	for _, h := range newHooks {
+		if MatchLoadedHook(h.ID) != nil {
+			logger.Errorf("error: hook with the id %s has already been loaded! skipping file %s", h.ID, hooksFilePath)
+			hooksMutex.Lock()
+			newList := HooksFiles[:0]
+			for _, p := range HooksFiles {
+				if p != hooksFilePath {
+					newList = append(newList, p)
+				}
+			}
+			HooksFiles = newList
+			hooksMutex.Unlock()
+			return
+		}
+		logger.Debugf("\tloaded: %s", h.ID)
+	}
+	hooksMutex.Lock()
+	LoadedHooksFromFiles[hooksFilePath] = newHooks
+	updateIndexForFileLocked(hooksFilePath, newHooks)
+	hooksMutex.Unlock()
+}

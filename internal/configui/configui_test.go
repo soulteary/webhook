@@ -120,7 +120,7 @@ func TestWriteJSONError(t *testing.T) {
 }
 
 func TestHandler(t *testing.T) {
-	h, err := Handler("/config-ui", "http://localhost:9000")
+	h, err := Handler("/config-ui", "http://localhost:9000", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestHandler(t *testing.T) {
 }
 
 func TestHandlerRootAPIGenerate(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080")
+	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestHandlerRootAPIGenerate(t *testing.T) {
 }
 
 func TestHandlerRootAPIGenerateBadRequest(t *testing.T) {
-	h, err := Handler("/", "http://localhost:9080")
+	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -216,4 +216,103 @@ func TestHandlerRootAPIGenerateBadRequest(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestHandlerRootBasePathNoDoubleSlash ensures root basePath does not render <base href="//">.
+func TestHandlerRootBasePathNoDoubleSlash(t *testing.T) {
+	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "http://test/", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /: status %d, want 200", rec.Code)
+	}
+	html := rec.Body.String()
+	if strings.Contains(html, `<base href="//">`) {
+		t.Errorf("HTML must not contain <base href=\"//\">; got snippet: %s", firstLine(html))
+	}
+}
+
+// TestHandlerRootStaticAndCapabilities ensures /static/ and /api/capabilities are reachable when basePath is "/".
+func TestHandlerRootStaticAndCapabilities(t *testing.T) {
+	h, err := Handler("/", "http://localhost:9080", "", "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	// Static
+	reqStatic := httptest.NewRequest(http.MethodGet, "http://test/static/js/app.js", nil)
+	recStatic := httptest.NewRecorder()
+	h.ServeHTTP(recStatic, reqStatic)
+	if recStatic.Code != http.StatusOK {
+		t.Errorf("GET /static/js/app.js: status %d, want 200", recStatic.Code)
+	}
+	// API capabilities
+	reqCap := httptest.NewRequest(http.MethodGet, "http://test/api/capabilities", nil)
+	recCap := httptest.NewRecorder()
+	h.ServeHTTP(recCap, reqCap)
+	if recCap.Code != http.StatusOK {
+		t.Errorf("GET /api/capabilities: status %d, want 200", recCap.Code)
+	}
+	var capBody map[string]bool
+	if err := json.NewDecoder(recCap.Body).Decode(&capBody); err != nil {
+		t.Fatalf("Decode capabilities: %v", err)
+	}
+	if _, ok := capBody["saveToDir"]; !ok {
+		t.Errorf("capabilities response missing saveToDir: %v", capBody)
+	}
+}
+
+// TestHandlerBasePathTrailingSlashNormalized ensures Handler("/config-ui/", ...) behaves like Handler("/config-ui", ...).
+func TestHandlerBasePathTrailingSlashNormalized(t *testing.T) {
+	h, err := Handler("/config-ui/", "http://localhost:9000", "", "/hooks")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "http://test/config-ui", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("GET /config-ui (handler created with /config-ui/): status %d, want 200", rec.Code)
+	}
+	req2 := httptest.NewRequest(http.MethodGet, "http://test/config-ui/static/js/app.js", nil)
+	rec2 := httptest.NewRecorder()
+	h.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Errorf("GET /config-ui/static/js/app.js: status %d, want 200", rec2.Code)
+	}
+}
+
+// TestHandlerGenerateUsesCustomHooksPrefix ensures callUrl uses the provided hooks URL prefix.
+func TestHandlerGenerateUsesCustomHooksPrefix(t *testing.T) {
+	h, err := Handler("/", "http://localhost:9080", "", "/events")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	body := `{"id":"my-hook","execute-command":"/bin/true"}`
+	req := httptest.NewRequest(http.MethodPost, "http://test/api/generate", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST /api/generate: status %d, body: %s", w.Code, w.Body.Bytes())
+	}
+	var res generateResponse
+	if err := json.NewDecoder(w.Body).Decode(&res); err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if res.CallURL == "" || !strings.Contains(res.CallURL, "/events/my-hook") {
+		t.Errorf("CallURL should contain /events/my-hook; got %q", res.CallURL)
+	}
+}
+
+func firstLine(s string) string {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			return s[:i]
+		}
+	}
+	return s
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -428,4 +429,90 @@ func TestLaunch_OpenAPIEndpoint_ReservedPathSkipped(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	// Health endpoint returns JSON (health-kit), not the OpenAPI doc
 	assert.Contains(t, resp.Header.Get("Content-Type"), "application/json")
+}
+
+func TestLaunch_ConfigUIPathTrailingSlash(t *testing.T) {
+	appFlags := flags.AppFlags{
+		Debug:           false,
+		HttpMethods:     "",
+		HooksURLPrefix:  "hooks",
+		ResponseHeaders: hook.ResponseHeaders{},
+		ConfigUIEnabled: true,
+		ConfigUIPath:    "/config-ui/", // trailing slash normalized
+	}
+
+	ln, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	defer func() { _ = ln.Close() }()
+
+	srv := Launch(appFlags, ln.Addr().String(), ln)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	base := "http://" + ln.Addr().String()
+
+	req, err := http.NewRequest("GET", base+"/config-ui", nil)
+	require.NoError(t, err)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "GET /config-ui with path configured as /config-ui/")
+	assert.Contains(t, resp.Header.Get("Content-Type"), "text/html")
+
+	req2, err := http.NewRequest("GET", base+"/config-ui/static/js/app.js", nil)
+	require.NoError(t, err)
+	resp2, err := client.Do(req2)
+	require.NoError(t, err)
+	defer func() { _ = resp2.Body.Close() }()
+	assert.Equal(t, http.StatusOK, resp2.StatusCode, "GET /config-ui/static/js/app.js")
+}
+
+func TestLaunch_ConfigUIWithCustomURLPrefix(t *testing.T) {
+	appFlags := flags.AppFlags{
+		Debug:           false,
+		HttpMethods:     "",
+		HooksURLPrefix:  "events",
+		ResponseHeaders: hook.ResponseHeaders{},
+		ConfigUIEnabled: true,
+		ConfigUIPath:    "/config-ui",
+	}
+
+	ln, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	defer func() { _ = ln.Close() }()
+
+	srv := Launch(appFlags, ln.Addr().String(), ln)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	base := "http://" + ln.Addr().String()
+
+	// POST /config-ui/api/generate and check callUrl contains /events/
+	body := `{"id":"test-id","execute-command":"/bin/true"}`
+	req, err := http.NewRequest("POST", base+"/config-ui/api/generate", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result struct {
+		CallURL string `json:"callUrl"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	require.NoError(t, err)
+	assert.Contains(t, result.CallURL, "/events/test-id", "callUrl should use urlprefix 'events'")
 }

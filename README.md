@@ -148,7 +148,7 @@ For more security options, see:
 
 - **Form Data Support**: Parse multipart form data and file uploads - see [Form Data](docs/en-US/Referencing-Request-Values.md)
 - **Template Support**: Use Go templates in configuration files with `-template` flag - see [Templates](docs/en-US/Templates.md)
-- **Config UI**: Enable built-in config generator Web UI with `-config-ui` (recommend debugging or intranet only). Standalone: `go run ./cmd` — see [Webhook Parameters](docs/en-US/Webhook-Parameters.md) and [Config UI](cmd/README.md)
+- **Config UI**: Same binary, behavior by flags. Enable config generator Web UI with `-config-ui` (recommend debugging or intranet only). Config-ui-only: `go run . -config-ui` (no `-hooks`, default port 9080); or mount on webhook server with `-hooks` and `-config-ui`. Use `-config-ui-path` to change the path (trailing slash is normalized). With `-hooks-dir`, the UI can save generated configs into that directory. The `-urlprefix` value is used for the call URL shown in the UI. See [Webhook Parameters](docs/en-US/Webhook-Parameters.md) and [Config UI](cmd/README.md).
 - **HTTPS**: Use a reverse proxy (nginx, Traefik, Caddy) for HTTPS support
 - **CORS**: Set custom headers including CORS headers with `-header name=value`
 - **Hot Reload**: Update configurations without restarting using `-hotreload` or `kill -USR1`
@@ -159,7 +159,7 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 
 ### Core Documentation
 - [Hook Definition](docs/en-US/Hook-Definition.md) - Complete hook configuration reference
-- [Config UI](cmd/README.md) - Standalone config generator (run with `go run ./cmd`)
+- [Config UI](cmd/README.md) - Config generator (run with `go run . -config-ui` for config-ui-only mode)
 - [Hook Rules](docs/en-US/Hook-Rules.md) - Trigger rules and conditions
 - [Webhook Parameters](docs/en-US/Webhook-Parameters.md) - Command-line arguments and configuration
 - [Templates](docs/en-US/Templates.md) - Using Go templates in configurations

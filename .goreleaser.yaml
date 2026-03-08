@@ -18,17 +18,17 @@ builds:
       - "7"
       - "6"
 
-  # Standalone config generator Web UI binary (same ldflags for version not applied; optional)
+  # Config UI binary (same code as main binary; run with -config-ui and no -hooks for config-ui-only mode)
   - <<: *build_defaults
     id: config-ui-macos
-    main: ./cmd
+    main: .
     binary: webhook-config-ui
     goos: [darwin]
     goarch: [amd64, arm64]
 
   - <<: *build_defaults
     id: config-ui-linux
-    main: ./cmd
+    main: .
     binary: webhook-config-ui
     goos: [linux]
     goarch: ["386", arm, amd64, arm64]

@@ -1,6 +1,8 @@
 package monitor
 
 import (
+	"os"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/logger"
@@ -10,23 +12,29 @@ import (
 var watcher *fsnotify.Watcher
 
 func ApplyWatcher(appFlags flags.AppFlags) {
+	// -hooks-dir: watch directory for new/changed/removed hook config files (including when dir is empty)
+	if appFlags.HooksDir != "" {
+		if err := os.MkdirAll(appFlags.HooksDir, 0755); err != nil {
+			logger.Fatalf("error creating hooks-dir %s: %v", appFlags.HooksDir, err)
+		}
+		go WatchDir(appFlags.HooksDir, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic)
+		return
+	}
+
+	// -hotreload with explicit -hooks: watch each file (watcher kept for process lifetime; do not Close in ApplyWatcher)
 	var err error
 	watcher, err = fsnotify.NewWatcher()
 	if err != nil {
 		logger.Fatalf("error creating file watcher instance: %v", err)
 	}
-	defer func() { _ = watcher.Close() }()
 
-	// 加锁读取 HooksFiles
 	rules.RLockHooksFiles()
 	hooksFilesCopy := make([]string, len(rules.HooksFiles))
 	copy(hooksFilesCopy, rules.HooksFiles)
 	rules.RUnlockHooksFiles()
 
 	for _, hooksFilePath := range hooksFilesCopy {
-		// set up file watcher
 		logger.Infof("setting up file watcher for %s", hooksFilePath)
-
 		err = watcher.Add(hooksFilePath)
 		if err != nil {
 			logger.Errorf("error adding hooks file %s to the watcher: %v", hooksFilePath, err)
@@ -34,5 +42,8 @@ func ApplyWatcher(appFlags flags.AppFlags) {
 		}
 	}
 
-	go WatchForFileChange(watcher, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, rules.ReloadHooks, rules.RemoveHooks)
+	removeHooksFn := func(path string, verbose bool, noPanic bool) {
+		rules.RemoveHooks(path, verbose, noPanic, false)
+	}
+	go WatchForFileChange(watcher, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, rules.ReloadHooks, removeHooksFn)
 }

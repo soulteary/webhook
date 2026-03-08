@@ -20,7 +20,7 @@ func TestRemoveHooks(t *testing.T) {
 	rules.BuildIndex()
 
 	// Execute
-	rules.RemoveHooks("test1.json", false, false)
+	rules.RemoveHooks("test1.json", false, false, false)
 
 	// Assert
 	assert.Equal(t, 1, rules.LenLoadedHooks(), "Expected number of hooks after removing should be 1")
@@ -272,7 +272,7 @@ func TestRemoveHooks_WithVerbose(t *testing.T) {
 	}
 
 	// Execute with verbose=true (should not panic)
-	rules.RemoveHooks("test1.json", true, false)
+	rules.RemoveHooks("test1.json", true, false, false)
 
 	// Assert
 	assert.Equal(t, 0, rules.LenLoadedHooks())
@@ -286,7 +286,7 @@ func TestRemoveHooks_WithNoPanic(t *testing.T) {
 	}
 
 	// Execute with noPanic=true (should not panic)
-	rules.RemoveHooks("test1.json", false, true)
+	rules.RemoveHooks("test1.json", false, true, false)
 
 	// Assert
 	assert.Equal(t, 0, rules.LenLoadedHooks())
@@ -300,7 +300,7 @@ func TestRemoveHooks_EmptyHooksFiles(t *testing.T) {
 	}
 
 	// Execute
-	rules.RemoveHooks("test1.json", false, true)
+	rules.RemoveHooks("test1.json", false, true, false)
 
 	// Assert - HooksFiles should be empty
 	assert.Equal(t, 0, len(rules.HooksFiles))

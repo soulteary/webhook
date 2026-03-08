@@ -21,8 +21,11 @@
 - `-hooks value`
   指定包含钩子定义的 JSON 或 YAML 文件路径，可以多次使用以从不同文件加载钩子
 
+- `-hooks-dir string`
+  指定用于扫描钩子配置文件的目录（*.json、*.yaml、*.yml）；目录为空时会监控新文件；与 Config UI 配合时可启用「保存到目录」功能
+
 - `-urlprefix string`
-  指定钩子 URL 的前缀（格式：`protocol://yourserver:port/PREFIX/:hook-id`，默认值：`hooks`）
+  指定钩子 URL 的前缀（格式：`protocol://yourserver:port/PREFIX/:hook-id`，默认值：`hooks`）；Config UI 生成的调用 URL 也会使用此前缀
 
 ### 日志和调试
 
@@ -260,15 +263,21 @@
 
 ### Config UI（配置生成 Web UI）
 
-以下参数用于在主服务中启用配置生成 Web UI（与独立二进制 `./cmd` 功能一致）；**建议仅在调试或内网环境使用**。
+以下参数用于启用配置生成 Web UI。运行模式由是否指定 `-hooks` 与是否启用 `-config-ui` 共同决定：
+
+- **仅 Config UI**：启用 `-config-ui` 且未指定 `-hooks`（CLI 与环境变量均无）时，仅启动 Config UI HTTP 服务，默认端口 9080。
+- **Webhook + Config UI**：指定 `-hooks` 且启用 `-config-ui` 时，在主服务上挂载 Config UI（如 `http://localhost:9000/config-ui`）。
+- **仅 Webhook**：指定 `-hooks` 且未启用 `-config-ui` 时，仅提供 webhook 服务。
+
+**建议仅在调试或内网环境使用 Config UI。**
 
 - `-config-ui`
   启用配置生成 Web UI，在 config-ui-path 提供页面与生成 API（默认值：`false`）
 
 - `-config-ui-path string`
-  启用 config-ui 时，提供 Config UI 的 HTTP 路径（默认值：`/config-ui`）
+  在 webhook 主服务上启用 config-ui 时，Config UI 的 HTTP 路径（默认值：`/config-ui`）。尾斜杠会被归一化（如 `/config-ui/` 等同于 `/config-ui`）。仅 Config UI 模式下该路径为根路径 `/`。
 
-  请勿设置为与现有端点冲突的路径（如 `/`、`/health`、`/hooks`、`/openapi` 等）。
+  请勿设置为与现有端点冲突的路径（如 `/`、`/health`、`/hooks`、`/openapi` 等）。Config UI 生成的调用 URL 和 curl 示例使用 `-urlprefix`（例如 `-urlprefix=events` 时生成 `/events/:id`）。设置 `-hooks-dir` 后，UI 会提供「保存到目录」选项。
 
 ### 其他
 
@@ -289,9 +298,10 @@
 | 环境变量 | 命令行参数 | 说明 | 默认值 |
 |---------|-----------|------|--------|
 | `HOST` | `-ip` | 监听 IP 地址 | `0.0.0.0` |
-| `PORT` | `-port` | 监听端口 | `9000` |
+| `PORT` | `-port` | 监听端口；仅 Config UI 模式（未设置 `HOOKS` 且启用 Config UI）下默认为 `9080`，否则为 `9000` | `9000` 或 `9080` |
 | `HOOKS` | `-hooks` | 钩子文件路径（多个用逗号分隔） | - |
-| `URL_PREFIX` | `-urlprefix` | URL 前缀 | `hooks` |
+| `HOOKS_DIR` | `-hooks-dir` | 扫描钩子配置文件的目录；设置后 Config UI 可保存到该目录 | - |
+| `URL_PREFIX` | `-urlprefix` | 钩子及 Config UI 生成调用 URL 的前缀 | `hooks` |
 
 ### 日志和调试
 
@@ -411,8 +421,8 @@
 
 | 环境变量 | 命令行参数 | 说明 | 默认值 |
 |---------|-----------|------|--------|
-| `CONFIG_UI_ENABLED` | `-config-ui` | 启用配置生成 Web UI | `false` |
-| `CONFIG_UI_PATH` | `-config-ui-path` | Config UI 的 HTTP 路径 | `/config-ui` |
+| `CONFIG_UI_ENABLED` | `-config-ui` | 启用配置生成 Web UI；不设置 `HOOKS` 时为仅 Config UI 模式（默认端口 9080） | `false` |
+| `CONFIG_UI_PATH` | `-config-ui-path` | 在主服务上挂载 Config UI 时的 HTTP 路径 | `/config-ui` |
 
 ### 环境变量使用示例
 

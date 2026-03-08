@@ -250,6 +250,10 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		if configUIPath == "" || !strings.HasPrefix(configUIPath, "/") {
 			configUIPath = "/config-ui"
 		}
+		configUIPath = strings.TrimSuffix(configUIPath, "/")
+		if configUIPath == "" {
+			configUIPath = "/"
+		}
 		hookBaseForReserved := link.MakeBaseURL(&appFlags.HooksURLPrefix)
 		if hookBaseForReserved == "" {
 			hookBaseForReserved = "/hooks"
@@ -268,7 +272,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		if isReserved {
 			logger.Warnf("config-ui-path %q conflicts with reserved path; skipping Config UI route", configUIPath)
 		} else {
-			configUIHandler, err := configui.Handler(configUIPath, "http://"+addr)
+			configUIHandler, err := configui.Handler(configUIPath, "http://"+addr, appFlags.HooksDir, hookBaseForReserved)
 			if err != nil {
 				logger.Warnf("config-ui handler init failed: %v", err)
 			} else {

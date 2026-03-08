@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/soulteary/cli-kit/configutil"
 	"github.com/soulteary/cli-kit/env"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/hooksdir"
 	"github.com/soulteary/webhook/internal/rules"
 )
 
@@ -95,6 +97,9 @@ func ParseConfig() AppFlags {
 	// Config UI flags (config generator Web UI)
 	fs.Bool("config-ui", DEFAULT_CONFIG_UI_ENABLED, "enable config generator Web UI at config-ui-path (default false)")
 	fs.String("config-ui-path", DEFAULT_CONFIG_UI_PATH, "HTTP path for config UI when config-ui is enabled (default /config-ui)")
+
+	// Hooks directory: scan for *.json, *.yaml; when empty, watch for new files (use with or without -hotreload)
+	fs.String("hooks-dir", DEFAULT_HOOKS_DIR, "directory to scan for hook config files (*.json, *.yaml); if empty, watch for new files")
 
 	showVersion := fs.Bool("version", false, "display webhook version and quit")
 	validateConfig := fs.Bool("validate-config", false, "validate configuration and exit")
@@ -199,12 +204,31 @@ func ParseConfig() AppFlags {
 	flags.ConfigUIEnabled = configutil.ResolveBool(fs, "config-ui", ENV_KEY_CONFIG_UI_ENABLED, DEFAULT_CONFIG_UI_ENABLED)
 	flags.ConfigUIPath = configutil.ResolveString(fs, "config-ui-path", ENV_KEY_CONFIG_UI_PATH, DEFAULT_CONFIG_UI_PATH, true)
 
+	// Hooks directory: when set, scan for hook files and optionally watch when empty
+	flags.HooksDir = configutil.ResolveString(fs, "hooks-dir", ENV_KEY_HOOKS_DIR, DEFAULT_HOOKS_DIR, true)
+	flags.HooksDir = strings.TrimSpace(flags.HooksDir)
+	if flags.HooksDir != "" {
+		flags.HooksDir = filepath.Clean(flags.HooksDir)
+	}
+
 	// Special flags
 	flags.ShowVersion = *showVersion
 	flags.ValidateConfig = *validateConfig
 
-	// Handle multi-value flags with ENV fallback
-	if len(hooksFiles) > 0 {
+	// Resolve HooksFiles: -hooks-dir takes precedence over -hooks
+	if flags.HooksDir != "" {
+		// Scan directory for *.json, *.yaml, *.yml
+		scanned, err := hooksdir.ScanHookFiles(flags.HooksDir)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				fmt.Fprintf(os.Stderr, "Error scanning hooks-dir %s: %v\n", flags.HooksDir, err)
+			}
+			// Directory may not exist yet (e.g. for Config UI save); leave HooksFiles empty
+			flags.HooksFiles = hook.HooksFiles{}
+		} else {
+			flags.HooksFiles = scanned
+		}
+	} else if len(hooksFiles) > 0 {
 		flags.HooksFiles = hooksFiles
 	} else {
 		// Try environment variable
@@ -226,6 +250,11 @@ func ParseConfig() AppFlags {
 	rules.LockHooksFiles()
 	rules.HooksFiles = flags.HooksFiles
 	rules.UnlockHooksFiles()
+
+	// When running in config-ui-only mode (no hooks), use dedicated default port
+	if flags.ConfigUIEnabled && len(flags.HooksFiles) == 0 && flags.Port == DEFAULT_PORT {
+		flags.Port = DEFAULT_PORT_CONFIG_UI_ONLY
+	}
 
 	if len(responseHeaders) > 0 {
 		flags.ResponseHeaders = responseHeaders

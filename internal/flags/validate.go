@@ -183,7 +183,12 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 	copy(hooksFiles, rules.HooksFiles)
 	rules.RUnlockHooksFiles()
 
-	// 如果没有指定 Hook 文件，使用默认值
+	// -hooks-dir 且当前无文件时，不验证（空目录由监控后续发现新文件）
+	if flags.HooksDir != "" && len(hooksFiles) == 0 {
+		return
+	}
+
+	// 如果没有指定 Hook 文件且未使用 -hooks-dir，使用默认值
 	if len(hooksFiles) == 0 {
 		hooksFiles = hook.HooksFiles{"hooks.json"}
 	}
