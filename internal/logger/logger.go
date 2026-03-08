@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	loggerkit "github.com/soulteary/logger-kit"
 )
@@ -27,8 +28,14 @@ func Init(verbose, debug bool, logPath string, jsonFormat bool) error {
 	if !verbose {
 		writer = io.Discard
 	} else if logPath != "" {
-		// 打开日志文件
-		logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+		// 规范化路径，防止路径遍历（gosec G304）
+		cleanPath := filepath.Clean(logPath)
+		absPath, err := filepath.Abs(cleanPath)
+		if err != nil {
+			return fmt.Errorf("resolve log path: %w", err)
+		}
+		// 打开日志文件（使用解析后的绝对路径，避免通过变量直接包含任意路径）
+		logFile, err := os.OpenFile(absPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 		if err != nil {
 			return err
 		}
