@@ -92,6 +92,10 @@ func ParseConfig() AppFlags {
 	fs.String("openapi-path", DEFAULT_OPENAPI_PATH, "HTTP path for OpenAPI spec when openapi is enabled (default /openapi)")
 	fs.Bool("openapi-print", DEFAULT_OPENAPI_PRINT, "print OpenAPI spec to stdout at startup when openapi is enabled (default false)")
 
+	// Config UI flags (config generator Web UI)
+	fs.Bool("config-ui", DEFAULT_CONFIG_UI_ENABLED, "enable config generator Web UI at config-ui-path (default false)")
+	fs.String("config-ui-path", DEFAULT_CONFIG_UI_PATH, "HTTP path for config UI when config-ui is enabled (default /config-ui)")
+
 	showVersion := fs.Bool("version", false, "display webhook version and quit")
 	validateConfig := fs.Bool("validate-config", false, "validate configuration and exit")
 
@@ -190,6 +194,10 @@ func ParseConfig() AppFlags {
 	flags.OpenAPIEnabled = configutil.ResolveBool(fs, "openapi", ENV_KEY_OPENAPI_ENABLED, DEFAULT_OPENAPI_ENABLED)
 	flags.OpenAPIPath = configutil.ResolveString(fs, "openapi-path", ENV_KEY_OPENAPI_PATH, DEFAULT_OPENAPI_PATH, true)
 	flags.OpenAPIPrint = configutil.ResolveBool(fs, "openapi-print", ENV_KEY_OPENAPI_PRINT, DEFAULT_OPENAPI_PRINT)
+
+	// Config UI settings
+	flags.ConfigUIEnabled = configutil.ResolveBool(fs, "config-ui", ENV_KEY_CONFIG_UI_ENABLED, DEFAULT_CONFIG_UI_ENABLED)
+	flags.ConfigUIPath = configutil.ResolveString(fs, "config-ui-path", ENV_KEY_CONFIG_UI_PATH, DEFAULT_CONFIG_UI_PATH, true)
 
 	// Special flags
 	flags.ShowVersion = *showVersion

@@ -258,6 +258,18 @@
 - `-openapi-print`
   启用 openapi 时，在启动时将规范打印到标准输出（默认值：`false`）
 
+### Config UI（配置生成 Web UI）
+
+以下参数用于在主服务中启用配置生成 Web UI（与独立二进制 `./cmd` 功能一致）；**建议仅在调试或内网环境使用**。
+
+- `-config-ui`
+  启用配置生成 Web UI，在 config-ui-path 提供页面与生成 API（默认值：`false`）
+
+- `-config-ui-path string`
+  启用 config-ui 时，提供 Config UI 的 HTTP 路径（默认值：`/config-ui`）
+
+  请勿设置为与现有端点冲突的路径（如 `/`、`/health`、`/hooks`、`/openapi` 等）。
+
 ### 其他
 
 - `-version`
@@ -394,6 +406,13 @@
 | `OPENAPI_ENABLED` | `-openapi` | 启用 OpenAPI 规范 | `false` |
 | `OPENAPI_PATH` | `-openapi-path` | OpenAPI 规范 HTTP 路径 | `/openapi` |
 | `OPENAPI_PRINT` | `-openapi-print` | 启动时打印规范到 stdout | `false` |
+
+### Config UI
+
+| 环境变量 | 命令行参数 | 说明 | 默认值 |
+|---------|-----------|------|--------|
+| `CONFIG_UI_ENABLED` | `-config-ui` | 启用配置生成 Web UI | `false` |
+| `CONFIG_UI_PATH` | `-config-ui-path` | Config UI 的 HTTP 路径 | `/config-ui` |
 
 ### 环境变量使用示例
 

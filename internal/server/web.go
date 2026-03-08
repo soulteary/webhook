@@ -17,6 +17,7 @@ import (
 	loggerkit "github.com/soulteary/logger-kit"
 	middlewarekit "github.com/soulteary/middleware-kit"
 	versionkit "github.com/soulteary/version-kit"
+	"github.com/soulteary/webhook/internal/configui"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/link"
 	"github.com/soulteary/webhook/internal/logger"
@@ -243,6 +244,41 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		}
 	}
 
+	var configUIPathLogged string
+	if appFlags.ConfigUIEnabled {
+		configUIPath := strings.TrimSpace(appFlags.ConfigUIPath)
+		if configUIPath == "" || !strings.HasPrefix(configUIPath, "/") {
+			configUIPath = "/config-ui"
+		}
+		hookBaseForReserved := link.MakeBaseURL(&appFlags.HooksURLPrefix)
+		if hookBaseForReserved == "" {
+			hookBaseForReserved = "/hooks"
+		}
+		reservedPaths := []string{"/", "/health", "/livez", "/readyz", "/version", "/metrics", hookBaseForReserved}
+		if openapiPathLogged != "" {
+			reservedPaths = append(reservedPaths, openapiPathLogged)
+		}
+		isReserved := false
+		for _, p := range reservedPaths {
+			if configUIPath == p || (p != "/" && strings.HasPrefix(configUIPath, p+"/")) {
+				isReserved = true
+				break
+			}
+		}
+		if isReserved {
+			logger.Warnf("config-ui-path %q conflicts with reserved path; skipping Config UI route", configUIPath)
+		} else {
+			configUIHandler, err := configui.Handler(configUIPath, "http://"+addr)
+			if err != nil {
+				logger.Warnf("config-ui handler init failed: %v", err)
+			} else {
+				app.All(configUIPath, adaptor.HTTPHandler(configUIHandler))
+				app.All(configUIPath+"/*", adaptor.HTTPHandler(configUIHandler))
+				configUIPathLogged = configUIPath
+			}
+		}
+	}
+
 	s := &Server{
 		app:      app,
 		listener: ln,
@@ -267,6 +303,9 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		logger.Infof("metrics endpoint: http://%s/metrics", addr)
 		if openapiPathLogged != "" {
 			logger.Infof("openapi spec: http://%s%s", addr, openapiPathLogged)
+		}
+		if configUIPathLogged != "" {
+			logger.Infof("config UI: http://%s%s", addr, configUIPathLogged)
 		}
 		if err := app.Listener(ln); err != nil {
 			logger.Error(fmt.Sprintf("server error: %v", err))

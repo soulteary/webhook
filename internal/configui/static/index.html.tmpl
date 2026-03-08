@@ -5,10 +5,11 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="description" content="Generate webhook hook config (YAML/JSON) and call example.">
 	<title>{{.Title}}</title>
-	<link rel="stylesheet" href="/static/css/pure-min.css">
-	<link rel="stylesheet" href="/static/css/grids-responsive-min.css">
-	<link rel="preload" href="/static/css/style.css" as="style">
-	<link rel="stylesheet" href="/static/css/style.css">
+	{{if .BasePath}}<base href="{{.BasePath}}/">{{end}}
+	<link rel="stylesheet" href="static/css/pure-min.css">
+	<link rel="stylesheet" href="static/css/grids-responsive-min.css">
+	<link rel="preload" href="static/css/style.css" as="style">
+	<link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
 	<div class="pure-g content">
@@ -81,6 +82,6 @@
 	</div>
 
 	<script>window.I18N = {{.I18N}};</script>
-	<script src="/static/js/app.js" defer></script>
+	<script src="static/js/app.js" defer></script>
 </body>
 </html>

@@ -140,6 +140,15 @@ This document describes all available command-line parameters and environment va
 
 *Note:* When `-openapi` is set, the spec is available via GET at `-openapi-path` (e.g. `/openapi`) and can be used with Swagger UI or client code generation. Use only in debugging or intranet environments. Do not set `-openapi-path` to a reserved path (e.g. `/`, `/health`, `/version`, `/metrics`, or the hooks prefix like `/hooks`); if you do, the OpenAPI route will not be registered and a warning will be logged.
 
+### Config UI
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-config-ui` | Enable config generator Web UI at config-ui-path (same as standalone `./cmd` binary); recommend only for debugging or intranet | `false` |
+| `-config-ui-path string` | HTTP path for Config UI when config-ui is enabled | `/config-ui` |
+
+*Note:* Do not set `-config-ui-path` to a reserved path (e.g. `/`, `/health`, `/hooks`, `/openapi`); if you do, the Config UI route will not be registered and a warning will be logged.
+
 ### Other
 
 | Flag | Description | Default |
@@ -273,6 +282,8 @@ All command-line parameters can also be set via environment variables:
 | `OPENAPI_ENABLED` | `-openapi` | Enable OpenAPI spec | `false` |
 | `OPENAPI_PATH` | `-openapi-path` | HTTP path for OpenAPI spec | `/openapi` |
 | `OPENAPI_PRINT` | `-openapi-print` | Print OpenAPI spec to stdout at startup | `false` |
+| `CONFIG_UI_ENABLED` | `-config-ui` | Enable config generator Web UI | `false` |
+| `CONFIG_UI_PATH` | `-config-ui-path` | HTTP path for Config UI | `/config-ui` |
 
 ## Security Best Practices
 

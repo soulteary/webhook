@@ -28,6 +28,6 @@
 更复杂的例子，可以查看[示例][Hook-Examples]文档。
 
 
-[Request-Values]: ./Request-Values.md
+[Request-Values]: ./Referencing-Request-Values.md
 [Hook-Rules]: ./Hook-Rules.md
 [Hook-Examples]: ./Hook-Examples.md

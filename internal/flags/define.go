@@ -80,6 +80,10 @@ const (
 	DEFAULT_OPENAPI_ENABLED = false
 	DEFAULT_OPENAPI_PATH    = "/openapi"
 	DEFAULT_OPENAPI_PRINT   = false
+
+	// Config UI defaults (config generator Web UI)
+	DEFAULT_CONFIG_UI_ENABLED = false
+	DEFAULT_CONFIG_UI_PATH    = "/config-ui"
 )
 
 const (
@@ -159,6 +163,10 @@ const (
 	ENV_KEY_OPENAPI_ENABLED = "OPENAPI_ENABLED"
 	ENV_KEY_OPENAPI_PATH    = "OPENAPI_PATH"
 	ENV_KEY_OPENAPI_PRINT   = "OPENAPI_PRINT"
+
+	// Config UI environment keys
+	ENV_KEY_CONFIG_UI_ENABLED = "CONFIG_UI_ENABLED"
+	ENV_KEY_CONFIG_UI_PATH    = "CONFIG_UI_PATH"
 )
 
 type AppFlags struct {
@@ -240,4 +248,8 @@ type AppFlags struct {
 	OpenAPIEnabled bool   // 是否启用 OpenAPI 规范（GET 路径或打印）
 	OpenAPIPath    string // OpenAPI 规范 HTTP 路径（默认 /openapi）
 	OpenAPIPrint   bool   // 是否在启动时将规范打印到 stdout
+
+	// Config UI settings (config generator Web UI)
+	ConfigUIEnabled bool   // 是否启用配置生成 Web UI
+	ConfigUIPath    string // Config UI 的 HTTP 路径（默认 /config-ui）
 }

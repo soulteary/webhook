@@ -143,6 +143,13 @@ webhook \
 - `rate-limit-rps`: 每秒 10-50 个请求（根据您的需求调整）
 - `rate-limit-burst`: RPS 值的 2 倍
 
+### 4. 可选 Web 端点（OpenAPI、Config UI）
+
+`-openapi` 与 `-config-ui` 会暴露额外 HTTP 端点（OpenAPI 规范与配置生成 Web UI）。这些端点无需认证，仅建议在调试或内网使用。
+
+- **请勿**在可从公网访问的服务上启用 `-openapi` 或 `-config-ui`，除非通过网络限制或带访问控制的反向代理保护。
+- 建议仅在开发、CI 或可信内网环境中启用。
+
 ---
 
 ## 身份验证和授权
@@ -495,6 +502,6 @@ export WEBHOOK_SECRET="my-secret-key-12345"
 
 - [安全策略](../SECURITY.md)
 - [Hook 规则](Hook-Rules.md) - 身份验证和授权规则
-- [配置参数](CLI-ENV.md) - 安全相关参数
+- [配置参数](Webhook-Parameters.md) - 安全相关参数
 - [API 参考](API-Reference.md) - API 安全注意事项
 

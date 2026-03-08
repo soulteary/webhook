@@ -107,7 +107,27 @@ curl http://localhost:9000/openapi
 
 ---
 
-### 5. Hook 执行端点
+### 5. Config UI（可选）
+
+**端点:** `GET /config-ui`、`GET /config-ui/`、`POST /config-ui/api/generate`（或通过 `-config-ui-path` 自定义路径）
+
+**可用性:** 仅当使用 `-config-ui` 参数（或 `CONFIG_UI_ENABLED=true`）启动服务时可用。默认不暴露，建议仅在调试或内网使用。
+
+**描述:** 用于生成 hook 配置（YAML/JSON）及调用示例的 Web 页面与 API，与独立二进制 `./cmd` 功能一致。
+
+- **GET** `{config-ui-path}` 或 `{config-ui-path}/`：返回配置生成器 HTML 页面。
+- **GET** `{config-ui-path}/static/*`：静态资源（CSS、JS）。
+- **POST** `{config-ui-path}/api/generate`：请求体为 JSON（字段如 `id`、`execute-command`、`response-message`、`trigger-rule`）。成功返回 `{ "yaml", "json", "callUrl", "curlExample" }`，校验失败返回 4xx 及 `{ "error": "..." }`。
+
+**示例:**
+```bash
+./webhook -hooks hooks.json -config-ui
+# 浏览器打开 http://localhost:9000/config-ui
+```
+
+---
+
+### 6. Hook 执行端点
 
 **端点:** `POST|GET|PUT|DELETE /hooks/{hook-id}`
 

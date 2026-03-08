@@ -18,6 +18,24 @@ builds:
       - "7"
       - "6"
 
+  # Standalone config generator Web UI binary (same ldflags for version not applied; optional)
+  - <<: *build_defaults
+    id: config-ui-macos
+    main: ./cmd
+    binary: webhook-config-ui
+    goos: [darwin]
+    goarch: [amd64, arm64]
+
+  - <<: *build_defaults
+    id: config-ui-linux
+    main: ./cmd
+    binary: webhook-config-ui
+    goos: [linux]
+    goarch: ["386", arm, amd64, arm64]
+    goarm:
+      - "7"
+      - "6"
+
 dockers:
   - image_templates:
       - "soulteary/webhook:linux-amd64-{{ .Tag }}"

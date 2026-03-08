@@ -650,7 +650,7 @@ webhook -x-request-id -hooks hooks.json
 
 1. **查看文档:**
    - [API 参考](API-Reference.md)
-   - [配置参数](CLI-ENV.md)
+   - [配置参数](Webhook-Parameters.md)
    - [Hook 规则](Hook-Rules.md)
 
 2. **审查日志:**

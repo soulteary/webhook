@@ -463,6 +463,6 @@ hey -n 10000 -c 100 http://localhost:9000/hooks/test-hook
 ## 其他资源
 
 - [API 参考](API-Reference.md) - API 性能注意事项
-- [配置参数](CLI-ENV.md) - 所有配置选项
+- [配置参数](Webhook-Parameters.md) - 所有配置选项
 - [安全最佳实践](Security-Best-Practices.md) - 安全与性能权衡
 

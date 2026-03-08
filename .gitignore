@@ -4,6 +4,8 @@
 *.test
 coverage
 webhook
+webhook-config-ui
+config-ui
 /test/hookecho
 build
 coverage.html

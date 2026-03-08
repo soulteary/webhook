@@ -146,22 +146,24 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 ## 其他功能
 
-- **表单数据支持**：解析 multipart 表单数据和文件上传 - 查看 [表单数据](docs/zh-CN/Request-Values.md)
+- **表单数据支持**：解析 multipart 表单数据和文件上传 - 查看 [表单数据](docs/zh-CN/Referencing-Request-Values.md)
 - **模板支持**：使用 `-template` 标志在配置文件中使用 Go 模板 - 查看 [配置模版](docs/zh-CN/Templates.md)
+- **Config UI**：使用 `-config-ui` 启用内置配置生成 Web UI（建议仅在调试或内网使用）；独立运行：`go run ./cmd` — 查看 [配置参数](docs/zh-CN/Webhook-Parameters.md) 与 [Config UI 说明](cmd/README.md)
 - **HTTPS**：使用反向代理（nginx、Traefik、Caddy）提供 HTTPS 支持
 - **CORS**：使用 `-header name=value` 设置自定义响应头，包括 CORS 响应头
 - **热重载**：使用 `-hotreload` 或 `kill -USR1` 无需重启即可更新配置
 
-更多示例和用例，请查看 [钩子示例](docs/zh-CN/Hook-Examples.md)。
+更多示例和用例，请查看 [钩子示例](docs/zh-CN/Hook-Examples.md)。示例配置与用法（hooks、飞书、多实例）见 [example/](example/) 目录。
 
 ## 文档
 
 ### 核心文档
 - [钩子定义](docs/zh-CN/Hook-Definition.md) - 完整的钩子配置参考
+- [Config UI](cmd/README.md) - 独立配置生成器（运行 `go run ./cmd`）
 - [钩子匹配规则](docs/zh-CN/Hook-Rules.md) - 触发规则和条件
-- [配置参数](docs/zh-CN/CLI-ENV.md) - 命令行参数和配置
+- [配置参数](docs/zh-CN/Webhook-Parameters.md) - 命令行参数和配置
 - [配置模版](docs/zh-CN/Templates.md) - 在配置中使用 Go 模板
-- [请求值引用](docs/zh-CN/Request-Values.md) - 访问请求数据
+- [请求值引用](docs/zh-CN/Referencing-Request-Values.md) - 访问请求数据
 - [钩子示例](docs/zh-CN/Hook-Examples.md) - 实用示例和用例
 
 ### 高级主题

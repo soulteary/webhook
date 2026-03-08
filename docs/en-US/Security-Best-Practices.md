@@ -143,6 +143,13 @@ webhook \
 - `rate-limit-rps`: 10-50 requests per second (adjust based on your needs)
 - `rate-limit-burst`: 2x the RPS value
 
+### 4. Optional Web Endpoints (OpenAPI, Config UI)
+
+The `-openapi` and `-config-ui` flags expose additional HTTP endpoints (OpenAPI spec and config generator Web UI). These endpoints do not require authentication and are intended for debugging or intranet use only.
+
+- **Do not** enable `-openapi` or `-config-ui` on servers reachable from the public internet unless protected by network restrictions or a reverse proxy with access control.
+- Prefer enabling them only in development, CI, or trusted internal networks.
+
 ---
 
 ## Authentication and Authorization

@@ -1,4 +1,4 @@
-package main
+package configui
 
 import (
 	"bytes"
@@ -77,7 +77,7 @@ func TestValidateOptionalJSON(t *testing.T) {
 			if tt.want == "" && got != "" {
 				t.Errorf("validateOptionalJSON() = %q, want empty", got)
 			}
-			if tt.want != "" && (got == "" || len(got) < len(tt.want)) {
+			if tt.want != "" && (got == "" || !strings.Contains(got, tt.want)) {
 				t.Errorf("validateOptionalJSON() = %q, want containing %q", got, tt.want)
 			}
 		})
@@ -119,14 +119,58 @@ func TestWriteJSONError(t *testing.T) {
 	}
 }
 
-func TestAPIGenerate(t *testing.T) {
+func TestHandler(t *testing.T) {
+	h, err := Handler("/config-ui", "http://localhost:9000")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
+	if h == nil {
+		t.Fatal("Handler returned nil")
+	}
+
+	// Index page
+	req := httptest.NewRequest(http.MethodGet, "http://test/config-ui", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("GET /config-ui: status %d, want 200", rec.Code)
+	}
+	if rec.Header().Get("Content-Type") != "text/html; charset=utf-8" {
+		t.Errorf("GET /config-ui: Content-Type %q", rec.Header().Get("Content-Type"))
+	}
+	if rec.Body.Len() == 0 {
+		t.Error("GET /config-ui: empty body")
+	}
+
+	// Index with trailing slash
+	req2 := httptest.NewRequest(http.MethodGet, "http://test/config-ui/", nil)
+	rec2 := httptest.NewRecorder()
+	h.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Errorf("GET /config-ui/: status %d, want 200", rec2.Code)
+	}
+
+	// 404 for unknown path under base
+	req3 := httptest.NewRequest(http.MethodGet, "http://test/config-ui/unknown", nil)
+	rec3 := httptest.NewRecorder()
+	h.ServeHTTP(rec3, req3)
+	if rec3.Code != http.StatusNotFound {
+		t.Errorf("GET /config-ui/unknown: status %d, want 404", rec3.Code)
+	}
+}
+
+func TestHandlerRootAPIGenerate(t *testing.T) {
+	h, err := Handler("/", "http://localhost:9080")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
 	body := `{"id":"test-hook","execute-command":"/bin/true"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/generate", bytes.NewReader([]byte(body)))
+	req := httptest.NewRequest(http.MethodPost, "http://test/api/generate", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	runGenerate(w, req, "9080")
+	h.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
-		t.Errorf("Code = %d, want 200, body: %s", w.Code, w.Body.Bytes())
+		t.Errorf("POST /api/generate: status %d, want 200, body: %s", w.Code, w.Body.Bytes())
 		return
 	}
 	var res generateResponse
@@ -147,7 +191,11 @@ func TestAPIGenerate(t *testing.T) {
 	}
 }
 
-func TestAPIGenerateBadRequest(t *testing.T) {
+func TestHandlerRootAPIGenerateBadRequest(t *testing.T) {
+	h, err := Handler("/", "http://localhost:9080")
+	if err != nil {
+		t.Fatalf("Handler: %v", err)
+	}
 	tests := []struct {
 		name string
 		body string
@@ -159,10 +207,10 @@ func TestAPIGenerateBadRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/api/generate", bytes.NewReader([]byte(tt.body)))
+			req := httptest.NewRequest(http.MethodPost, "http://test/api/generate", bytes.NewReader([]byte(tt.body)))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
-			runGenerate(w, req, "9080")
+			h.ServeHTTP(w, req)
 			if w.Code != tt.want {
 				t.Errorf("Code = %d, want %d", w.Code, tt.want)
 			}

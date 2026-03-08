@@ -107,7 +107,27 @@ You can also print the spec to stdout at startup with `-openapi-print` (e.g. `./
 
 ---
 
-### 5. Hook Execution Endpoint
+### 5. Config UI (Optional)
+
+**Endpoints:** `GET /config-ui`, `GET /config-ui/`, `POST /config-ui/api/generate` (or custom path via `-config-ui-path`)
+
+**Availability:** Only when the server is started with the `-config-ui` flag (or `CONFIG_UI_ENABLED=true`). Not exposed by default. Recommend use only for debugging or intranet.
+
+**Description:** Web UI and API for generating hook configuration (YAML/JSON) and call examples. Same functionality as the standalone `./cmd` binary.
+
+- **GET** `{config-ui-path}` or `{config-ui-path}/`: Returns the config generator HTML page.
+- **GET** `{config-ui-path}/static/*`: Static assets (CSS, JS).
+- **POST** `{config-ui-path}/api/generate`: Accepts JSON body with form fields (e.g. `id`, `execute-command`, `response-message`, `trigger-rule`). Returns `{ "yaml", "json", "callUrl", "curlExample" }` on success, or `{ "error": "..." }` with 4xx on validation error.
+
+**Example:**
+```bash
+./webhook -hooks hooks.json -config-ui
+# Open http://localhost:9000/config-ui in a browser
+```
+
+---
+
+### 6. Hook Execution Endpoint
 
 **Endpoint:** `POST|GET|PUT|DELETE /hooks/{hook-id}`
 

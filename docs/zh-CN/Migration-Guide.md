@@ -378,7 +378,7 @@ docker run -d \
 - **审计日志：** 将 hook 执行与请求记录到 file、Redis 或 database。使用 `-audit-enabled`、`-audit-storage-type`、`-audit-file-path` 及相关选项。
 - **基于 Redis 的分布式限流：** 在多实例间共享限流状态。使用 `-redis-enabled`、`-redis-addr`、`-rate-limit-window` 及相关选项。
 
-完整参数与环境变量说明见 [配置参数](CLI-ENV.md)。
+完整参数与环境变量说明见 [配置参数](Webhook-Parameters.md)。
 
 ---
 
@@ -472,7 +472,7 @@ docker run -d \
 1. **查看文档:**
    - [故障排查指南](Troubleshooting.md)
    - [API 参考](API-Reference.md)
-   - [配置参数](CLI-ENV.md)
+   - [配置参数](Webhook-Parameters.md)
 
 2. **审查日志:**
    ```bash

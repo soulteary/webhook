@@ -37,26 +37,26 @@ go test -v ./internal/server -run TestStress|TestLoad
 
 ### Using the Test Coverage Script
 
-We provide a convenient script `test-coverage.sh` to generate test coverage reports:
+We provide a convenient script `scripts/test-coverage.sh` to generate test coverage reports. Run it from the project root (or any directory; the script will change to the repo root):
 
 ```bash
 # Run all tests and generate coverage report
-./test-coverage.sh all
+./scripts/test-coverage.sh all
 
 # Run only server package tests
-./test-coverage.sh server
+./scripts/test-coverage.sh server
 
 # Run only critical scenario tests
-./test-coverage.sh critical
+./scripts/test-coverage.sh critical
 
 # Generate HTML coverage report
-./test-coverage.sh html
+./scripts/test-coverage.sh html
 
 # View function-level coverage
-./test-coverage.sh func
+./scripts/test-coverage.sh func
 
 # Clean coverage files
-./test-coverage.sh clean
+./scripts/test-coverage.sh clean
 ```
 
 ### Manual Coverage Report Generation
@@ -149,7 +149,7 @@ We recommend maintaining the following test coverage targets:
 
 ```bash
 # Generate HTML report and open
-./test-coverage.sh html
+./scripts/test-coverage.sh html
 open coverage.html  # macOS
 # or
 xdg-open coverage.html  # Linux

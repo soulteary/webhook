@@ -32,8 +32,9 @@ Webhook includes several security features to help prevent command injection att
 - Set appropriate limits for argument length and count
 - Regularly review and update your whitelist
 - Never enable `--allow-auto-chmod` in production (it's a security risk)
+- Do not enable `--openapi` or `--config-ui` on publicly reachable servers (they have no authentication; use only for debugging or intranet)
 
-For more details, see the [Configuration Parameters documentation](docs/zh-CN/CLI-ENV.md) or [Webhook Parameters](docs/en-US/Webhook-Parameters.md).
+For more details, see the [Webhook Parameters (English)](docs/en-US/Webhook-Parameters.md) or [配置参数 (中文)](docs/zh-CN/Webhook-Parameters.md).
 
 ## Comprehensive Security Guide
 

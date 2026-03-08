@@ -148,16 +148,18 @@ For more security options, see:
 
 - **Form Data Support**: Parse multipart form data and file uploads - see [Form Data](docs/en-US/Referencing-Request-Values.md)
 - **Template Support**: Use Go templates in configuration files with `-template` flag - see [Templates](docs/en-US/Templates.md)
+- **Config UI**: Enable built-in config generator Web UI with `-config-ui` (recommend debugging or intranet only). Standalone: `go run ./cmd` — see [Webhook Parameters](docs/en-US/Webhook-Parameters.md) and [Config UI](cmd/README.md)
 - **HTTPS**: Use a reverse proxy (nginx, Traefik, Caddy) for HTTPS support
 - **CORS**: Set custom headers including CORS headers with `-header name=value`
 - **Hot Reload**: Update configurations without restarting using `-hotreload` or `kill -USR1`
 
-For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examples.md).
+For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examples.md). Example configs and setups (hooks, Lark, multi-webhook) are in the [example/](example/) directory.
 
 ## Documentation
 
 ### Core Documentation
 - [Hook Definition](docs/en-US/Hook-Definition.md) - Complete hook configuration reference
+- [Config UI](cmd/README.md) - Standalone config generator (run with `go run ./cmd`)
 - [Hook Rules](docs/en-US/Hook-Rules.md) - Trigger rules and conditions
 - [Webhook Parameters](docs/en-US/Webhook-Parameters.md) - Command-line arguments and configuration
 - [Templates](docs/en-US/Templates.md) - Using Go templates in configurations

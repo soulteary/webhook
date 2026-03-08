@@ -37,26 +37,26 @@ go test -v ./internal/server -run TestStress|TestLoad
 
 ### 使用测试覆盖率脚本
 
-我们提供了一个便捷的脚本 `test-coverage.sh` 来生成测试覆盖率报告：
+我们提供了一个便捷的脚本 `scripts/test-coverage.sh` 来生成测试覆盖率报告。请在项目根目录执行（或任意目录执行亦可，脚本会自动切换到仓库根目录）：
 
 ```bash
 # 运行所有测试并生成覆盖率报告
-./test-coverage.sh all
+./scripts/test-coverage.sh all
 
 # 只运行 server 包测试
-./test-coverage.sh server
+./scripts/test-coverage.sh server
 
 # 只运行关键场景测试
-./test-coverage.sh critical
+./scripts/test-coverage.sh critical
 
 # 生成 HTML 覆盖率报告
-./test-coverage.sh html
+./scripts/test-coverage.sh html
 
 # 查看函数级别覆盖率
-./test-coverage.sh func
+./scripts/test-coverage.sh func
 
 # 清理覆盖率文件
-./test-coverage.sh clean
+./scripts/test-coverage.sh clean
 ```
 
 ### 手动生成覆盖率报告
@@ -149,7 +149,7 @@ go test -bench=. -cpuprofile=cpu.prof ./internal/server
 
 ```bash
 # 生成 HTML 报告并打开
-./test-coverage.sh html
+./scripts/test-coverage.sh html
 open coverage.html  # macOS
 # 或
 xdg-open coverage.html  # Linux
