@@ -849,6 +849,7 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 	}
 
 	// 使用 exec.CommandContext 替代 exec.Command，支持超时和取消
+	// #nosec G204 G702 -- cmdPath 来自 makeSureCallable：经 exec.LookPath 解析，且已通过 validator.ValidateCommandPath 白名单校验
 	cmd := exec.CommandContext(ctx, cmdPath)
 	cmd.Dir = h.CommandWorkingDirectory
 
