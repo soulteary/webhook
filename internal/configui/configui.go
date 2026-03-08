@@ -38,7 +38,7 @@ const (
 )
 
 type pageData struct {
-	I18N           template.JS
+	I18N           string // JSON string; template auto-escapes in script context to prevent XSS
 	Title          string
 	Lang           string
 	BasePath       string // e.g. /config-ui, used for <base href> so relative URLs work
@@ -113,7 +113,7 @@ func loadPageData(fromFS fs.FS, path string) (*pageData, error) {
 		title = t
 	}
 	return &pageData{
-		I18N:           template.JS(string(jsonI18N)),
+		I18N:           string(jsonI18N),
 		Title:          title,
 		Lang:           "zh-CN",
 		BasePath:       "",
