@@ -412,7 +412,7 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 		// Check if we need to traverse deeper
 		if p := strings.SplitN(s, ".", 2); len(p) > 1 {
 			index, err := strconv.ParseUint(p[0], 10, 64)
-			if err != nil || uint64(paramsValueSliceLength) <= index {
+			if err != nil || index > math.MaxInt || int(index) >= paramsValueSliceLength {
 				return nil, &ParameterNodeError{s}
 			}
 			return GetParameter(p[1], params.([]interface{})[index])
@@ -420,7 +420,7 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 
 		// Direct index access
 		index, err := strconv.ParseUint(s, 10, 64)
-		if err != nil || uint64(paramsValueSliceLength) <= index {
+		if err != nil || index > math.MaxInt || int(index) >= paramsValueSliceLength {
 			return nil, &ParameterNodeError{s}
 		}
 		return params.([]interface{})[index], nil
