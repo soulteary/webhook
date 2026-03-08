@@ -148,6 +148,7 @@ func Sprintf(messageID string, a ...any) string {
 }
 
 // 规范消息键常量（与 locale 文件 key 一致，统一为 MSG_* / ERR_*）
+// #nosec G101 -- i18n message keys only, not credentials (e.g. PASSED is "validation passed", not password)
 const (
 	MSG_WEBHOOK_VERSION               = "MSG_WEBHOOK_VERSION"
 	MSG_SERVER_IS_STARTING            = "MSG_SERVER_IS_STARTING"
