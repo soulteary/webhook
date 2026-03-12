@@ -19,7 +19,7 @@
 
 ### 1. 使用命令路径白名单
 
-在生产环境中**始终**使用 `--allowed-command-paths` 标志来限制可以执行的命令。
+在生产环境中**始终**使用 `-allowed-command-paths` 标志来限制可以执行的命令。
 
 ```bash
 webhook -allowed-command-paths="/usr/bin,/opt/scripts"
@@ -77,7 +77,7 @@ webhook \
 
 ### 4. 永远不要启用自动 Chmod
 
-在生产环境中**永远不要**使用 `--allow-auto-chmod`。这是一个安全风险，可能导致权限提升。
+在生产环境中**永远不要**使用 `-allow-auto-chmod`。这是一个安全风险，可能导致权限提升。
 
 ```bash
 # ❌ 错误 - 永远不要在生产环境中这样做
@@ -245,7 +245,7 @@ chown webhook:webhook hooks.json
 ### 3. 使用最小权限
 
 - 使用专用的非特权用户运行 webhook
-- 使用 `--setuid` 和 `--setgid` 在绑定端口后降低权限
+- 使用 `-setuid` 和 `-setgid` 在绑定端口后降低权限
 
 ```bash
 # 创建专用用户
@@ -494,13 +494,13 @@ export WEBHOOK_SECRET="my-secret-key-12345"
    - 建议的修复方案（如果您有）
 4. 在公开披露之前留出时间解决问题
 
-有关更多信息，请参阅[安全策略](../SECURITY.md)。
+有关更多信息，请参阅[安全策略](../../SECURITY.md)。
 
 ---
 
 ## 其他资源
 
-- [安全策略](../SECURITY.md)
+- [安全策略](../../SECURITY.md)
 - [Hook 规则](Hook-Rules.md) - 身份验证和授权规则
 - [配置参数](Webhook-Parameters.md) - 安全相关参数
 - [API 参考](API-Reference.md) - API 安全注意事项

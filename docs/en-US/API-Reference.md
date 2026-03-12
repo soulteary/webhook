@@ -12,6 +12,8 @@ http://your-server:9000
 
 You can customize the IP address and port using the `-ip` and `-port` command-line arguments or environment variables.
 
+**Reserved paths and path conflicts:** Do not set `-openapi-path` or `-config-ui-path` to a path that conflicts with reserved endpoints. Reserved paths include `/`, `/health`, `/livez`, `/readyz`, `/version`, `/metrics`, and the hook base path (e.g. `/hooks`). If a conflict is detected at startup, the server will skip registering that route and log a warning.
+
 ## Endpoints
 
 ### 1. Root Endpoint
@@ -53,9 +55,48 @@ curl http://localhost:9000/
 curl http://localhost:9000/health
 ```
 
+**Note:** The exact JSON structure is defined by the health check library (e.g. it may include multiple check results). For the precise schema, see the OpenAPI spec when `-openapi` is enabled.
+
 ---
 
-### 3. Metrics Endpoint
+### 3. Liveness and Readiness Endpoints
+
+**Endpoints:** `GET /livez`, `GET /readyz`
+
+**Description:** Kubernetes-style liveness and readiness probes. `/livez` indicates the process is running; `/readyz` reports whether the server is ready to accept traffic (e.g. after loading hooks).
+
+**Response:**
+- **Status Code:** `200 OK` when healthy/ready; non-2xx when not.
+- **Content-Type:** `application/json`
+- **Body:** Implementation-defined JSON (see OpenAPI spec for schema when `-openapi` is enabled).
+
+**Example:**
+```bash
+curl http://localhost:9000/livez
+curl http://localhost:9000/readyz
+```
+
+---
+
+### 4. Version Endpoint
+
+**Endpoint:** `GET /version`
+
+**Description:** Returns server version and build information in JSON format, with optional `X-`-prefixed response headers for version details.
+
+**Response:**
+- **Status Code:** `200 OK`
+- **Content-Type:** `application/json`
+- **Body:** JSON with version fields (e.g. `version`, `commit`, `buildDate`, `branch`). Exact structure is defined by the version library; use the OpenAPI spec when `-openapi` is enabled for the full schema.
+
+**Example:**
+```bash
+curl http://localhost:9000/version
+```
+
+---
+
+### 5. Metrics Endpoint
 
 **Endpoint:** `GET /metrics`
 
@@ -81,7 +122,7 @@ curl http://localhost:9000/metrics
 
 ---
 
-### 4. OpenAPI Specification Endpoint (Optional)
+### 6. OpenAPI Specification Endpoint (Optional)
 
 **Endpoint:** `GET /openapi` (or custom path via `-openapi-path`)
 
@@ -107,7 +148,7 @@ You can also print the spec to stdout at startup with `-openapi-print` (e.g. `./
 
 ---
 
-### 5. Config UI (Optional)
+### 7. Config UI (Optional)
 
 **Endpoints:** `GET /config-ui`, `GET /config-ui/`, `POST /config-ui/api/generate` (or custom path via `-config-ui-path`)
 
@@ -130,7 +171,7 @@ You can also print the spec to stdout at startup with `-openapi-print` (e.g. `./
 
 ---
 
-### 6. Hook Execution Endpoint
+### 8. Hook Execution Endpoint
 
 **Endpoint:** `POST|GET|PUT|DELETE /hooks/{hook-id}`
 

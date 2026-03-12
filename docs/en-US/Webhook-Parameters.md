@@ -11,7 +11,7 @@ This document describes all available command-line parameters and environment va
 | `-ip string` | IP address the webhook should serve hooks on | `0.0.0.0` |
 | `-port int` | Port the webhook should serve hooks on | `9000` |
 | `-hooks value` | Explicit single-file mode: path to JSON/YAML hook definitions (can be used multiple times) | - |
-| `-hooks-dir string` | Directory mode: scan hook config files (*.json, *.yaml, *.yml); if empty, watch for new files; use with Config UI to enable save-to-dir | `./hooks` |
+| `-hooks-dir string` | Directory to scan for hook config files (*.json, *.yaml, *.yml). Default `./hooks`. If explicitly set to an empty string, directory mode is not used; when set to a non-empty path, that directory is scanned and (with `-hotreload` or directory watch) can be watched for new files. With Config UI, enables save-to-dir when in directory mode. | `./hooks` |
 | `-urlprefix string` | URL prefix for served hooks (protocol://yourserver:port/PREFIX/:hook-id); also used by Config UI for the generated call URL | `hooks` |
 
 ### Logging and Debugging

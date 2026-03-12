@@ -185,7 +185,9 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 ## 关于此 Fork
 
-本项目是原始 [webhook](https://github.com/adnanh/webhook) 项目的维护分支，专注于：
+本项目是原始 [webhook](https://github.com/adnanh/webhook) 项目的维护分支。当前支持版本为 5.x，版本支持情况见 [SECURITY.md](SECURITY.md)。
+
+该分支专注于：
 
 - **安全性**：定期安全更新、漏洞修复和增强的安全功能
 - **维护性**：积极开发、依赖更新和错误修复

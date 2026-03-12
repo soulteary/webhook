@@ -332,26 +332,26 @@ docker run -d \
 ### New Configuration Options
 
 1. **Security:**
-   - `--allowed-command-paths`
-   - `--strict-mode`
-   - `--max-arg-length`
-   - `--max-total-args-length`
-   - `--max-args-count`
+  - `-allowed-command-paths`
+  - `-strict-mode`
+  - `-max-arg-length`
+  - `-max-total-args-length`
+  - `-max-args-count`
 
 2. **Performance:**
-   - `--rate-limit-enabled`
-   - `--rate-limit-rps`
-   - `--rate-limit-burst`
-   - `--max-concurrent-hooks`
-   - `--hook-timeout-seconds`
-   - `--hook-execution-timeout`
+  - `-rate-limit-enabled`
+  - `-rate-limit-rps`
+  - `-rate-limit-burst`
+  - `-max-concurrent-hooks`
+  - `-hook-timeout-seconds`
+  - `-hook-execution-timeout`
 
 3. **HTTP Server:**
-   - `--read-header-timeout-seconds`
-   - `--read-timeout-seconds`
-   - `--write-timeout-seconds`
-   - `--idle-timeout-seconds`
-   - `--max-header-bytes`
+  - `-read-header-timeout-seconds`
+  - `-read-timeout-seconds`
+  - `-write-timeout-seconds`
+  - `-idle-timeout-seconds`
+  - `-max-header-bytes`
 
 ### Enhanced Features
 

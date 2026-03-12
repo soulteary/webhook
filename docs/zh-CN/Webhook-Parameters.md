@@ -2,7 +2,7 @@
 
 程序支持两种调用方法，分别是"通过命令行参数"和"设置环境变量"。
 
-关于命令行参数，只需要记得使用 `--help`，即可查看所有的支持设置参数。
+关于命令行参数，可查阅本文档了解所有支持项；部分环境可通过 `-h` 查看简要用法。
 
 而关于环境变量的设置，我们可以通过查看 [internal/flags/define.go](https://github.com/soulteary/webhook/blob/main/internal/flags/define.go) 中的配置项，来完成一致的程序行为设置。
 
@@ -22,7 +22,7 @@
   显式启用单文件模式：指定包含钩子定义的 JSON 或 YAML 文件路径，可以多次使用以从不同文件加载钩子
 
 - `-hooks-dir string`
-  指定用于扫描钩子配置文件的目录（*.json、*.yaml、*.yml，默认：`./hooks`）；目录为空时会监控新文件；与 Config UI 配合时可启用「保存到目录」功能
+  指定用于扫描钩子配置文件的目录（*.json、*.yaml、*.yml，默认：`./hooks`）。默认为 `./hooks`；若显式设置且其值为空字符串，则不使用目录模式（不扫描、不监控该路径）。设置为非空目录时，会扫描该目录下的配置文件，并可与 `-hotreload` 或目录监控配合监控新文件。与 Config UI 配合时可启用「保存到目录」功能。
 
 - `-urlprefix string`
   指定钩子 URL 的前缀（格式：`protocol://yourserver:port/PREFIX/:hook-id`，默认值：`hooks`）；Config UI 生成的调用 URL 也会使用此前缀

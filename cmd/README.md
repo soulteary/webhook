@@ -65,7 +65,7 @@ go build -o webhook .
 
 - 本程序复用 [internal/configui](../internal/configui) 包，静态资源与页面配置仅在该包内维护一份（`internal/configui/config/`、`internal/configui/static/`），通过包内 `embed` 打入二进制，单二进制即可运行。
 - 页面配置来自 `internal/configui/config/page.yaml`（i18n 与表单结构）。
-- 生成 API：`POST /api/generate`，请求体为表单对应 JSON，响应为 `{ "yaml", "json", "callUrl", "curlExample" }`；错误时返回 `{ "error": "..." }` 及 4xx 状态码。
+- 生成 API：`POST {config-ui-path}/api/generate`，请求体为表单对应 JSON，响应为 `{ "yaml", "json", "callUrl", "curlExample" }`；错误时返回 `{ "error": "..." }` 及 4xx 状态码。此外还有 `GET {config-ui-path}/api/capabilities`（返回是否支持保存到目录）与 `POST {config-ui-path}/api/save`（将配置写入 hooks 目录）。完整端点说明见 [API 参考](../docs/zh-CN/API-Reference.md)（Config UI 章节）。
 
 ## 故障排查
 

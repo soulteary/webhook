@@ -332,26 +332,26 @@ docker run -d \
 ### 新配置选项
 
 1. **安全:**
-   - `--allowed-command-paths`
-   - `--strict-mode`
-   - `--max-arg-length`
-   - `--max-total-args-length`
-   - `--max-args-count`
+  - `-allowed-command-paths`
+  - `-strict-mode`
+  - `-max-arg-length`
+  - `-max-total-args-length`
+  - `-max-args-count`
 
 2. **性能:**
-   - `--rate-limit-enabled`
-   - `--rate-limit-rps`
-   - `--rate-limit-burst`
-   - `--max-concurrent-hooks`
-   - `--hook-timeout-seconds`
-   - `--hook-execution-timeout`
+  - `-rate-limit-enabled`
+  - `-rate-limit-rps`
+  - `-rate-limit-burst`
+  - `-max-concurrent-hooks`
+  - `-hook-timeout-seconds`
+  - `-hook-execution-timeout`
 
 3. **HTTP 服务器:**
-   - `--read-header-timeout-seconds`
-   - `--read-timeout-seconds`
-   - `--write-timeout-seconds`
-   - `--idle-timeout-seconds`
-   - `--max-header-bytes`
+  - `-read-header-timeout-seconds`
+  - `-read-timeout-seconds`
+  - `-write-timeout-seconds`
+  - `-idle-timeout-seconds`
+  - `-max-header-bytes`
 
 ### 增强功能
 

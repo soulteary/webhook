@@ -185,7 +185,9 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 
 ## About This Fork
 
-This project is a maintained fork of the original [webhook](https://github.com/adnanh/webhook) project, focused on:
+This project is a maintained fork of the original [webhook](https://github.com/adnanh/webhook) project. Current supported versions are 5.x; see [SECURITY.md](SECURITY.md) for the version support table.
+
+The fork is focused on:
 
 - **Security**: Regular security updates, vulnerability fixes, and enhanced security features
 - **Maintenance**: Active development, dependency updates, and bug fixes

@@ -12,6 +12,8 @@ http://your-server:9000
 
 您可以使用 `-ip` 和 `-port` 命令行参数或环境变量来自定义 IP 地址和端口。
 
+**保留路径与路径冲突**：请勿将 `-openapi-path` 或 `-config-ui-path` 设置为与保留端点冲突的路径。保留路径包括 `/`、`/health`、`/livez`、`/readyz`、`/version`、`/metrics` 以及 hook 前缀（如 `/hooks`）。若启动时检测到冲突，服务将跳过该路由注册并记录警告。
+
 ## 端点
 
 ### 1. 根端点
@@ -53,9 +55,48 @@ curl http://localhost:9000/
 curl http://localhost:9000/health
 ```
 
+**说明**：实际 JSON 结构由健康检查库定义（可能包含多项检查结果）。精确结构请在使用 `-openapi` 时查看 OpenAPI 规范。
+
 ---
 
-### 3. 指标端点
+### 3. 存活与就绪端点
+
+**端点:** `GET /livez`、`GET /readyz`
+
+**描述:** 类 Kubernetes 的存活与就绪探针。`/livez` 表示进程在运行；`/readyz` 表示服务是否就绪接收流量（如已加载 hooks）。
+
+**响应:**
+- **状态码:** 健康/就绪时为 `200 OK`；否则为非 2xx。
+- **Content-Type:** `application/json`
+- **响应体:** 由实现定义的 JSON（启用 `-openapi` 时可查看 OpenAPI 规范中的 schema）。
+
+**示例:**
+```bash
+curl http://localhost:9000/livez
+curl http://localhost:9000/readyz
+```
+
+---
+
+### 4. 版本端点
+
+**端点:** `GET /version`
+
+**描述:** 以 JSON 格式返回服务版本与构建信息，响应头中可能包含以 `X-` 为前缀的版本相关头。
+
+**响应:**
+- **状态码:** `200 OK`
+- **Content-Type:** `application/json`
+- **响应体:** 包含版本相关字段的 JSON（如 `version`、`commit`、`buildDate`、`branch`）。具体结构由版本库定义；启用 `-openapi` 时可查看 OpenAPI 规范获取完整 schema。
+
+**示例:**
+```bash
+curl http://localhost:9000/version
+```
+
+---
+
+### 5. 指标端点
 
 **端点:** `GET /metrics`
 
@@ -81,7 +122,7 @@ curl http://localhost:9000/metrics
 
 ---
 
-### 4. OpenAPI 规范端点（可选）
+### 6. OpenAPI 规范端点（可选）
 
 **端点:** `GET /openapi`（或通过 `-openapi-path` 自定义路径）
 
@@ -107,7 +148,7 @@ curl http://localhost:9000/openapi
 
 ---
 
-### 5. Config UI（可选）
+### 7. Config UI（可选）
 
 **端点:** `GET /config-ui`、`GET /config-ui/`、`POST /config-ui/api/generate`（或通过 `-config-ui-path` 自定义路径）
 
@@ -130,7 +171,7 @@ curl http://localhost:9000/openapi
 
 ---
 
-### 6. Hook 执行端点
+### 8. Hook 执行端点
 
 **端点:** `POST|GET|PUT|DELETE /hooks/{hook-id}`
 

@@ -8,13 +8,13 @@ Hooks are defined as objects in the JSON or YAML hooks configuration file. Pleas
  * `execute-command` - specifies the command that should be executed when the hook is triggered
  * `command-working-directory` - specifies the working directory that will be used for the script when it's executed
  * `response-message` - specifies the string that will be returned to the hook initiator
- * `response-headers` - specifies the list of headers in format `{"name": "X-Example-Header", "value": "it works"}` that will be returned in HTTP response for the hook
+ * `response-headers` - list of header objects returned in the HTTP response for the hook; each object has `"name"` and `"value"` (e.g. `{"name": "X-Example-Header", "value": "it works"}`)
  * `success-http-response-code` - specifies the HTTP status code to be returned upon success
  * `incoming-payload-content-type` - sets the `Content-Type` of the incoming HTTP request (ie. `application/json`); useful when the request lacks a `Content-Type` or sends an erroneous value
  * `http-methods` - a list of allowed HTTP methods, such as `POST` and `GET`
  * `include-command-output-in-response` - boolean whether webhook should wait for the command to finish and return the raw output as a response to the hook initiator. If the command fails to execute or encounters any errors while executing the response will result in 500 Internal Server Error HTTP status code, otherwise the 200 OK status code will be returned.
  * `stream-command-output` - boolean whether webhook should stream the command output to the HTTP response. When enabled, the command's `stdout` and `stderr` are streamed in real-time to the client, rather than waiting for the command to finish before returning. This is useful for long-running commands.
- * `include-command-output-in-response-on-error` - boolean whether webhook should include command stdout & stderror as a response in failed executions. It only works if `include-command-output-in-response` is set to `true`.
+ * `include-command-output-in-response-on-error` - boolean whether webhook should include command stdout & stderr as a response in failed executions. It only works if `include-command-output-in-response` is set to `true`.
  * `parse-parameters-as-json` - specifies the list of arguments that contain JSON strings. These parameters will be decoded by webhook and you can access them like regular objects in rules and `pass-arguments-to-command`.
  * `pass-arguments-to-command` - specifies the list of arguments that will be passed to the command. Check [Referencing request values page](Referencing-Request-Values.md) to see how to reference the values from the request. If you want to pass a static string value to your command you can specify it as
 `{ "source": "string", "name": "argumentvalue" }`

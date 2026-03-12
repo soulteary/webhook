@@ -6,8 +6,8 @@ Current support status of each version.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 3.4.x   | :white_check_mark: |
-| < 3.4.1   | :x:                |
+| 5.x     | :white_check_mark: |
+| < 5.0   | :x:                |
 
 ## Security Features
 
@@ -15,14 +15,14 @@ Current support status of each version.
 
 Webhook includes several security features to help prevent command injection attacks:
 
-1. **Command Path Whitelist**: Use `--allowed-command-paths` (or `ALLOWED_COMMAND_PATHS` environment variable) to restrict which commands can be executed. Only commands from the whitelist will be allowed to run.
+1. **Command Path Whitelist**: Use `-allowed-command-paths` (or `ALLOWED_COMMAND_PATHS` environment variable) to restrict which commands can be executed. Only commands from the whitelist will be allowed to run.
 
 2. **Argument Validation**: 
-   - `--max-arg-length`: Limit the maximum length of a single argument (default: 1MB)
-   - `--max-total-args-length`: Limit the total length of all arguments (default: 10MB)
-   - `--max-args-count`: Limit the maximum number of arguments (default: 1000)
+   - `-max-arg-length`: Limit the maximum length of a single argument (default: 1MB)
+   - `-max-total-args-length`: Limit the total length of all arguments (default: 10MB)
+   - `-max-args-count`: Limit the maximum number of arguments (default: 1000)
 
-3. **Strict Mode**: Enable `--strict-mode` to reject arguments containing potentially dangerous characters (shell special characters like `;`, `|`, `&`, `` ` ``, `$`, etc.)
+3. **Strict Mode**: Enable `-strict-mode` to reject arguments containing potentially dangerous characters (shell special characters like `;`, `|`, `&`, `` ` ``, `$`, etc.)
 
 4. **Secure Logging**: All command executions are logged with sensitive information (passwords, tokens, keys) automatically sanitized.
 
@@ -31,8 +31,8 @@ Webhook includes several security features to help prevent command injection att
 - Enable strict mode for enhanced security
 - Set appropriate limits for argument length and count
 - Regularly review and update your whitelist
-- Never enable `--allow-auto-chmod` in production (it's a security risk)
-- Do not enable `--openapi` or `--config-ui` on publicly reachable servers (they have no authentication; use only for debugging or intranet). Config UI is mounted on the webhook server; restrict access with firewall/reverse proxy.
+- Never enable `-allow-auto-chmod` in production (it's a security risk)
+- Do not enable `-openapi` or `-config-ui` on publicly reachable servers (they have no authentication; use only for debugging or intranet). Config UI is mounted on the webhook server; restrict access with firewall/reverse proxy.
 
 For more details, see the [Webhook Parameters (English)](docs/en-US/Webhook-Parameters.md) or [配置参数 (中文)](docs/zh-CN/Webhook-Parameters.md).
 

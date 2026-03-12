@@ -19,7 +19,7 @@ This document provides comprehensive security best practices for deploying and u
 
 ### 1. Use Command Path Whitelist
 
-**Always** use the `--allowed-command-paths` flag in production to restrict which commands can be executed.
+**Always** use the `-allowed-command-paths` flag in production to restrict which commands can be executed.
 
 ```bash
 webhook -allowed-command-paths="/usr/bin,/opt/scripts"
@@ -77,7 +77,7 @@ webhook \
 
 ### 4. Never Enable Auto-Chmod
 
-**Never** use `--allow-auto-chmod` in production. This is a security risk that can lead to privilege escalation.
+**Never** use `-allow-auto-chmod` in production. This is a security risk that can lead to privilege escalation.
 
 ```bash
 # ❌ BAD - Never do this in production
@@ -245,7 +245,7 @@ chown webhook:webhook hooks.json
 ### 3. Use Least Privilege
 
 - Run webhook with a dedicated, non-privileged user
-- Use `--setuid` and `--setgid` to drop privileges after binding to port
+- Use `-setuid` and `-setgid` to drop privileges after binding to port
 
 ```bash
 # Create dedicated user
@@ -494,13 +494,13 @@ If you discover a security vulnerability, please report it responsibly:
    - Suggested fix (if you have one)
 4. Allow time for the issue to be addressed before public disclosure
 
-For more information, see the [Security Policy](../SECURITY.md).
+For more information, see the [Security Policy](../../SECURITY.md).
 
 ---
 
 ## Additional Resources
 
-- [Security Policy](../SECURITY.md)
+- [Security Policy](../../SECURITY.md)
 - [Hook Rules](Hook-Rules.md) - Authentication and authorization rules
 - [Configuration Parameters](Webhook-Parameters.md) - Security-related parameters
 - [API Reference](API-Reference.md) - API security considerations
