@@ -1,4 +1,4 @@
-FROM golang:1.26-bullseye AS builder
+FROM golang:1.26.4-bullseye AS builder
 ENV GOPROXY=https://goproxy.cn
 ENV CGO_ENABLED=0
 WORKDIR /app
