@@ -8,7 +8,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/invopop/yaml v0.3.1
 	github.com/prometheus/client_golang v1.23.2
-	github.com/redis/go-redis/v9 v9.20.0
+	github.com/redis/go-redis/v9 v9.20.1
 	github.com/soulteary/audit-kit v1.3.0
 	github.com/soulteary/cli-kit v1.6.0
 	github.com/soulteary/health-kit v1.2.0
