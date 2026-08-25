@@ -1,7 +1,7 @@
 package version
 
 import (
-	versionkit "github.com/soulteary/version-kit"
+	versionkit "github.com/soulteary/version-kit/v2"
 )
 
 // auto set by build system - can be overridden via ldflags

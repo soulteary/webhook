@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/rules"
@@ -124,7 +125,7 @@ func TestCreateHookHandler_ConfigFileError(t *testing.T) {
 	req := httptest.NewRequest("POST", "/hooks/invalid-hook", nil)
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -207,7 +208,7 @@ func TestConcurrentHookExecution_SameHook(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/hooks/concurrent-hook", nil)
-			resp, err := app.Test(req, 5000)
+			resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 			if err != nil {
 				results <- 0
 				return
@@ -274,7 +275,7 @@ func TestConcurrentHookExecution_FileOperations(t *testing.T) {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/hooks/file-hook", nil)
 			req.Header.Set("X-Data", "data-"+strconv.Itoa(id))
-			resp, err := app.Test(req, 5000)
+			resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 			if err != nil {
 				errors <- err
 				return
@@ -335,7 +336,7 @@ func TestConcurrentHookExecution_ResourceContention(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/hooks/resource-hook", nil)
-			resp, _ := app.Test(req, 5000)
+			resp, _ := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 			if resp != nil {
 				_ = resp.Body.Close()
 			}
@@ -402,7 +403,7 @@ func TestCommandInjection_Prevention(t *testing.T) {
 			req.Header.Set("X-Input", injection)
 
 			app := testHookApp(handler)
-			resp, _ := app.Test(req, 5000)
+			resp, _ := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 			if resp != nil {
 				defer func() { _ = resp.Body.Close() }()
 				_ = resp.StatusCode
@@ -667,7 +668,7 @@ func BenchmarkConcurrentHookExecution(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			req := httptest.NewRequest("POST", "/hooks/bench-hook", nil)
-			resp, err := app.Test(req, 5000)
+			resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 			if err == nil && resp != nil {
 				_ = resp.Body.Close()
 			}
@@ -721,7 +722,7 @@ func TestLoadTest_MultipleHooks(t *testing.T) {
 			go func(hookID string) {
 				defer wg.Done()
 				req := httptest.NewRequest("POST", "/hooks/"+hookID, nil)
-				resp, err := app.Test(req, 5000)
+				resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 				if err != nil {
 					return
 				}
@@ -782,7 +783,7 @@ func TestStressTest_HighConcurrency(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/hooks/stress-hook", nil)
-			resp, err := app.Test(req, 5000)
+			resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 			if err != nil {
 				results <- 0
 				return

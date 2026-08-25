@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	loggerkit "github.com/soulteary/logger-kit"
+	loggerkit "github.com/soulteary/logger-kit/v2"
 	rediskit "github.com/soulteary/redis-kit/client"
 	redisratelimit "github.com/soulteary/redis-kit/ratelimit"
 	"github.com/soulteary/webhook/internal/logger"

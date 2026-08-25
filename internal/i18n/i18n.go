@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	i18nkit "github.com/soulteary/i18n-kit"
+	i18nkit "github.com/soulteary/i18n-kit/v2"
 	"github.com/soulteary/webhook/internal/fn"
 )
 

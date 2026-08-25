@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	loggerkit "github.com/soulteary/logger-kit"
+	loggerkit "github.com/soulteary/logger-kit/v2"
 )
 
 var (

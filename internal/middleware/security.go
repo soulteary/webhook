@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	middlewarekit "github.com/soulteary/middleware-kit"
+	middlewarekit "github.com/soulteary/middleware-kit/v2"
 )
 
 // SecurityConfig 安全中间件配置

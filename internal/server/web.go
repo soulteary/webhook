@@ -9,14 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
-	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
+	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	healthkit "github.com/soulteary/health-kit"
-	loggerkit "github.com/soulteary/logger-kit"
-	middlewarekit "github.com/soulteary/middleware-kit"
-	versionkit "github.com/soulteary/version-kit"
+	healthkit "github.com/soulteary/health-kit/v2"
+	loggerkit "github.com/soulteary/logger-kit/v2"
+	middlewarekit "github.com/soulteary/middleware-kit/v2"
+	versionkit "github.com/soulteary/version-kit/v2"
 	"github.com/soulteary/webhook/internal/configui"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/link"
@@ -63,13 +63,12 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	}
 
 	app := fiber.New(fiber.Config{
-		BodyLimit:             bodyLimit,
-		ReadTimeout:           readTimeout,
-		WriteTimeout:          writeTimeout,
-		IdleTimeout:           idleTimeout,
-		ReadBufferSize:        0,
-		WriteBufferSize:       0,
-		DisableStartupMessage: true,
+		BodyLimit:       bodyLimit,
+		ReadTimeout:     readTimeout,
+		WriteTimeout:    writeTimeout,
+		IdleTimeout:     idleTimeout,
+		ReadBufferSize:  0,
+		WriteBufferSize: 0,
 	})
 
 	// 安全头中间件（middleware-kit Fiber 版）
@@ -235,7 +234,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 				logger.Warnf("openapi spec generation failed: %v", err)
 			} else {
 				body := specJSON
-				app.Get(openapiPath, func(c *fiber.Ctx) error {
+				app.Get(openapiPath, func(c fiber.Ctx) error {
 					c.Set("Content-Type", "application/json; charset=utf-8")
 					return c.Send(body)
 				})
@@ -311,7 +310,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		if configUIPathLogged != "" {
 			logger.Infof("config UI: http://%s%s", addr, configUIPathLogged)
 		}
-		if err := app.Listener(ln); err != nil {
+		if err := app.Listener(ln, fiber.ListenConfig{DisableStartupMessage: true}); err != nil {
 			logger.Error(fmt.Sprintf("server error: %v", err))
 		}
 	}()
