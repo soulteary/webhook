@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	loggerkit "github.com/soulteary/logger-kit"
+	loggerkit "github.com/soulteary/logger-kit/v2"
 )
 
 func TestInit(t *testing.T) {

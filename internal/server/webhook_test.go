@@ -12,9 +12,10 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/rules"
@@ -24,7 +25,7 @@ import (
 
 // testHookApp 构建用于测试的 Fiber app，挂载 createHookHandler，便于 app.Test
 func testHookApp(handler http.HandlerFunc) *fiber.App {
-	app := fiber.New(fiber.Config{DisableStartupMessage: true})
+	app := fiber.New(fiber.Config{})
 	app.All("/hooks/:id", adaptor.HTTPHandlerFunc(handler))
 	app.All("/hooks/:id/*", adaptor.HTTPHandlerFunc(handler))
 	return app
@@ -181,7 +182,7 @@ func TestCreateHookHandler_HookNotFound(t *testing.T) {
 	req := httptest.NewRequest("GET", "/hooks/test-hook", nil)
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
@@ -206,7 +207,7 @@ func TestCreateHookHandler_MethodNotAllowed(t *testing.T) {
 	req := httptest.NewRequest("GET", "/hooks/test-hook", nil)
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -232,14 +233,14 @@ func TestCreateHookHandler_AppFlagsHttpMethods(t *testing.T) {
 
 	// Test with allowed method
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 	assert.NotEqual(t, http.StatusMethodNotAllowed, resp.StatusCode)
 
 	// Test with disallowed method
 	req2 := httptest.NewRequest("GET", "/hooks/test-hook", nil)
-	resp2, err := app.Test(req2, 5000)
+	resp2, err := app.Test(req2, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp2.Body.Close() }()
 	assert.Equal(t, http.StatusMethodNotAllowed, resp2.StatusCode)
@@ -372,7 +373,7 @@ func TestCreateHookHandler_JSONContentType(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -397,7 +398,7 @@ func TestCreateHookHandler_XMLContentType(t *testing.T) {
 	req.Header.Set("Content-Type", "application/xml")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -422,7 +423,7 @@ func TestCreateHookHandler_FormUrlEncodedContentType(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -447,7 +448,7 @@ func TestCreateHookHandler_UnsupportedContentType(t *testing.T) {
 	req.Header.Set("Content-Type", "text/plain")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -472,7 +473,7 @@ func TestCreateHookHandler_WithTriggerRule(t *testing.T) {
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
@@ -500,7 +501,7 @@ func TestCreateHookHandler_WithResponseHeaders(t *testing.T) {
 	req := httptest.NewRequest("POST", "/hooks/test-hook", nil)
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -694,7 +695,7 @@ func TestCreateHookHandler_MultipartForm(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -734,7 +735,7 @@ func TestCreateHookHandler_MultipartFormWithFile(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -770,7 +771,7 @@ func TestCreateHookHandler_MultipartFormError(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 	bodyBytes, _ := io.ReadAll(resp.Body)
@@ -799,7 +800,7 @@ func TestCreateHookHandler_ReadBodyError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	if err != nil {
 		// Fiber app.Test 在读 body 时可能因 errorReader 报错，无法到达 handler
 		t.Skip("app.Test fails when body reader returns error:", err)
@@ -835,7 +836,7 @@ func TestCreateHookHandler_TriggerRuleError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -873,7 +874,7 @@ func TestCreateHookHandler_StreamCommandOutputError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -912,7 +913,7 @@ func TestCreateHookHandler_CaptureOutputOnError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
@@ -949,7 +950,7 @@ func TestCreateHookHandler_TriggerRuleMismatchHttpResponseCode(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
@@ -977,7 +978,7 @@ func TestCreateHookHandler_SuccessHttpResponseCode(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	app := testHookApp(handler)
-	resp, err := app.Test(req, 5000)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 

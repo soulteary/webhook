@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	loggerkit "github.com/soulteary/logger-kit"
+	loggerkit "github.com/soulteary/logger-kit/v2"
 	"github.com/soulteary/webhook/internal/audit"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/fn"

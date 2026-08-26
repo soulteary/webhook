@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	loggerkit "github.com/soulteary/logger-kit"
+	loggerkit "github.com/soulteary/logger-kit/v2"
 	tracingkit "github.com/soulteary/tracing-kit"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"

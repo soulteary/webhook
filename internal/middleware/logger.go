@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	loggerkit "github.com/soulteary/logger-kit"
+	loggerkit "github.com/soulteary/logger-kit/v2"
 	"github.com/soulteary/webhook/internal/logger"
 )
 
