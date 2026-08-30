@@ -30,8 +30,7 @@ services:
       retries: 15
 
   owlmail:
-    build:
-      context: https://github.com/soulteary/owlmail.git#main
+    image: soulteary/owlmail:0.5.0
     depends_on:
       webhook:
         condition: service_healthy
@@ -42,6 +41,7 @@ services:
       OWLMAIL_SMTP_HOST: "0.0.0.0"
       OWLMAIL_WEB_HOST: "0.0.0.0"
       OWLMAIL_WEBHOOK_CONFIG: "/app/config/owlmail.json"
+      OWLMAIL_WEBHOOK_MAX_CONCURRENCY: "8"
       OWLMAIL_WEBHOOK_URL: "http://webhook:9000/hooks/owlmail"
       OWLMAIL_WEBHOOK_SECRET: "${OWLMAIL_WEBHOOK_SECRET:?set OWLMAIL_WEBHOOK_SECRET}"
     volumes:
