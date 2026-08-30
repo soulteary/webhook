@@ -13,7 +13,7 @@ services:
       ALLOWED_COMMAND_PATHS: "/app/print-email.sh"
       STRICT_MODE: "true"
       MAX_CONCURRENT_HOOKS: "10"
-      HOOK_TIMEOUT_SECONDS: "15"
+      HOOK_EXECUTION_TIMEOUT: "8"
       RATE_LIMIT_ENABLED: "true"
       RATE_LIMIT_RPS: "20"
       RATE_LIMIT_BURST: "10"

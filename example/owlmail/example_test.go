@@ -79,6 +79,7 @@ func TestOwlMailConfigAndDocumentation(t *testing.T) {
 		"DEBUG: \"true\"",
 		"LOG_REQUEST_BODY: \"false\"",
 		"ALLOWED_COMMAND_PATHS",
+		"HOOK_EXECUTION_TIMEOUT: \"8\"",
 		"STRICT_MODE",
 	} {
 		if !strings.Contains(string(compose), required) {
