@@ -1,21 +1,28 @@
-name: Codecov
+name: Tests
 
 on:
   workflow_dispatch:
   push:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  CodeCov:
+  test:
     runs-on: ubuntu-latest
-
     env:
       GO_VERSION: "1.26.6"
       GO111MODULE: on
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -30,9 +37,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Run coverage
-        run: go test ./... -coverprofile=coverage.out -covermode=atomic
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Run tests
+        run: go test ./...
