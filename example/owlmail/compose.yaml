@@ -2,7 +2,7 @@ services:
   webhook:
     image: soulteary/webhook:extend-7.0.0
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
     environment:
       HOST: "0.0.0.0"
       PORT: "9000"
@@ -35,8 +35,8 @@ services:
       webhook:
         condition: service_healthy
     ports:
-      - "1025:1025"
-      - "1080:1080"
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:1080:1080"
     environment:
       OWLMAIL_SMTP_HOST: "0.0.0.0"
       OWLMAIL_WEB_HOST: "0.0.0.0"
