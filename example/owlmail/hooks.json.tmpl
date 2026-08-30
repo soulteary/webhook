@@ -1,0 +1,30 @@
+[
+  {
+    "id": "owlmail",
+    "execute-command": "{{ getenv "OWLMAIL_WEBHOOK_COMMAND" | js }}",
+    "command-working-directory": "{{ getenv "OWLMAIL_WEBHOOK_WORKDIR" | js }}",
+    "http-methods": ["POST"],
+    "incoming-payload-content-type": "application/json",
+    "include-command-output-in-response": true,
+    "include-command-output-in-response-on-error": false,
+    "pass-environment-to-command": [
+      { "source": "payload", "name": "event", "envname": "OWLMAIL_EVENT" },
+      { "source": "payload", "name": "emailId", "envname": "OWLMAIL_EMAIL_ID" },
+      { "source": "payload", "name": "title", "envname": "OWLMAIL_TITLE" },
+      { "source": "payload", "name": "message", "envname": "OWLMAIL_MESSAGE" },
+      { "source": "payload", "name": "from", "envname": "OWLMAIL_FROM" },
+      { "source": "payload", "name": "to", "envname": "OWLMAIL_TO" },
+      { "source": "payload", "name": "receivedAt", "envname": "OWLMAIL_RECEIVED_AT" }
+    ],
+    "trigger-rule": {
+      "match": {
+        "type": "payload-hmac-sha256",
+        "secret": "{{ getenv "OWLMAIL_WEBHOOK_SECRET" | js }}",
+        "parameter": {
+          "source": "header",
+          "name": "X-OwlMail-Signature"
+        }
+      }
+    }
+  }
+]
