@@ -35,8 +35,10 @@ The `webhook` container logs a summary from `print-email.sh`. Open
 docker compose down
 ```
 
-The example stores no persistent mail volume. It also keeps WebHook debug body
-logging disabled so message contents are not duplicated into request logs.
+The example stores no persistent mail volume. It enables WebHook debug logging
+so the demo command output is visible, but keeps raw request-body logging
+disabled. Disable `DEBUG` in production because the mapped email fields printed
+by the command will otherwise be written to logs.
 
 For configuration details, production guidance, field mappings, and
 troubleshooting, read the [OwlMail integration guide](../../docs/en-US/OwlMail-Integration.md).

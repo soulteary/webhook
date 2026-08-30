@@ -34,8 +34,9 @@ printf 'From: monitor@example.test\r\nTo: ops@example.test\r\nSubject: Demo aler
 docker compose down
 ```
 
-示例未设置持久化邮件数据卷，也没有开启 WebHook 请求体调试日志，避免把邮件
-内容重复写入请求日志。
+示例未设置持久化邮件数据卷。为了让演示命令输出可见，它开启了 WebHook 调试
+日志，但仍关闭原始请求体日志。生产环境必须关闭 `DEBUG`，否则命令输出的邮件
+字段仍会进入日志。
 
 配置说明、生产建议、字段映射和故障排查见
 [OwlMail 联动指南](../../docs/zh-CN/OwlMail-Integration.md)。

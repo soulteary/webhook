@@ -8,6 +8,8 @@ services:
       PORT: "9000"
       HOOKS: "/app/hooks.json.tmpl"
       TEMPLATE: "true"
+      DEBUG: "true"
+      LOG_REQUEST_BODY: "false"
       ALLOWED_COMMAND_PATHS: "/app/print-email.sh"
       STRICT_MODE: "true"
       MAX_CONCURRENT_HOOKS: "10"

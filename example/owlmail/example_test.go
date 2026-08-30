@@ -76,6 +76,8 @@ func TestOwlMailConfigAndDocumentation(t *testing.T) {
 	for _, required := range []string{
 		"soulteary/webhook:extend-7.0.0",
 		"OWLMAIL_WEBHOOK_SECRET:?set OWLMAIL_WEBHOOK_SECRET",
+		"DEBUG: \"true\"",
+		"LOG_REQUEST_BODY: \"false\"",
 		"ALLOWED_COMMAND_PATHS",
 		"STRICT_MODE",
 	} {
