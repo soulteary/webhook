@@ -75,6 +75,8 @@ func TestOwlMailConfigAndDocumentation(t *testing.T) {
 	}
 	for _, required := range []string{
 		"soulteary/webhook:extend-7.0.0",
+		"soulteary/owlmail:0.5.0",
+		"OWLMAIL_WEBHOOK_MAX_CONCURRENCY: \"8\"",
 		"OWLMAIL_WEBHOOK_SECRET:?set OWLMAIL_WEBHOOK_SECRET",
 		"DEBUG: \"true\"",
 		"LOG_REQUEST_BODY: \"false\"",
@@ -85,6 +87,9 @@ func TestOwlMailConfigAndDocumentation(t *testing.T) {
 		if !strings.Contains(string(compose), required) {
 			t.Errorf("compose.yaml does not contain %q", required)
 		}
+	}
+	if strings.Contains(string(compose), "github.com/soulteary/owlmail.git#main") {
+		t.Error("compose.yaml must use the released OwlMail image instead of an unpinned main build")
 	}
 
 	for _, path := range []string{
