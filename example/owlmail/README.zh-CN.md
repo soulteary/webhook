@@ -1,20 +1,21 @@
 # OwlMail 联动示例
 
-该示例将 [OwlMail](https://github.com/soulteary/owlmail) 与
+该示例将 [OwlMail](https://github.com/soulteary/owlmail) `v0.5.0` 与
 `soulteary/webhook` 连接起来。每封接收的邮件都会被渲染为 JSON，由 OwlMail
 使用 HMAC-SHA256 签名；WebHook 验证签名后，再通过一组固定环境变量将字段传给
 演示命令。
 
-当前已发布的 OwlMail `v0.4.0` 镜像早于 Webhook 转发功能，因此 Compose 示例
-会从 OwlMail 当前 `main` 分支构建。后续正式版本包含该功能后，可将 `build`
-替换为对应的 OwlMail 发布镜像。
+OwlMail `v0.5.0` 已正式包含 Webhook 转发、`/webhooks` 浏览器配置生成器，以及
+Webhook 投递并发上限。Compose Demo 直接使用发布镜像
+`soulteary/owlmail:0.5.0`，并显式设置默认并发值 `8`，让示例同时能够说明生产
+运行时行为。
 
 ## 运行
 
 ```bash
 cd example/owlmail
 export OWLMAIL_WEBHOOK_SECRET="$(openssl rand -hex 32)"
-docker compose up --build
+docker compose up
 ```
 
 在另一个终端发送测试邮件：
@@ -28,7 +29,9 @@ printf 'From: monitor@example.test\r\nTo: ops@example.test\r\nSubject: Demo aler
 ```
 
 `webhook` 容器会输出 `print-email.sh` 生成的摘要。打开
-`http://127.0.0.1:1080` 可以查看捕获的邮件。
+`http://127.0.0.1:1080` 可以查看捕获的邮件；打开
+`http://127.0.0.1:1080/webhooks` 可以查看 OwlMail 的 Webhook 配置生成器，并与
+本目录的 `owlmail.json` 示例进行对照。
 
 ```bash
 docker compose down
