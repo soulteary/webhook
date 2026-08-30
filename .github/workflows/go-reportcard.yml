@@ -1,0 +1,24 @@
+name: Go Report Card
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  report-card:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: grc
+        uses: soulteary/goreportcard-action@739d8af6eb6bbd62d7ab521523415d3e5c53b70e # v1.0.0
+        with:
+          directory: "."
+          output: ".github/goreportcard.svg"
+          commit: "true"
+      - run: echo "Grade ${{ steps.grc.outputs.grade }} (${{ steps.grc.outputs.score }}%)"
