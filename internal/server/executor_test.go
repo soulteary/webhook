@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,6 +76,44 @@ func TestNewHookExecutor_DefaultValues(t *testing.T) {
 			executor := NewHookExecutorWithFunc(tt.maxConcurrent, tt.defaultTimeout, mockExecutorFunc)
 			assert.Equal(t, tt.expectedMax, executor.GetMaxConcurrent())
 			assert.Equal(t, tt.expectedTimeout, executor.GetDefaultTimeout())
+		})
+	}
+}
+
+func TestResolveHookTimeouts(t *testing.T) {
+	tests := []struct {
+		name                   string
+		appFlags               flags.AppFlags
+		expectedCommandTimeout time.Duration
+		expectedAcquireTimeout time.Duration
+	}{
+		{
+			name: "configured values keep separate semantics",
+			appFlags: flags.AppFlags{
+				HookTimeoutSeconds:   45,
+				HookExecutionTimeout: 7,
+			},
+			expectedCommandTimeout: 45 * time.Second,
+			expectedAcquireTimeout: 7 * time.Second,
+		},
+		{
+			name:                   "zero values use independent defaults",
+			appFlags:               flags.AppFlags{},
+			expectedCommandTimeout: DefaultHookTimeout,
+			expectedAcquireTimeout: DefaultHookAcquireTimeout,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			commandTimeout, acquireTimeout := resolveHookTimeouts(tt.appFlags)
+			assert.Equal(t, tt.expectedCommandTimeout, commandTimeout)
+			assert.Equal(t, tt.expectedAcquireTimeout, acquireTimeout)
+
+			executor := NewHookExecutorWithFunc(1, commandTimeout, func(context.Context, *hook.Hook, *hook.Request, http.ResponseWriter) (string, error) {
+				return "", nil
+			})
+			assert.Equal(t, tt.expectedCommandTimeout, executor.GetDefaultTimeout())
 		})
 	}
 }

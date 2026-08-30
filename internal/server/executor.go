@@ -14,8 +14,8 @@ const (
 	DefaultHookTimeout = 30 * time.Second
 	// DefaultMaxConcurrentHooks 默认最大并发执行的 hook 数量
 	DefaultMaxConcurrentHooks = 10
-	// HookExecutionTimeout 获取 semaphore 的超时时间
-	HookExecutionTimeout = 5 * time.Second
+	// DefaultHookAcquireTimeout 默认获取 semaphore 的超时时间
+	DefaultHookAcquireTimeout = 5 * time.Second
 )
 
 // HookExecutor 管理 hook 执行的并发控制和超时
@@ -49,12 +49,12 @@ func NewHookExecutorWithFunc(maxConcurrent int, defaultTimeout time.Duration, ex
 }
 
 // Execute 执行 hook，带并发控制和超时
-func (he *HookExecutor) Execute(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter, executionTimeout time.Duration) (string, error) {
+func (he *HookExecutor) Execute(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter, acquireTimeout time.Duration) (string, error) {
 	// 尝试获取 semaphore，带超时
 	select {
 	case he.sem <- struct{}{}:
 		defer func() { <-he.sem }()
-	case <-time.After(executionTimeout):
+	case <-time.After(acquireTimeout):
 		return "", errors.New("too many concurrent hooks, execution timeout")
 	case <-ctx.Done():
 		return "", ctx.Err()

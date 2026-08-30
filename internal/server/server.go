@@ -375,11 +375,8 @@ func executeHookWithResponse(w http.ResponseWriter, r *http.Request, matchedHook
 	// 使用请求的 context，支持取消和超时
 	ctx := r.Context()
 
-	// 获取执行超时时间
-	executionTimeout := time.Duration(appFlags.HookExecutionTimeout) * time.Second
-	if executionTimeout <= 0 {
-		executionTimeout = HookExecutionTimeout
-	}
+	// 获取等待执行槽位的超时时间。命令执行超时由 HookExecutor 单独管理。
+	_, acquireTimeout := resolveHookTimeouts(appFlags)
 
 	// 记录并发 hook 开始
 	metrics.IncrementConcurrentHooks(hookID)
@@ -391,19 +388,19 @@ func executeHookWithResponse(w http.ResponseWriter, r *http.Request, matchedHook
 	}()
 
 	if matchedHook.StreamCommandOutput {
-		executeStreamingHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID, startTime)
+		executeStreamingHook(w, ctx, matchedHook, req, executor, acquireTimeout, requestID, hookID, startTime)
 	} else if matchedHook.CaptureCommandOutput {
-		executeCapturingHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID, startTime)
+		executeCapturingHook(w, ctx, matchedHook, req, executor, acquireTimeout, requestID, hookID, startTime)
 	} else {
-		executeAsyncHook(w, ctx, matchedHook, req, executor, executionTimeout, requestID, hookID, startTime)
+		executeAsyncHook(w, ctx, matchedHook, req, executor, acquireTimeout, requestID, hookID, startTime)
 	}
 }
 
 // executeStreamingHook 执行流式输出的 hook
-func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string, startTime time.Time) {
+func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, acquireTimeout time.Duration, requestID, hookID string, startTime time.Time) {
 	// 使用 trackingResponseWriter 来跟踪是否已经写入响应
 	trw := &trackingResponseWriter{ResponseWriter: w}
-	_, err := executor.Execute(ctx, matchedHook, req, trw, executionTimeout)
+	_, err := executor.Execute(ctx, matchedHook, req, trw, acquireTimeout)
 	duration := time.Since(startTime)
 	durationMS := duration.Milliseconds()
 
@@ -435,7 +432,7 @@ func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 		if !trw.HasWritten() {
 			// 为了保持向后兼容性，使用特定的错误消息
 			if errors.Is(err, context.DeadlineExceeded) {
-				logger.Errorf("[%s] hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
+				logger.Errorf("[%s] hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executor.GetDefaultTimeout(), err)
 				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 				w.WriteHeader(http.StatusRequestTimeout)
 				_, _ = fmt.Fprint(w, "Hook execution timeout. Please check your logs for more details.")
@@ -468,8 +465,8 @@ func executeStreamingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 }
 
 // executeCapturingHook 执行捕获输出的 hook
-func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string, startTime time.Time) {
-	response, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
+func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, acquireTimeout time.Duration, requestID, hookID string, startTime time.Time) {
+	response, err := executor.Execute(ctx, matchedHook, req, nil, acquireTimeout)
 	duration := time.Since(startTime)
 	durationMS := duration.Milliseconds()
 
@@ -535,7 +532,7 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 }
 
 // executeAsyncHook 执行异步 hook
-func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, executionTimeout time.Duration, requestID, hookID string, startTime time.Time) {
+func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, acquireTimeout time.Duration, requestID, hookID string, startTime time.Time) {
 	// 获取请求信息用于审计日志（在 goroutine 外获取，避免请求对象被回收）
 	var ip, userAgent string
 	if req.RawRequest != nil {
@@ -548,7 +545,7 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 	asyncHookWaitGroup.Add(1)
 	go func() {
 		defer asyncHookWaitGroup.Done()
-		_, err := executor.Execute(ctx, matchedHook, req, nil, executionTimeout)
+		_, err := executor.Execute(ctx, matchedHook, req, nil, acquireTimeout)
 		duration := time.Since(startTime)
 		durationMS := duration.Milliseconds()
 
@@ -557,7 +554,7 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 			status := "error"
 			if errors.Is(err, context.DeadlineExceeded) {
 				status = "timeout"
-				logger.Errorf("[%s] async hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executionTimeout, err)
+				logger.Errorf("[%s] async hook %s execution timeout (command: %s, timeout: %v): %v", requestID, hookID, matchedHook.ExecuteCommand, executor.GetDefaultTimeout(), err)
 				// 记录审计日志：执行超时
 				audit.LogHookTimeout(requestID, hookID, ip, userAgent, durationMS)
 			} else if errors.Is(err, context.Canceled) {
@@ -587,6 +584,20 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 	_, _ = fmt.Fprint(w, matchedHook.ResponseMessage)
 }
 
+func resolveHookTimeouts(appFlags flags.AppFlags) (commandTimeout, acquireTimeout time.Duration) {
+	commandTimeout = time.Duration(appFlags.HookTimeoutSeconds) * time.Second
+	if commandTimeout <= 0 {
+		commandTimeout = DefaultHookTimeout
+	}
+
+	acquireTimeout = time.Duration(appFlags.HookExecutionTimeout) * time.Second
+	if acquireTimeout <= 0 {
+		acquireTimeout = DefaultHookAcquireTimeout
+	}
+
+	return commandTimeout, acquireTimeout
+}
+
 func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.ResponseWriter, r *http.Request) {
 	// 从配置中获取超时和并发设置，如果未配置则使用默认值
 	maxConcurrent := appFlags.MaxConcurrentHooks
@@ -594,17 +605,14 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 		maxConcurrent = DefaultMaxConcurrentHooks
 	}
 
-	executionTimeout := time.Duration(appFlags.HookExecutionTimeout) * time.Second
-	if executionTimeout <= 0 {
-		executionTimeout = HookExecutionTimeout
-	}
+	commandTimeout, _ := resolveHookTimeouts(appFlags)
 
 	// 创建 HookExecutor 实例，管理并发控制
 	// 创建一个包装函数，将 appFlags 传递给 handleHook
 	executorFunc := func(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
 		return handleHook(ctx, h, r, w, appFlags)
 	}
-	executor := NewHookExecutorWithFunc(maxConcurrent, executionTimeout, executorFunc)
+	executor := NewHookExecutorWithFunc(maxConcurrent, commandTimeout, executorFunc)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 记录请求开始时间
