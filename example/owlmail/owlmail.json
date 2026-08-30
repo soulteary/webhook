@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "targets": [
+    {
+      "name": "soulteary-webhook",
+      "url": "${OWLMAIL_WEBHOOK_URL}",
+      "secret": "${OWLMAIL_WEBHOOK_SECRET}",
+      "timeout": "10s",
+      "retries": 2,
+      "bodyTemplate": "{\"event\":\"email.received\",\"emailId\":{{ json .ID }},\"title\":{{ json .Subject }},\"message\":{{ json (truncate .Text 4000) }},\"from\":{{ json (join .From \",\") }},\"to\":{{ json (join .To \",\") }},\"receivedAt\":{{ json .Time }}}"
+    }
+  ]
+}

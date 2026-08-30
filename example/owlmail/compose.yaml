@@ -1,0 +1,46 @@
+services:
+  webhook:
+    image: soulteary/webhook:extend-7.0.0
+    ports:
+      - "9000:9000"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "9000"
+      HOOKS: "/app/hooks.json.tmpl"
+      TEMPLATE: "true"
+      ALLOWED_COMMAND_PATHS: "/app/print-email.sh"
+      STRICT_MODE: "true"
+      MAX_CONCURRENT_HOOKS: "10"
+      HOOK_TIMEOUT_SECONDS: "15"
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_RPS: "20"
+      RATE_LIMIT_BURST: "10"
+      OWLMAIL_WEBHOOK_SECRET: "${OWLMAIL_WEBHOOK_SECRET:?set OWLMAIL_WEBHOOK_SECRET}"
+      OWLMAIL_WEBHOOK_COMMAND: "/app/print-email.sh"
+      OWLMAIL_WEBHOOK_WORKDIR: "/app"
+    volumes:
+      - ./hooks.json.tmpl:/app/hooks.json.tmpl:ro
+      - ./print-email.sh:/app/print-email.sh:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9000/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  owlmail:
+    build:
+      context: https://github.com/soulteary/owlmail.git#main
+    depends_on:
+      webhook:
+        condition: service_healthy
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+    environment:
+      OWLMAIL_SMTP_HOST: "0.0.0.0"
+      OWLMAIL_WEB_HOST: "0.0.0.0"
+      OWLMAIL_WEBHOOK_CONFIG: "/app/config/owlmail.json"
+      OWLMAIL_WEBHOOK_URL: "http://webhook:9000/hooks/owlmail"
+      OWLMAIL_WEBHOOK_SECRET: "${OWLMAIL_WEBHOOK_SECRET:?set OWLMAIL_WEBHOOK_SECRET}"
+    volumes:
+      - ./owlmail.json:/app/config/owlmail.json:ro
