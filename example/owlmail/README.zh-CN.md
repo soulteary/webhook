@@ -18,6 +18,9 @@ export OWLMAIL_WEBHOOK_SECRET="$(openssl rand -hex 32)"
 docker compose up
 ```
 
+Demo 发布的所有端口均绑定到 `127.0.0.1`，因此 SMTP 监听器、收件箱界面和
+WebHook 端点不会暴露给网络中的其他主机。
+
 在另一个终端发送测试邮件：
 
 ```bash

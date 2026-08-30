@@ -19,6 +19,9 @@ export OWLMAIL_WEBHOOK_SECRET="$(openssl rand -hex 32)"
 docker compose up
 ```
 
+All published demo ports bind to `127.0.0.1`, so the SMTP listener, inbox UI,
+and WebHook endpoint are not exposed to other hosts on the network.
+
 Send a test message from another terminal:
 
 ```bash
