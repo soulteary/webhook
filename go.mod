@@ -1,6 +1,6 @@
 module github.com/soulteary/webhook
 
-go 1.26.6
+go 1.27.0
 
 require (
 	github.com/clbanning/mxj/v2 v2.7.0
@@ -9,7 +9,7 @@ require (
 	github.com/invopop/yaml v0.3.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/redis/go-redis/v9 v9.22.0
-	github.com/soulteary/audit-kit v1.3.0
+	github.com/soulteary/audit-kit v1.7.0
 	github.com/soulteary/cli-kit v1.6.0
 	github.com/soulteary/health-kit/v2 v2.0.0-20260825184657-5abf6d7d57aa
 	github.com/soulteary/i18n-kit/v2 v2.0.0-20260825190833-61c6480faff7
@@ -17,7 +17,7 @@ require (
 	github.com/soulteary/metrics-kit/v2 v2.0.0-20260825190213-a45f1f3040f0
 	github.com/soulteary/middleware-kit/v2 v2.0.0-20260825190703-ab8d8cfae74a
 	github.com/soulteary/redis-kit v1.2.0
-	github.com/soulteary/secure-kit v1.3.0
+	github.com/soulteary/secure-kit v1.5.0
 	github.com/soulteary/tracing-kit v1.1.0
 	github.com/soulteary/version-kit/v2 v2.0.0-20260825185013-b8322bc21a84
 	github.com/stretchr/testify v1.12.1
