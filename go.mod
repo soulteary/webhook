@@ -1,6 +1,6 @@
 module github.com/soulteary/webhook
 
-go 1.26.6
+go 1.27.0
 
 require (
 	github.com/clbanning/mxj/v2 v2.7.0
@@ -14,7 +14,7 @@ require (
 	github.com/soulteary/health-kit/v2 v2.0.0-20260825184657-5abf6d7d57aa
 	github.com/soulteary/i18n-kit/v2 v2.0.0-20260825190833-61c6480faff7
 	github.com/soulteary/logger-kit/v2 v2.0.0-20260825184349-8667e28f7f2a
-	github.com/soulteary/metrics-kit/v2 v2.0.0-20260825190213-a45f1f3040f0
+	github.com/soulteary/metrics-kit/v2 v2.1.0
 	github.com/soulteary/middleware-kit/v2 v2.0.0-20260825190703-ab8d8cfae74a
 	github.com/soulteary/redis-kit v1.2.0
 	github.com/soulteary/secure-kit v1.3.0

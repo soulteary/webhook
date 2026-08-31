@@ -97,8 +97,8 @@ github.com/soulteary/i18n-kit/v2 v2.0.0-20260825190833-61c6480faff7 h1:aS3kpAIru
 github.com/soulteary/i18n-kit/v2 v2.0.0-20260825190833-61c6480faff7/go.mod h1:4KCjf5l3hUQjfg8339C7envvxXhMlILcxt/T4Hvj/PQ=
 github.com/soulteary/logger-kit/v2 v2.0.0-20260825184349-8667e28f7f2a h1:3f4tiADw/LBtw1KWXRa78b+5KD4Gka/bWADrkJQX5bU=
 github.com/soulteary/logger-kit/v2 v2.0.0-20260825184349-8667e28f7f2a/go.mod h1:Z653e2gcefSA5uVs3sP1dEE++kzLBPnhEbLbxpkUktQ=
-github.com/soulteary/metrics-kit/v2 v2.0.0-20260825190213-a45f1f3040f0 h1:PrJbU+3HUZqqOZ65ieZRJNQsItehvbwn+SJQXIFDQ7k=
-github.com/soulteary/metrics-kit/v2 v2.0.0-20260825190213-a45f1f3040f0/go.mod h1:JYOiNds35ptX3Ux5UO0UNLbCZF31lScUVomugqCyz9s=
+github.com/soulteary/metrics-kit/v2 v2.1.0 h1:KjI75aCp1nKiKHgiyU0GHpBs8F2gYpbGod5pXNWSbr0=
+github.com/soulteary/metrics-kit/v2 v2.1.0/go.mod h1:1keQjM9DaSmPD+XedvkUK+eV4qIgkhj0cJEcii1j4do=
 github.com/soulteary/middleware-kit/v2 v2.0.0-20260825190703-ab8d8cfae74a h1:MvhmAFwr5NdZQ789TEmOovtnqTUg+OSmKbCpqtuMLSE=
 github.com/soulteary/middleware-kit/v2 v2.0.0-20260825190703-ab8d8cfae74a/go.mod h1:EoKrT3vAyceZOR7Ek5Y0Vjq5kH8duu/XuC8l4AO+r1o=
 github.com/soulteary/redis-kit v1.2.0 h1:saoQdXnfbi0UROt2rc/Y58QjyjLb+D4uJ5695k496dA=
