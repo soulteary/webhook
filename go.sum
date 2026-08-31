@@ -91,8 +91,8 @@ github.com/soulteary/audit-kit v1.3.0 h1:ipKbaLZ4zwMPY3LSCO396roZw1ke4mPKy2jtlYA
 github.com/soulteary/audit-kit v1.3.0/go.mod h1:8pV9jtK0cn0proCBsVdUQ4/RVXavbTAPM2G26NfWiQQ=
 github.com/soulteary/cli-kit v1.6.0 h1:db0iGGZZNRerTaGR1ljdllTiDuNkpl6wLb2wJHXZv0c=
 github.com/soulteary/cli-kit v1.6.0/go.mod h1:O7jG7L41pI4tTjTb8yWnI/pQl6L9Zl9waKEqRir5qXo=
-github.com/soulteary/health-kit/v2 v2.0.0-20260825184657-5abf6d7d57aa h1:E6XP7wrCAamVeC1YhpMlz/bo+sNVirItsPAZh491dhc=
-github.com/soulteary/health-kit/v2 v2.0.0-20260825184657-5abf6d7d57aa/go.mod h1:OfSD52DUlA6HpDLN1ELAyqQk0xaycosbXlCsEpafZCQ=
+github.com/soulteary/health-kit/v2 v2.1.0 h1:mUINt5lnx87gyZ3BUuVT7xKRLxOhG1jCOlAdQtnTg3o=
+github.com/soulteary/health-kit/v2 v2.1.0/go.mod h1:tZy1dcIUK9IvDxml4AFqhJFE3qzJgr7fY1Ywa1FmsuA=
 github.com/soulteary/i18n-kit/v2 v2.0.0-20260825190833-61c6480faff7 h1:aS3kpAIruIDaAlkg8VeJrPZWCJAbAgwuDd3Y5jVl1C4=
 github.com/soulteary/i18n-kit/v2 v2.0.0-20260825190833-61c6480faff7/go.mod h1:4KCjf5l3hUQjfg8339C7envvxXhMlILcxt/T4Hvj/PQ=
 github.com/soulteary/logger-kit/v2 v2.0.0-20260825184349-8667e28f7f2a h1:3f4tiADw/LBtw1KWXRa78b+5KD4Gka/bWADrkJQX5bU=
