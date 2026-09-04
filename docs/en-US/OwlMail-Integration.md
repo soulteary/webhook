@@ -26,7 +26,7 @@ Start from [`hooks.json.tmpl`](../../example/owlmail/hooks.json.tmpl). It define
 `X-OwlMail-Signature`, and maps `event`, `emailId`, `title`, `message`, `from`,
 `to`, and `receivedAt` to fixed `OWLMAIL_*` command environment variables. It
 also maps the `X-OwlMail-Delivery-ID` request header to
-`OWLMAIL_DELIVERY_ID` for idempotency.
+`OWLMAIL_DELIVERY_ID` for delivery correlation.
 
 ```bash
 export OWLMAIL_WEBHOOK_SECRET="$(openssl rand -hex 32)"
@@ -87,19 +87,22 @@ OwlMail 0.9.0 sends both signature formats when a target has a `secret`:
 | `X-OwlMail-Signature-V2` | Replay-aware HMAC over `timestamp + "." + nonce + "." + body`: `v2=<hex digest>`. |
 | `X-OwlMail-Timestamp` | UTC RFC 3339 signing time. |
 | `X-OwlMail-Nonce` | A new random value for each HTTP attempt. |
-| `X-OwlMail-Delivery-ID` | Stable identifier retained across retries of one queued delivery. |
+| `X-OwlMail-Delivery-ID` | Stable identifier retained across retries of one queued delivery; neither signature covers this header. |
 
 The bundled WebHook `payload-hmac-sha256` rule validates the legacy
-body-only header. It still prevents body tampering, but it does not validate the
-timestamp, nonce, or delivery ID and therefore does not itself provide replay
-protection. If replay resistance is required, validate the V2 tuple in an
-authenticated reverse proxy or purpose-built handler, enforce a short timestamp
-window, and reject reused nonces.
+body-only header. It prevents body tampering, but it does not validate the
+timestamp or nonce and therefore does not itself provide replay protection. If
+replay resistance is required, validate the V2 tuple in an authenticated
+reverse proxy or purpose-built handler, enforce a short timestamp window, and
+reject reused nonces.
 
-Use `OWLMAIL_DELIVERY_ID` as the idempotency key before non-idempotent side
-effects. An email ID identifies a stored message, while one message may produce
-more than one delivery or event over time. Do not treat the delivery ID header
-as cryptographically bound when only the legacy signature rule is in use.
+Neither the legacy nor V2 signature covers `X-OwlMail-Delivery-ID`: V2 signs
+only the timestamp, nonce, and exact body. Treat `OWLMAIL_DELIVERY_ID` as
+correlation metadata, not as an authenticated authorization value or sole
+idempotency key across an untrusted path. For this fixed `email.received`
+payload, derive the idempotency key from the signed `event` and `emailId`
+fields. If a future integration needs a trusted per-delivery identifier, place
+an authenticated copy in the signed body through a trusted adapter.
 
 ## Delivery timing and durability
 
@@ -145,7 +148,7 @@ mapped demo event.
 - Restrict `-allowed-command-paths`; enable strict mode, bounded concurrency, execution timeouts, and rate limits.
 - Keep OwlMail at the default concurrency of `8` or size it to downstream capacity; do not accidentally set it to `0`.
 - Keep raw request-body logging disabled for email payloads and run commands unprivileged.
-- Deduplicate retries with `OWLMAIL_DELIVERY_ID`, not only the email ID.
+- For this fixed payload, deduplicate with the signed `(event, emailId)` tuple; use the unsigned delivery ID only for correlation.
 - Persist OwlMail's mail directory and configure Redis when delivery must survive process restarts.
 - Keep OwlMail's per-attempt timeout above normal command duration but bounded; set a finite shutdown drain timeout.
 
@@ -164,7 +167,7 @@ Use separate commands and, where practical, separate secrets to isolate permissi
 | WebHook returns 401/403 | Both services use the same secret and no proxy changes the body or signature header. |
 | WebHook returns 404 | The target URL ends in `/hooks/owlmail` and the hook ID is `owlmail`. |
 | OwlMail retries after 5xx | Inspect command exit status and WebHook timeout/concurrency logs. |
-| Duplicate processing | Make the command idempotent using `OWLMAIL_DELIVERY_ID`; delivery is at least once. |
+| Duplicate processing | Delivery is at least once; deduplicate this fixed payload with the signed `(event, emailId)` tuple and use the unsigned delivery ID only for correlation. |
 | Events disappear after restart | Persist the mail directory and configure Redis; the demo intentionally uses neither. |
 | Replay protection is required | The bundled rule checks the legacy body HMAC only; validate the V2 timestamp, nonce, signature, and replay window separately. |
 

@@ -23,8 +23,8 @@ SMTP 客户端 -> OwlMail v0.9.0 -> 带签名的 HTTP POST -> WebHook -> 命令/
 可以从 [`hooks.json.tmpl`](../../example/owlmail/hooks.json.tmpl) 开始。它定义了
 `POST /hooks/owlmail`，要求 `application/json`，验证 `X-OwlMail-Signature`，并将
 `event`、`emailId`、`title`、`message`、`from`、`to`、`receivedAt` 映射到固定的
-`OWLMAIL_*` 环境变量；同时把 `X-OwlMail-Delivery-ID` 请求头映射为用于幂等处理的
-`OWLMAIL_DELIVERY_ID`。
+`OWLMAIL_*` 环境变量；同时把 `X-OwlMail-Delivery-ID` 请求头映射为
+`OWLMAIL_DELIVERY_ID`，用于投递链路关联。
 
 ```bash
 export OWLMAIL_WEBHOOK_SECRET="$(openssl rand -hex 32)"
@@ -85,16 +85,18 @@ OwlMail 会先展开环境变量，再验证配置；缺少变量或数值无效
 | `X-OwlMail-Signature-V2` | 对 `时间戳 + "." + nonce + "." + 请求体` 计算的防重放 HMAC：`v2=<十六进制摘要>`。 |
 | `X-OwlMail-Timestamp` | UTC RFC 3339 签名时间。 |
 | `X-OwlMail-Nonce` | 每次 HTTP 尝试都会生成的新随机值。 |
-| `X-OwlMail-Delivery-ID` | 同一个队列投递在重试期间保持稳定的标识。 |
+| `X-OwlMail-Delivery-ID` | 同一个队列投递在重试期间保持稳定的标识；两种签名都不覆盖此请求头。 |
 
 本示例使用 WebHook 内置的 `payload-hmac-sha256` 规则，只验证旧版的正文签名。
-它可以防止请求体被修改，但不会验证时间戳、nonce 或投递 ID，因此本身不具备
-防重放能力。需要防重放时，应在经过认证的反向代理或专用处理器中验证 V2 签名，
-限制时间窗口，并拒绝重复 nonce。
+它可以防止请求体被修改，但不会验证时间戳或 nonce，因此本身不具备防重放能力。
+需要防重放时，应在经过认证的反向代理或专用处理器中验证 V2 签名，限制时间窗口，
+并拒绝重复 nonce。
 
-执行非幂等副作用前，应使用 `OWLMAIL_DELIVERY_ID` 去重。邮件 ID 标识一封已保存
-邮件，而同一邮件未来可能产生多个事件或投递。仅使用旧版签名规则时，不能把
-投递 ID 请求头视为已经被密码学绑定。
+旧版与 V2 签名都不覆盖 `X-OwlMail-Delivery-ID`：V2 只签名时间戳、nonce 与
+原始请求体。因此只能把 `OWLMAIL_DELIVERY_ID` 作为链路关联元数据，不能把它当作
+经过认证的授权值，也不能跨越不可信链路作为唯一幂等键。对于当前固定的
+`email.received` 请求体，应使用已签名的 `event` 与 `emailId` 组合生成幂等键。
+未来若需要可信的逐投递标识，应通过可信适配层把它写入受签名保护的请求体。
 
 ## 投递时序与持久性
 
@@ -135,7 +137,7 @@ WebHook 容器日志中可以看到经过签名校验和字段映射后的 Demo 
 - `-allowed-command-paths` 只允许明确脚本，启用 `-strict-mode`、并发限制、执行超时和限流。
 - OwlMail 保持默认 `8` 或按下游容量设置 `OWLMAIL_WEBHOOK_MAX_CONCURRENCY`，不要无意设置为 `0`。
 - 邮件链路不要开启原始请求体日志；命令使用非特权用户执行。
-- 使用 `OWLMAIL_DELIVERY_ID` 对重试去重，而不是只依赖邮件 ID。
+- 当前固定请求体使用已签名的 `(event, emailId)` 组合去重；未签名的投递 ID 仅用于链路关联。
 - 需要跨重启恢复时，持久化 OwlMail 邮件目录并配置 Redis。
 - OwlMail 单次投递超时应略高于命令正常耗时但保持有界，同时设置有限的退出排空时间。
 
@@ -153,7 +155,7 @@ OwlMail v0.9.0 支持按发件人、收件人、主题和纯文本正文进行�
 | WebHook 返回 401/403 | 两边密钥是否一致，代理是否修改请求体或签名头。 |
 | WebHook 返回 404 | 目标 URL 是否以 `/hooks/owlmail` 结尾，Hook ID 是否为 `owlmail`。 |
 | OwlMail 遇到 5xx 后重试 | 检查命令退出状态、WebHook 超时及并发日志。 |
-| 同一事件重复处理 | 使用 `OWLMAIL_DELIVERY_ID` 作为幂等键；投递语义是“至少一次”。 |
+| 同一事件重复处理 | 投递语义是“至少一次”；当前固定请求体使用已签名的 `(event, emailId)` 组合去重，未签名的投递 ID 仅用于关联。 |
 | 重启后事件丢失 | 持久化邮件目录并配置 Redis；本 Demo 有意没有配置这两项。 |
 | 需要防重放 | 内置规则只校验旧版正文 HMAC；需单独验证 V2 时间戳、nonce、签名与重放窗口。 |
 

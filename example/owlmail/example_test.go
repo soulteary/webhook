@@ -54,7 +54,7 @@ func TestHookTemplateRendersValidJSON(t *testing.T) {
 		}
 	}
 	if !hasDeliveryID {
-		t.Fatal("hook config does not expose OwlMail delivery IDs for idempotency")
+		t.Fatal("hook config does not expose OwlMail delivery IDs for correlation")
 	}
 
 	rule := hooks[0]["trigger-rule"].(map[string]any)["match"].(map[string]any)

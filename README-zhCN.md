@@ -155,7 +155,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 - **表单数据支持**：解析 multipart 表单数据和文件上传 - 查看 [表单数据](docs/zh-CN/Referencing-Request-Values.md)
 - **模板支持**：使用 `-template` 标志在配置文件中使用 Go 模板 - 查看 [配置模版](docs/zh-CN/Templates.md)
 - **Config UI**：同一二进制，按参数切换。使用 `-config-ui` 启用配置生成 Web UI（建议仅在调试或内网使用）；与主服务共用端口（默认 `9000`），可用 `-config-ui-path` 修改路径（尾斜杠会归一化）。目录模式（默认 `./hooks` 或显式 `-hooks-dir`）下，UI 可将生成的配置直接保存到目录，保存后可立即调用生成的 URL 验证；显式 `-hooks` 单文件模式下，仍可生成/下载但不会提供目录保存。`-urlprefix` 会影响 UI 中展示的调用 URL。详见 [配置参数](docs/zh-CN/Webhook-Parameters.md) 与 [Config UI 说明](cmd/README.md)。
-- **OwlMail 联动**：接收 [OwlMail](https://github.com/soulteary/owlmail) 的签名邮件事件，使用 HMAC-SHA256 验证请求体、映射稳定投递 ID 以便幂等处理，并执行受控命令。参见[联动指南](docs/zh-CN/OwlMail-Integration.md)和[可运行示例](example/owlmail/)。
+- **OwlMail 联动**：接收 [OwlMail](https://github.com/soulteary/owlmail) 的签名邮件事件，使用 HMAC-SHA256 验证请求体、映射投递元数据用于链路关联，并执行受控命令。参见[联动指南](docs/zh-CN/OwlMail-Integration.md)和[可运行示例](example/owlmail/)。
 - **HTTPS**：使用反向代理（nginx、Traefik、Caddy）提供 HTTPS 支持
 - **CORS**：使用 `-header name=value` 设置自定义响应头，包括 CORS 响应头
 - **热重载**：使用 `-hotreload` 或 `kill -USR1` 无需重启即可更新配置

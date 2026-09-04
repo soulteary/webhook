@@ -33,7 +33,7 @@ printf 'From: monitor@example.test\r\nTo: ops@example.test\r\nSubject: Demo aler
 ```
 
 The `webhook` container logs a summary from `print-email.sh`, including both
-the email ID and OwlMail's stable delivery ID. Open
+the email ID and OwlMail's stable delivery ID for correlation. Open
 `http://127.0.0.1:1080` to inspect the captured message. Open
 `http://127.0.0.1:1080/webhooks` to inspect OwlMail's webhook configurator and
 compare its generated configuration with `owlmail.json` in this directory.
@@ -43,11 +43,14 @@ docker compose down
 ```
 
 Webhook delivery is asynchronous relative to SMTP acceptance and has
-at-least-once semantics. Use `OWLMAIL_DELIVERY_ID` as the idempotency key for
-side effects; retries keep the same delivery ID. The bundled rule validates the
-legacy body-only `X-OwlMail-Signature` header. OwlMail 0.9.0 also sends the
-replay-aware `X-OwlMail-Signature-V2`, timestamp, and nonce, but this example
-does not validate that V2 tuple.
+at-least-once semantics. Retries keep the same `OWLMAIL_DELIVERY_ID`, which is
+useful for log correlation, but neither OwlMail signature covers that header.
+For idempotency in this fixed `email.received` contract, derive the key from
+the signed body fields `OWLMAIL_EVENT` and `OWLMAIL_EMAIL_ID`; do not use the
+unsigned delivery ID as the sole key across an untrusted path. The bundled rule
+validates the legacy body-only `X-OwlMail-Signature`. OwlMail 0.9.0 also sends
+the replay-aware `X-OwlMail-Signature-V2`, timestamp, and nonce, but this
+example does not validate that V2 tuple.
 
 The example stores no persistent mail volume or Redis queue. It enables WebHook debug logging
 so the demo command output is visible, but keeps raw request-body logging
