@@ -41,6 +41,22 @@ func TestHookTemplateRendersValidJSON(t *testing.T) {
 		t.Fatalf("unexpected hooks: %#v", hooks)
 	}
 
+	mappings, ok := hooks[0]["pass-environment-to-command"].([]any)
+	if !ok {
+		t.Fatalf("unexpected environment mappings: %#v", hooks[0]["pass-environment-to-command"])
+	}
+	var hasDeliveryID bool
+	for _, raw := range mappings {
+		mapping, ok := raw.(map[string]any)
+		if ok && mapping["source"] == "header" && mapping["name"] == "X-OwlMail-Delivery-ID" && mapping["envname"] == "OWLMAIL_DELIVERY_ID" {
+			hasDeliveryID = true
+			break
+		}
+	}
+	if !hasDeliveryID {
+		t.Fatal("hook config does not expose OwlMail delivery IDs for correlation")
+	}
+
 	rule := hooks[0]["trigger-rule"].(map[string]any)["match"].(map[string]any)
 	if rule["type"] != "payload-hmac-sha256" || rule["secret"] != "test-secret" {
 		t.Fatalf("unexpected HMAC rule: %#v", rule)
@@ -74,8 +90,8 @@ func TestOwlMailConfigAndDocumentation(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, required := range []string{
-		"soulteary/webhook:extend-7.0.0",
-		"soulteary/owlmail:0.5.0",
+		"soulteary/webhook:extend-7.1.0",
+		"ghcr.io/soulteary/owlmail:0.9.0",
 		"127.0.0.1:9000:9000",
 		"127.0.0.1:1025:1025",
 		"127.0.0.1:1080:1080",
@@ -110,8 +126,16 @@ func TestOwlMailConfigAndDocumentation(t *testing.T) {
 		filepath.Join("..", "..", "docs", "en-US", "OwlMail-Integration.md"),
 		filepath.Join("..", "..", "docs", "zh-CN", "OwlMail-Integration.md"),
 	} {
-		if _, err := os.Stat(path); err != nil {
+		document, err := os.ReadFile(path)
+		if err != nil {
 			t.Errorf("linked documentation %q is unavailable: %v", path, err)
+			continue
+		}
+		if strings.Contains(string(document), "v0.5.0") || strings.Contains(string(document), "owlmail:0.5.0") {
+			t.Errorf("linked documentation %q still references obsolete OwlMail 0.5.0", path)
+		}
+		if !strings.Contains(string(document), "0.9.0") {
+			t.Errorf("linked documentation %q does not identify the tested OwlMail release", path)
 		}
 	}
 }

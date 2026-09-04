@@ -1,15 +1,15 @@
 # OwlMail integration example
 
-This example connects [OwlMail](https://github.com/soulteary/owlmail) `v0.5.0` to
+This example connects [OwlMail](https://github.com/soulteary/owlmail) `v0.9.0` to
 `soulteary/webhook`. Every accepted email is rendered as JSON, signed with
 HMAC-SHA256, verified by WebHook, and passed to a demo command through a fixed
 set of environment variables.
 
-OwlMail `v0.5.0` includes webhook forwarding, the `/webhooks` browser
-configurator, and bounded webhook delivery concurrency. The Compose demo uses
-the released `soulteary/owlmail:0.5.0` image directly and keeps the default
-OwlMail delivery concurrency of `8` explicit so the example documents the
-runtime behavior.
+OwlMail `v0.9.0` adds a durable local outbox, optional Redis-backed recovery,
+and replay-aware signature metadata to the webhook pipeline. The Compose demo
+pins `ghcr.io/soulteary/owlmail:0.9.0` and
+`soulteary/webhook:extend-7.1.0`, and keeps OwlMail's safe default delivery
+concurrency of `8` explicit.
 
 ## Run
 
@@ -32,7 +32,8 @@ printf 'From: monitor@example.test\r\nTo: ops@example.test\r\nSubject: Demo aler
       --upload-file -
 ```
 
-The `webhook` container logs a summary from `print-email.sh`. Open
+The `webhook` container logs a summary from `print-email.sh`, including both
+the email ID and OwlMail's stable delivery ID for correlation. Open
 `http://127.0.0.1:1080` to inspect the captured message. Open
 `http://127.0.0.1:1080/webhooks` to inspect OwlMail's webhook configurator and
 compare its generated configuration with `owlmail.json` in this directory.
@@ -41,7 +42,17 @@ compare its generated configuration with `owlmail.json` in this directory.
 docker compose down
 ```
 
-The example stores no persistent mail volume. It enables WebHook debug logging
+Webhook delivery is asynchronous relative to SMTP acceptance and has
+at-least-once semantics. Retries keep the same `OWLMAIL_DELIVERY_ID`, which is
+useful for log correlation, but neither OwlMail signature covers that header.
+For idempotency in this fixed `email.received` contract, derive the key from
+the signed body fields `OWLMAIL_EVENT` and `OWLMAIL_EMAIL_ID`; do not use the
+unsigned delivery ID as the sole key across an untrusted path. The bundled rule
+validates the legacy body-only `X-OwlMail-Signature`. OwlMail 0.9.0 also sends
+the replay-aware `X-OwlMail-Signature-V2`, timestamp, and nonce, but this
+example does not validate that V2 tuple.
+
+The example stores no persistent mail volume or Redis queue. It enables WebHook debug logging
 so the demo command output is visible, but keeps raw request-body logging
 disabled. Disable `DEBUG` in production because the mapped email fields printed
 by the command will otherwise be written to logs.

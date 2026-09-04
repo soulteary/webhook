@@ -6,8 +6,8 @@ Current support status of each version.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.x     | :white_check_mark: |
-| < 5.0   | :x:                |
+| 7.x     | :white_check_mark: |
+| < 7.0   | :x:                |
 
 ## Security Features
 
