@@ -4,7 +4,8 @@ set -eu
 printf '%s\n' \
   "OwlMail webhook event" \
   "  event: ${OWLMAIL_EVENT:-}" \
-  "  id: ${OWLMAIL_EMAIL_ID:-}" \
+  "  email id: ${OWLMAIL_EMAIL_ID:-}" \
+  "  delivery id: ${OWLMAIL_DELIVERY_ID:-}" \
   "  title: ${OWLMAIL_TITLE:-}" \
   "  from: ${OWLMAIL_FROM:-}" \
   "  to: ${OWLMAIL_TO:-}" \

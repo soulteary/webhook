@@ -58,10 +58,10 @@ Download pre-built binaries for Linux, macOS, and Windows from the [Releases pag
 docker pull soulteary/webhook:latest
 
 # Specific version
-docker pull soulteary/webhook:5.0.0
+docker pull soulteary/webhook:7.1.0
 
 # Extended version with debugging tools
-docker pull soulteary/webhook:extend-5.0.0
+docker pull soulteary/webhook:extend-7.1.0
 ```
 
 ### Option 3: Build from Source
@@ -155,12 +155,12 @@ For more security options, see:
 - **Form Data Support**: Parse multipart form data and file uploads - see [Form Data](docs/en-US/Referencing-Request-Values.md)
 - **Template Support**: Use Go templates in configuration files with `-template` flag - see [Templates](docs/en-US/Templates.md)
 - **Config UI**: Same binary, behavior by flags. Enable config generator Web UI with `-config-ui` (recommend debugging or intranet only). It runs on the same server port (default `9000`) and can be mounted with `-config-ui-path` (trailing slash normalized). In directory mode (default `./hooks` or explicit `-hooks-dir`), the UI can save generated configs directly to that directory and you can validate by calling the generated endpoint immediately after save. In explicit single-file mode (`-hooks`), generation/download still works but save-to-directory is not exposed. The `-urlprefix` value is used for the call URL shown in the UI. See [Webhook Parameters](docs/en-US/Webhook-Parameters.md) and [Config UI](cmd/README.md).
-- **OwlMail integration**: Receive signed email events from [OwlMail](https://github.com/soulteary/owlmail), verify HMAC-SHA256, map fields, and run controlled commands. See the [integration guide](docs/en-US/OwlMail-Integration.md) and [runnable example](example/owlmail/).
+- **OwlMail integration**: Receive signed email events from [OwlMail](https://github.com/soulteary/owlmail), verify the request body with HMAC-SHA256, map stable delivery IDs for idempotency, and run controlled commands. See the [integration guide](docs/en-US/OwlMail-Integration.md) and [runnable example](example/owlmail/).
 - **HTTPS**: Use a reverse proxy (nginx, Traefik, Caddy) for HTTPS support
 - **CORS**: Set custom headers including CORS headers with `-header name=value`
 - **Hot Reload**: Update configurations without restarting using `-hotreload` or `kill -USR1`
 
-For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examples.md). Example configs and setups (hooks, Lark, multi-webhook) are in the [example/](example/) directory.
+For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examples.md). Example configs and setups (hooks, Lark, multi-webhook, and OwlMail) are in the [example/](example/) directory.
 
 ## Documentation
 
@@ -187,7 +187,7 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 
 ## About This Fork
 
-This project is a maintained fork of the original [webhook](https://github.com/adnanh/webhook) project. Current supported versions are 5.x; see [SECURITY.md](SECURITY.md) for the version support table.
+This project is a maintained fork of the original [webhook](https://github.com/adnanh/webhook) project. Current supported versions are 7.x; see [SECURITY.md](SECURITY.md) for the version support table.
 
 The fork is focused on:
 
