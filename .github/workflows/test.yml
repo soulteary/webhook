@@ -18,7 +18,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      GO_VERSION: "1.26.6"
       GO111MODULE: on
     steps:
       - name: Checkout
@@ -27,7 +26,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
 
       - name: Cache Go modules
         uses: actions/cache@v5
