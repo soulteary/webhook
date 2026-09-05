@@ -488,14 +488,14 @@ func Handler(basePath string, webhookBaseURL string, writeDir string, hooksURLPr
 
 	// Index: exact basePath or basePath/
 	indexHandler := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet && r.Method != http.MethodHead {
-			w.Header().Set("Allow", "GET, HEAD")
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
 		path := r.URL.Path
 		if path != basePath && path != basePath+"/" {
 			http.NotFound(w, r)
+			return
+		}
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
