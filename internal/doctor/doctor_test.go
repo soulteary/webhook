@@ -44,6 +44,18 @@ func TestRunRejectsCommandOutsideAllowlist(t *testing.T) {
 	require.True(t, HasFailures(checks))
 }
 
+func TestRunRejectsPartialPrivilegeConfiguration(t *testing.T) {
+	tempDir := t.TempDir()
+	hooksPath := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksPath, []byte("- id: ok\n  execute-command: /bin/echo\n"), 0o600))
+
+	appFlags := validFlags(hooksPath)
+	appFlags.SetUID = 1000
+	checks := Run(appFlags)
+	require.True(t, HasFailures(checks))
+	require.Contains(t, checks[0].Detail, "setuid/setgid")
+}
+
 func validFlags(hooksPath string) flags.AppFlags {
 	return flags.AppFlags{
 		Profile:                  "compat",

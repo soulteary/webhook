@@ -64,6 +64,33 @@ func TestValidate_Profile(t *testing.T) {
 	}
 }
 
+func TestValidatePrivilegePair(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		uid     int
+		gid     int
+		invalid bool
+	}{
+		{name: "neither configured"},
+		{name: "both configured", uid: 1000, gid: 1000},
+		{name: "only uid", uid: 1000, invalid: true},
+		{name: "only gid", gid: 1000, invalid: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			appFlags := createValidFlags()
+			appFlags.SetUID = tt.uid
+			appFlags.SetGID = tt.gid
+			result := Validate(appFlags)
+			if !tt.invalid {
+				assert.False(t, result.HasErrors())
+				return
+			}
+			require.True(t, result.HasErrors())
+			assert.Contains(t, result.Errors[0].Error(), "setuid/setgid")
+		})
+	}
+}
+
 // createValidFlags 创建一个具有所有默认有效值的 AppFlags，用于测试
 func createValidFlags() AppFlags {
 	return AppFlags{
@@ -946,4 +973,26 @@ func TestValidateRejectsDuplicateHookIDsAcrossFiles(t *testing.T) {
 	result := Validate(appFlags)
 	require.True(t, result.HasErrors())
 	assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "duplicate")
+}
+
+func TestValidateRejectsMissingExecuteCommand(t *testing.T) {
+	tempDir := t.TempDir()
+	hookFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte("- id: missing-command\n"), 0o600))
+
+	rules.LockHooksFiles()
+	oldHooksFiles := rules.HooksFiles
+	rules.HooksFiles = []string{hookFile}
+	rules.UnlockHooksFiles()
+	defer func() {
+		rules.LockHooksFiles()
+		rules.HooksFiles = oldHooksFiles
+		rules.UnlockHooksFiles()
+	}()
+
+	appFlags := createValidFlags()
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "execute-command")
 }

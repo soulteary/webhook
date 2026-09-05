@@ -11,7 +11,7 @@
     and:
       - match:
           type: payload-hmac-sha256
-          secret: '{{ getenv "GITHUB_WEBHOOK_SECRET" }}'
+          secret: "{{ getenv "GITHUB_WEBHOOK_SECRET" | js }}"
           parameter:
             source: header
             name: X-Hub-Signature-256

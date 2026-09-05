@@ -80,6 +80,47 @@ func TestProviderRecipesEndToEnd(t *testing.T) {
 	}
 }
 
+func TestExampleTemplateSecretsRoundTrip(t *testing.T) {
+	const secret = "quote='\" newline=\n slash=\\"
+	tests := []struct {
+		name      string
+		path      string
+		secretEnv string
+		prefix    string
+		usesValue bool
+	}{
+		{name: "github", path: filepath.Join("providers", "github", "hooks.yaml"), secretEnv: "GITHUB_WEBHOOK_SECRET"},
+		{name: "gitlab", path: filepath.Join("providers", "gitlab", "hooks.yaml"), secretEnv: "GITLAB_WEBHOOK_TOKEN", usesValue: true},
+		{name: "gitea", path: filepath.Join("providers", "gitea", "hooks.yaml"), secretEnv: "GITEA_WEBHOOK_SECRET"},
+		{name: "harbor", path: filepath.Join("providers", "harbor", "hooks.yaml"), secretEnv: "HARBOR_WEBHOOK_TOKEN", prefix: "Bearer ", usesValue: true},
+		{name: "alertmanager", path: filepath.Join("providers", "alertmanager", "hooks.yaml"), secretEnv: "ALERTMANAGER_WEBHOOK_TOKEN", prefix: "Bearer ", usesValue: true},
+		{name: "quickstart", path: filepath.Join("quickstart", "hooks", "hooks.yaml"), secretEnv: "DEMO_SECRET"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(tt.secretEnv, secret)
+			var configuredHooks hook.Hooks
+			path := filepath.Join("..", "..", "example", tt.path)
+			require.NoError(t, configuredHooks.LoadFromFileStrict(path, true))
+			require.Len(t, configuredHooks, 1)
+			require.NotNil(t, configuredHooks[0].TriggerRule)
+
+			rule := configuredHooks[0].TriggerRule
+			if rule.And != nil {
+				require.NotEmpty(t, *rule.And)
+				rule = &(*rule.And)[0]
+			}
+			require.NotNil(t, rule.Match)
+			if tt.usesValue {
+				require.Equal(t, tt.prefix+secret, rule.Match.Value)
+			} else {
+				require.Equal(t, secret, rule.Match.Secret)
+			}
+		})
+	}
+}
+
 func providerRequest(t *testing.T, app *fiber.App, hookID string, payload []byte, headers map[string]string) *http.Response {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/hooks/"+hookID, bytes.NewReader(payload))

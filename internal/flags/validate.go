@@ -49,6 +49,9 @@ func Validate(flags AppFlags) *ValidationResult {
 	if flags.Profile == "secure" && !hasAllowedCommandPath(flags.AllowedCommandPaths) {
 		result.AddError("allowed-command-paths", "is required when profile is secure")
 	}
+	if (flags.SetUID != 0) != (flags.SetGID != 0) {
+		result.AddError("setuid/setgid", "must be used together")
+	}
 
 	// 验证端口范围 - 使用 cli-kit/validator
 	if err := validator.ValidatePort(flags.Port); err != nil {
@@ -266,6 +269,10 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].id", hookFile, i),
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_ID_EMPTY))
 			continue
+		}
+		if strings.TrimSpace(h.ExecuteCommand) == "" {
+			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].execute-command", hookFile, i),
+				"must not be empty")
 		}
 
 		// 检查重复的 Hook ID
