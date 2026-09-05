@@ -1,11 +1,11 @@
 # 什么是 WebHook (歪脖虎克)?
 
-[![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Go Report Card](.github/goreportcard.svg)](.github/goreportcard-report.md)
+[![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Benchmarks](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml) [![Go Report Card](.github/goreportcard.svg)](.github/goreportcard-report.md)
 
 
  <img src="./docs/logo/logo-600x600.jpg" alt="Webhook" align="left" width="180" />
  
- **WebHook（歪脖虎克）** 是一个用 Go 语言编写的轻量、安全、高度可配置的 HTTP Webhook 服务器。它允许你创建 HTTP 端点来触发自定义命令或脚本，非常适合自动化部署、CI/CD 流水线以及各种服务集成。
+ **WebHook（歪脖虎克）** 是面向自托管、边缘节点和内网环境的安全、可观测 webhook-to-command runner。它以兼容 [adnanh/webhook](https://github.com/adnanh/webhook) Hook 配置为目标，并补充命令执行、流量、审计与链路追踪方面的生产控制能力。
 
 ## ✨ 核心特性
 
@@ -37,6 +37,15 @@ WebHook 遵循简单、专注的方法：
 
 你执行的命令完全由你决定——从简单脚本到复杂的自动化工作流。
 
+## 兼容性与产品边界
+
+| 范围 | 兼容性 / 行为 |
+|---|---|
+| Hook 配置 | 以兼容 adnanh/webhook 的 JSON/YAML 配置为目标，通常可直接加载；每次升级前仍应执行校验。 |
+| 历史默认行为 | 默认 `compat` Profile 保持现有的宽松 HTTP 方法与安全能力按需开启的行为。 |
+| 生产安全默认值 | `-profile secure` 默认启用仅 POST、严格参数检查、限流、请求 ID 和审计日志，并强制要求 `-allowed-command-paths`。 |
+| 明确边界 | WebHook 负责受控执行本地命令，不承诺持久队列、重试、DLQ 或进程重启后的任务恢复。 |
+
 # 🚀 快速开始
 
 几分钟内即可上手使用 WebHook。
@@ -47,7 +56,7 @@ WebHook 遵循简单、专注的方法：
 
 [![](.github/release.png)](https://github.com/soulteary/webhook/releases)
 
-从 [发布页面](https://github.com/soulteary/webhook/releases) 下载适用于 Linux、macOS 和 Windows 的预编译二进制文件。
+从 [发布页面](https://github.com/soulteary/webhook/releases) 下载适用于 Linux 和 macOS 的预编译二进制文件。
 
 ### 方式二：Docker
 
@@ -63,6 +72,8 @@ docker pull soulteary/webhook:7.1.0
 # 包含调试工具的扩展版本
 docker pull soulteary/webhook:extend-7.1.0
 ```
+
+两种 Release 镜像都以非 root 用户从 `/var/lib/webhook` 运行。默认镜像是基于 `scratch` 的 Core 镜像，适合挂载静态可执行文件且不依赖 Shell 的配置；`extend-*` 镜像包含 Alpine、Bash、curl、wget、jq 和 yq，适合执行 Shell 脚本。请确保挂载的 Hook、命令和审计目录可由 UID/GID `65532` 读取或写入。
 
 ### 方式三：从源码构建
 
@@ -122,20 +133,21 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 **重要提示**：上面的示例没有身份验证。在生产环境中请始终使用触发规则！
 
-**示例：带密钥令牌的安全钩子**
+**示例：使用 HMAC 请求头的安全钩子**
 
 ```json
 [
   {
     "id": "secure-deploy",
     "execute-command": "/var/scripts/deploy.sh",
+    "http-methods": ["POST"],
     "trigger-rule": {
       "match": {
-        "type": "value",
-        "value": "your-secret-token",
+        "type": "payload-hmac-sha256",
+        "secret": "replace-with-a-long-random-secret",
         "parameter": {
-          "source": "url",
-          "name": "token"
+          "source": "header",
+          "name": "X-Webhook-Signature"
         }
       }
     }
@@ -143,7 +155,15 @@ http://yourserver:9000/hooks/redeploy-webhook
 ]
 ```
 
-现在钩子只能通过以下方式触发：`http://yourserver:9000/hooks/secure-deploy?token=your-secret-token`
+使用 Secure Profile 启动（该 Profile 强制要求命令白名单）：
+
+```bash
+./webhook -profile secure \
+  -allowed-command-paths=/var/scripts \
+  -hooks hooks.json
+```
+
+发送原始请求体时提供 `X-Webhook-Signature: sha256=<HMAC-SHA256 十六进制值>`。建议通过[配置模板](docs/zh-CN/Templates.md)从环境变量读取密钥，避免将其提交到仓库。与 URL 查询参数 Token 不同，签名不会被复制到 URL、访问日志或浏览器历史中。
 
 更多安全选项，请查看：
 - [安全最佳实践](docs/zh-CN/Security-Best-Practices.md) - 全面的安全指南
@@ -184,6 +204,20 @@ http://yourserver:9000/hooks/redeploy-webhook
 
 ### 安全
 - [安全策略](SECURITY.md) - 安全功能和漏洞报告
+
+### Release 完整性
+
+Tag Release 会发布 SPDX SBOM、Checksum 文件的 Keyless Sigstore Bundle、已签名的多架构容器 Manifest，以及 GitHub 构建来源证明。验证示例：
+
+```bash
+gh attestation verify webhook_7.1.0_linux_amd64.tar.gz -R soulteary/webhook
+
+cosign verify-blob \
+  --bundle webhook_7.1.0_checksums.txt.sigstore.json \
+  --certificate-identity-regexp='^https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/.+$' \
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+  webhook_7.1.0_checksums.txt
+```
 
 ## 关于此 Fork
 

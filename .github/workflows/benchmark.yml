@@ -1,0 +1,67 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/benchmark.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/benchmark.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmarks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+
+      - name: Record environment
+        run: |
+          {
+            go version
+            git rev-parse HEAD
+            uname -a
+            lscpu
+          } | tee benchmark-environment.txt
+
+      - name: Run reproducible benchmark sample
+        run: |
+          go test -run='^$' \
+            -bench='Benchmark(HookExecution|ConcurrentHookExecution)$' \
+            -benchmem -count=5 ./internal/server | tee benchmark.txt
+          {
+            echo '## Hook execution benchmarks'
+            echo '```text'
+            cat benchmark.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: benchmark-${{ github.sha }}
+          path: |
+            benchmark.txt
+            benchmark-environment.txt
+          if-no-files-found: error

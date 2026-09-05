@@ -60,6 +60,71 @@ func TestParseConfig_DefaultValues(t *testing.T) {
 	assert.Equal(t, DEFAULT_I18N_DIR, flags.I18nDir)
 }
 
+func TestParseConfig_SecureProfileDefaults(t *testing.T) {
+	envKeys := []string{
+		ENV_KEY_PROFILE,
+		ENV_KEY_HTTP_METHODS,
+		ENV_KEY_STRICT_MODE,
+		ENV_KEY_RATE_LIMIT_ENABLED,
+		ENV_KEY_AUDIT_ENABLED,
+		ENV_KEY_X_REQUEST_ID,
+		ENV_KEY_ALLOWED_COMMAND_PATHS,
+		ENV_KEY_HOOKS,
+		ENV_KEY_HOOKS_DIR,
+	}
+	for _, key := range envKeys {
+		t.Setenv(key, "")
+	}
+
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }()
+	os.Args = []string{"webhook", "-profile=secure", "-allowed-command-paths=/opt/scripts"}
+
+	appFlags := ParseConfig()
+	assert.Equal(t, "secure", appFlags.Profile)
+	assert.Equal(t, "POST", appFlags.HttpMethods)
+	assert.Equal(t, "/opt/scripts", appFlags.AllowedCommandPaths)
+	assert.True(t, appFlags.StrictMode)
+	assert.True(t, appFlags.RateLimitEnabled)
+	assert.True(t, appFlags.AuditEnabled)
+	assert.True(t, appFlags.UseXRequestID)
+}
+
+func TestParseConfig_SecureProfileRespectsExplicitOverrides(t *testing.T) {
+	envKeys := []string{
+		ENV_KEY_PROFILE,
+		ENV_KEY_HTTP_METHODS,
+		ENV_KEY_STRICT_MODE,
+		ENV_KEY_RATE_LIMIT_ENABLED,
+		ENV_KEY_AUDIT_ENABLED,
+		ENV_KEY_X_REQUEST_ID,
+		ENV_KEY_HOOKS,
+		ENV_KEY_HOOKS_DIR,
+	}
+	for _, key := range envKeys {
+		t.Setenv(key, "")
+	}
+
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }()
+	os.Args = []string{
+		"webhook",
+		"-profile=secure",
+		"-http-methods=PATCH",
+		"-strict-mode=false",
+		"-rate-limit-enabled=false",
+		"-audit-enabled=false",
+		"-x-request-id=false",
+	}
+
+	appFlags := ParseConfig()
+	assert.Equal(t, "PATCH", appFlags.HttpMethods)
+	assert.False(t, appFlags.StrictMode)
+	assert.False(t, appFlags.RateLimitEnabled)
+	assert.False(t, appFlags.AuditEnabled)
+	assert.False(t, appFlags.UseXRequestID)
+}
+
 func TestParseConfig_FromEnvVars(t *testing.T) {
 	// Save original environment and args
 	originalEnv := make(map[string]string)

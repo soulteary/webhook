@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -34,5 +35,33 @@ func TestGoReleaserInjectsCompleteVersionMetadata(t *testing.T) {
 		for _, value := range required {
 			assert.Contains(t, joined, value, "build %q must inject complete version metadata", build.ID)
 		}
+	}
+}
+
+func TestGoReleaserPublishesSupplyChainMetadata(t *testing.T) {
+	data, err := os.ReadFile(".goreleaser.yaml")
+	require.NoError(t, err)
+
+	contents := string(data)
+	assert.Contains(t, contents, "sboms:")
+	assert.Contains(t, contents, "artifacts: archive")
+	assert.Contains(t, contents, "signs:")
+	assert.Contains(t, contents, "--bundle=${signature}")
+	assert.Contains(t, contents, "docker_signs:")
+	assert.Contains(t, contents, "${artifact}@${digest}")
+}
+
+func TestReleaseDockerfilesRunAsNonRoot(t *testing.T) {
+	for _, path := range []string{
+		"docker/goreleaser/Dockerfile",
+		"docker/goreleaser/Dockerfile.extend",
+	} {
+		t.Run(path, func(t *testing.T) {
+			data, err := os.ReadFile(path)
+			require.NoError(t, err)
+			contents := string(data)
+			assert.Regexp(t, regexp.MustCompile(`(?m)^USER\s+[^\s]+`), contents)
+			assert.NotContains(t, contents, "alpine:3.19")
+		})
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/soulteary/cli-kit/validator"
 	"github.com/soulteary/webhook/internal/hook"
@@ -39,6 +40,15 @@ func (r *ValidationResult) HasErrors() bool {
 // Validate 验证配置的有效性
 func Validate(flags AppFlags) *ValidationResult {
 	result := &ValidationResult{}
+
+	switch flags.Profile {
+	case "", "compat", "secure":
+	default:
+		result.AddError("profile", "must be one of: compat, secure")
+	}
+	if flags.Profile == "secure" && !hasAllowedCommandPath(flags.AllowedCommandPaths) {
+		result.AddError("allowed-command-paths", "is required when profile is secure")
+	}
 
 	// 验证端口范围 - 使用 cli-kit/validator
 	if err := validator.ValidatePort(flags.Port); err != nil {
@@ -128,6 +138,15 @@ func Validate(flags AppFlags) *ValidationResult {
 	}
 
 	return result
+}
+
+func hasAllowedCommandPath(value string) bool {
+	for _, path := range strings.Split(value, ",") {
+		if strings.TrimSpace(path) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // validateFilePath 验证文件路径

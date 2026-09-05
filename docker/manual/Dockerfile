@@ -17,16 +17,20 @@ RUN go build -ldflags "-w -s \
     -X github.com/soulteary/webhook/internal/version.BuildDate=${BUILD_DATE} \
     -X github.com/soulteary/webhook/internal/version.Branch=${BRANCH}" -o webhook .
 
-FROM debian:bullseye-slim
+FROM debian:trixie-slim
 LABEL maintainer "soulteary <soulteary@gmail.com>"
 # 安装 CA 证书（用于 HTTPS 请求）
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 # 创建非 root 用户
-RUN groupadd -r webhook && useradd -r -g webhook webhook
+RUN groupadd -r webhook && \
+    useradd -r -g webhook -d /var/lib/webhook webhook && \
+    mkdir -p /var/lib/webhook/hooks && \
+    chown -R webhook:webhook /var/lib/webhook
 COPY --from=builder /app/webhook /usr/local/bin/webhook
 RUN chmod +x /usr/local/bin/webhook
 USER webhook
+WORKDIR /var/lib/webhook
 EXPOSE 9000/tcp
-CMD ["webhook"]
+ENTRYPOINT ["webhook"]

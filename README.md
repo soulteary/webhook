@@ -1,11 +1,11 @@
 # Welcome to WebHook! [中文文档](./README-zhCN.md)
 
-[![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Go Report Card](.github/goreportcard.svg)](.github/goreportcard-report.md)
+[![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Benchmarks](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml) [![Go Report Card](.github/goreportcard.svg)](.github/goreportcard-report.md)
 
 
  <img src="./docs/logo/logo-600x600.jpg" alt="Webhook" align="left" width="180" />
  
- **WebHook** is a lightweight, secure, and highly configurable HTTP webhook server written in Go. It enables you to create HTTP endpoints that trigger custom commands or scripts based on incoming requests, making it perfect for automating deployments, CI/CD pipelines, and integrating with various services.
+ **WebHook** is a hardened and observable webhook-to-command runner for self-hosted, edge, and private-network environments. It keeps compatibility with [adnanh/webhook](https://github.com/adnanh/webhook) hook definitions while adding production controls for command execution, traffic, auditing, and telemetry.
 
 ## ✨ Key Features
 
@@ -37,6 +37,15 @@ WebHook follows a simple, focused approach:
 
 The commands you execute are entirely up to you - from simple scripts to complex automation workflows.
 
+## Compatibility and Scope
+
+| Area | Compatibility / behavior |
+|---|---|
+| Hook definitions | Existing adnanh/webhook JSON and YAML definitions are a compatibility target and should normally load unchanged. Validate before every upgrade. |
+| Historical defaults | The default `compat` profile preserves the existing permissive HTTP-method and opt-in security behavior. |
+| Production defaults | `-profile secure` enables POST-only hooks, strict argument checks, rate limiting, request IDs, and audit logging; it also requires `-allowed-command-paths`. |
+| Deliberate boundary | WebHook controls local command execution. It is not a durable delivery platform and does not promise persistent queues, retries, DLQs, or restart recovery. |
+
 # 🚀 Quick Start
 
 Get up and running with WebHook in minutes.
@@ -47,7 +56,7 @@ Get up and running with WebHook in minutes.
 
 [![](.github/release.png)](https://github.com/soulteary/webhook/releases)
 
-Download pre-built binaries for Linux, macOS, and Windows from the [Releases page](https://github.com/soulteary/webhook/releases).
+Download pre-built binaries for Linux and macOS from the [Releases page](https://github.com/soulteary/webhook/releases).
 
 ### Option 2: Docker
 
@@ -63,6 +72,8 @@ docker pull soulteary/webhook:7.1.0
 # Extended version with debugging tools
 docker pull soulteary/webhook:extend-7.1.0
 ```
+
+Both release variants run as non-root from `/var/lib/webhook`. The default image is a `scratch`-based core image: use it for mounted static executables and configurations that do not need a shell. The `extend-*` image includes Alpine, Bash, curl, wget, jq, and yq and is the appropriate variant for shell-script hooks. Ensure mounted hooks, commands, and audit paths are readable or writable by UID/GID `65532`.
 
 ### Option 3: Build from Source
 
@@ -122,20 +133,21 @@ Single-file mode is still supported when explicitly set:
 
 **Important**: The example above has no authentication. Always use trigger rules in production!
 
-**Example: Secure Hook with Secret Token**
+**Example: Secure Hook with an HMAC Header**
 
 ```json
 [
   {
     "id": "secure-deploy",
     "execute-command": "/var/scripts/deploy.sh",
+    "http-methods": ["POST"],
     "trigger-rule": {
       "match": {
-        "type": "value",
-        "value": "your-secret-token",
+        "type": "payload-hmac-sha256",
+        "secret": "replace-with-a-long-random-secret",
         "parameter": {
-          "source": "url",
-          "name": "token"
+          "source": "header",
+          "name": "X-Webhook-Signature"
         }
       }
     }
@@ -143,7 +155,15 @@ Single-file mode is still supported when explicitly set:
 ]
 ```
 
-Now the hook can only be triggered with: `http://yourserver:9000/hooks/secure-deploy?token=your-secret-token`
+Start with the secure profile (the command allowlist is mandatory for this profile):
+
+```bash
+./webhook -profile secure \
+  -allowed-command-paths=/var/scripts \
+  -hooks hooks.json
+```
+
+Send the exact request body with `X-Webhook-Signature: sha256=<hex HMAC-SHA256>`. Prefer loading the secret from an environment variable through a [configuration template](docs/en-US/Templates.md) instead of committing it. Unlike query-string tokens, the signature is not copied into URLs, access logs, or browser history.
 
 For more security options, see:
 - [Security Best Practices](docs/en-US/Security-Best-Practices.md) - Comprehensive security guide
@@ -184,6 +204,20 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 
 ### Security
 - [Security Policy](SECURITY.md) - Security features and vulnerability reporting
+
+### Release Integrity
+
+Tagged releases publish SPDX SBOMs, a keyless Sigstore bundle for the checksum file, signed multi-architecture container manifests, and GitHub build-provenance attestations. Examples:
+
+```bash
+gh attestation verify webhook_7.1.0_linux_amd64.tar.gz -R soulteary/webhook
+
+cosign verify-blob \
+  --bundle webhook_7.1.0_checksums.txt.sigstore.json \
+  --certificate-identity-regexp='^https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/.+$' \
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+  webhook_7.1.0_checksums.txt
+```
 
 ## About This Fork
 

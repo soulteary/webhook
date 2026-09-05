@@ -168,9 +168,13 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	healthHandler := func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
 		handler := healthkit.Handler(healthAggregator)
-		handler(w, r)
+		// The fasthttp adapter's request context is backed by server-owned state.
+		// Health checks may derive child contexts, so detach them before shutdown
+		// can recycle or mutate that state.
+		detachedRequest := r.Clone(context.Background())
+		handler(w, detachedRequest)
 		duration := time.Since(startTime)
-		result := healthAggregator.Check(r.Context())
+		result := healthAggregator.Check(context.Background())
 		statusCode := healthkit.HTTPStatusCode(result.Status)
 		metrics.RecordHTTPRequest(r.Method, fmt.Sprintf("%d", statusCode), "/health", duration)
 	}
@@ -187,9 +191,10 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	readyzHandler := func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
 		handler := healthkit.ReadinessHandler(healthAggregator)
-		handler(w, r)
+		detachedRequest := r.Clone(context.Background())
+		handler(w, detachedRequest)
 		duration := time.Since(startTime)
-		result := healthAggregator.Check(r.Context())
+		result := healthAggregator.Check(context.Background())
 		statusCode := healthkit.HTTPStatusCode(result.Status)
 		metrics.RecordHTTPRequest(r.Method, fmt.Sprintf("%d", statusCode), "/readyz", duration)
 	}

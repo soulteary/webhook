@@ -38,9 +38,13 @@
    - 更好的日志记录和调试
 
 4. **配置兼容性:**
-   - 与原始 hook 配置完全兼容
-   - 额外的安全和性能参数
-   - 与现有设置向后兼容
+   - 兼容原始 Hook 配置是持续维护目标，但不代表跨 Major Version 的无条件保证
+   - 提供额外的安全和性能参数
+   - 默认 `compat` Profile 保持历史运行时默认行为；`secure` 是显式启用的更严格模式
+
+### 兼容性契约
+
+项目会测试 Hook JSON/YAML 兼容性，并将回归视为缺陷。但 Major Version 仍可能调整运行时行为、HTTP 错误契约、CLI 参数、默认值和 Release 资产命名。升级时应阅读跨越版本的全部 Release Notes，并在预发布环境校验；不能仅凭 Hook Schema 兼容就判断升级无风险。
 
 ### 迁移步骤
 
@@ -52,8 +56,10 @@
 
 2. **下载新版本:**
    ```bash
-   # 从发布页面下载
-   wget https://github.com/soulteary/webhook/releases/latest/download/webhook-linux-amd64
+   # 下载带版本号的 Release 压缩包
+   VERSION=7.1.0
+   wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
+   tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    
    # 或使用 Docker
    docker pull soulteary/webhook:latest
@@ -121,11 +127,12 @@ webhook -hooks hooks.json
 4. **更新:**
    ```bash
    # 下载新版本
-   wget https://github.com/soulteary/webhook/releases/download/vX.X.X/webhook-linux-amd64
+   VERSION=X.X.X
+   wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
+   tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    
    # 替换二进制文件
-   sudo mv webhook-linux-amd64 /usr/local/bin/webhook
-   sudo chmod +x /usr/local/bin/webhook
+   sudo install -m 0755 webhook /usr/local/bin/webhook
    ```
 
 5. **重启服务:**
@@ -202,9 +209,9 @@ webhook \
 
 ### 配置文件格式
 
-**状态:** Hook 配置格式无破坏性更改。
+**状态:** Hook 配置兼容是项目目标，但不能代替对 Major Version 变化的审查。
 
-Hook 配置保持完全兼容。所有现有配置无需修改即可工作。
+现有 adnanh/webhook 配置在 `compat` Profile 下通常可以直接通过校验。升级生产环境前，仍应对准确配置执行校验，并测试触发、拒绝和错误路径。
 
 ### 命令行参数
 
@@ -231,7 +238,8 @@ Hook 配置保持完全兼容。所有现有配置无需修改即可工作。
    - 更好的错误上下文
 
 3. **安全性:**
-   - 更严格的默认行为（可配置）
+   - `compat` 保持历史默认行为
+   - `secure` 默认启用仅 POST、严格参数检查、限流、请求 ID 与审计日志，并要求命令白名单
    - 增强的验证
    - 更好的错误处理
 
@@ -502,4 +510,3 @@ docker run -d \
 - [性能调优](Performance-Tuning.md) - 性能优化
 - [故障排查指南](Troubleshooting.md) - 常见问题和解决方案
 - [API 参考](API-Reference.md) - API 文档
-

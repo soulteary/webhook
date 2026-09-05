@@ -32,6 +32,38 @@ func TestValidationResult(t *testing.T) {
 	assert.Len(t, result.Errors, 2)
 }
 
+func TestValidate_Profile(t *testing.T) {
+	tests := []struct {
+		name         string
+		profile      string
+		allowedPaths string
+		errorField   string
+	}{
+		{name: "compat profile", profile: "compat"},
+		{name: "secure profile with allowlist", profile: "secure", allowedPaths: "/opt/scripts"},
+		{name: "secure profile requires allowlist", profile: "secure", errorField: "allowed-command-paths"},
+		{name: "secure profile rejects separator-only allowlist", profile: "secure", allowedPaths: " , ,\t", errorField: "allowed-command-paths"},
+		{name: "unknown profile", profile: "unknown", errorField: "profile"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			appFlags := createValidFlags()
+			appFlags.Profile = tt.profile
+			appFlags.AllowedCommandPaths = tt.allowedPaths
+
+			result := Validate(appFlags)
+			if tt.errorField == "" {
+				assert.False(t, result.HasErrors())
+				return
+			}
+
+			require.True(t, result.HasErrors())
+			assert.Contains(t, result.Errors[0].Error(), tt.errorField)
+		})
+	}
+}
+
 // createValidFlags 创建一个具有所有默认有效值的 AppFlags，用于测试
 func createValidFlags() AppFlags {
 	return AppFlags{
