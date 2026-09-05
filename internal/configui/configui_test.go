@@ -374,7 +374,7 @@ func TestHandlerReadOnlyResourcesRejectOtherMethods(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, path := range []string{"/config-ui", "/config-ui/", "/config-ui/static/js/app.js"} {
+	for _, path := range []string{"/config-ui", "/config-ui/", "/config-ui/static/", "/config-ui/static/js/app.js"} {
 		t.Run(path, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "http://test"+path, nil)
 			rec := httptest.NewRecorder()
