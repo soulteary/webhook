@@ -1,6 +1,7 @@
 package flags
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -1025,4 +1026,50 @@ func TestValidateStrictRejectsInvalidHookHTTPMethod(t *testing.T) {
 	result := Validate(appFlags)
 	require.True(t, result.HasErrors())
 	assert.Contains(t, result.Errors[0].Error(), `invalid HTTP method "PSOT"`)
+}
+
+func TestValidateRejectsInvalidRuleShapesAndTypes(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		rule    string
+		message string
+	}{
+		{
+			name: "multiple operators",
+			rule: `
+    and: []
+    match:
+      type: value
+      value: push
+      parameter: {source: header, name: X-Event}`,
+			message: "exactly one",
+		},
+		{
+			name: "unsupported match type",
+			rule: `
+    match:
+      type: payload-hmac-sha265
+      secret: test
+      parameter: {source: header, name: X-Signature}`,
+			message: "unsupported match type",
+		},
+		{
+			name:    "empty and",
+			rule:    "\n    and: []",
+			message: "at least one rule",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+			content := "- id: invalid-rule\n  execute-command: /bin/echo\n  trigger-rule:" + tt.rule + "\n"
+			require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+			appFlags := createValidFlags()
+			appFlags.ValidateStrict = true
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), tt.message)
+		})
+	}
 }

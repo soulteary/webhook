@@ -299,6 +299,22 @@ func validateRuleContent(result *ValidationResult, field string, rule *hook.Rule
 	if rule == nil {
 		return
 	}
+	operatorCount := 0
+	if rule.And != nil {
+		operatorCount++
+	}
+	if rule.Or != nil {
+		operatorCount++
+	}
+	if rule.Not != nil {
+		operatorCount++
+	}
+	if rule.Match != nil {
+		operatorCount++
+	}
+	if operatorCount != 1 {
+		result.AddError(field, "must contain exactly one of: and, or, not, match")
+	}
 	if rule.Match != nil {
 		switch rule.Match.Type {
 		case hook.MatchHMACSHA1, hook.MatchHMACSHA256, hook.MatchHMACSHA512,
@@ -307,14 +323,23 @@ func validateRuleContent(result *ValidationResult, field string, rule *hook.Rule
 			if strings.TrimSpace(rule.Match.Secret) == "" {
 				result.AddError(field+".match.secret", "must not be empty for a signature rule")
 			}
+		case hook.MatchValue, hook.MatchRegex, hook.IPWhitelist:
+		default:
+			result.AddError(field+".match.type", fmt.Sprintf("unsupported match type %q", rule.Match.Type))
 		}
 	}
 	if rule.And != nil {
+		if len(*rule.And) == 0 {
+			result.AddError(field+".and", "must contain at least one rule")
+		}
 		for i := range *rule.And {
 			validateRuleContent(result, fmt.Sprintf("%s.and[%d]", field, i), &(*rule.And)[i])
 		}
 	}
 	if rule.Or != nil {
+		if len(*rule.Or) == 0 {
+			result.AddError(field+".or", "must contain at least one rule")
+		}
 		for i := range *rule.Or {
 			validateRuleContent(result, fmt.Sprintf("%s.or[%d]", field, i), &(*rule.Or)[i])
 		}

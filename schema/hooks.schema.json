@@ -31,6 +31,7 @@
     "match": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["type"],
       "properties": {
         "type": {
           "type": "string",
@@ -51,10 +52,12 @@
       "properties": {
         "and": {
           "type": "array",
+          "minItems": 1,
           "items": { "$ref": "#/$defs/rule" }
         },
         "or": {
           "type": "array",
+          "minItems": 1,
           "items": { "$ref": "#/$defs/rule" }
         },
         "not": { "$ref": "#/$defs/rule" },
@@ -85,7 +88,10 @@
         "success-http-response-code": { "type": "integer", "minimum": 100, "maximum": 599 },
         "http-methods": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "string",
+            "pattern": "^[\\t ]*(?:[Gg][Ee][Tt]|[Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee]|[Hh][Ee][Aa][Dd]|[Oo][Pp][Tt][Ii][Oo][Nn][Ss]|[Cc][Oo][Nn][Nn][Ee][Cc][Tt]|[Tt][Rr][Aa][Cc][Ee])[\\t ]*$"
+          },
           "uniqueItems": true
         }
       }
