@@ -104,6 +104,8 @@ func ParseConfig() AppFlags {
 
 	showVersion := fs.Bool("version", false, "display webhook version and quit")
 	validateConfig := fs.Bool("validate-config", false, "validate configuration and exit")
+	validateStrict := fs.Bool("validate-strict", false, "reject unknown fields while validating hook files")
+	doctor := fs.Bool("doctor", false, "check configuration, hook commands, and working directories, then exit")
 
 	// Multi-value flags
 	rules.RLockHooksFiles()
@@ -224,6 +226,8 @@ func ParseConfig() AppFlags {
 	// Special flags
 	flags.ShowVersion = *showVersion
 	flags.ValidateConfig = *validateConfig
+	flags.ValidateStrict = *validateStrict
+	flags.Doctor = *doctor
 
 	// Resolve HooksFiles:
 	// 1) explicit -hooks-dir / HOOKS_DIR (non-empty) => directory mode

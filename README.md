@@ -52,13 +52,22 @@ Get up and running with WebHook in minutes.
 
 ## Installation
 
-### Option 1: Pre-built Binaries
+### Option 1: Homebrew or Go install
+
+```bash
+brew install soulteary/tap/webhook
+
+# Or install directly with the Go toolchain
+go install github.com/soulteary/webhook@latest
+```
+
+### Option 2: Pre-built Binaries
 
 [![](.github/release.png)](https://github.com/soulteary/webhook/releases)
 
 Download pre-built binaries for Linux and macOS from the [Releases page](https://github.com/soulteary/webhook/releases).
 
-### Option 2: Docker
+### Option 3: Docker
 
 ![](.github/dockerhub.png)
 
@@ -75,7 +84,9 @@ docker pull soulteary/webhook:extend-7.1.0
 
 Both release variants run as non-root from `/var/lib/webhook`. The default image is a `scratch`-based core image: use it for mounted static executables and configurations that do not need a shell. The `extend-*` image includes Alpine, Bash, curl, wget, jq, and yq and is the appropriate variant for shell-script hooks. Ensure mounted hooks, commands, and audit paths are readable or writable by UID/GID `65532`.
 
-### Option 3: Build from Source
+For a signed request you can run immediately, use the [60-second Docker Compose quickstart](example/quickstart/).
+
+### Option 4: Build from Source
 
 ```bash
 git clone https://github.com/soulteary/webhook.git
@@ -85,7 +96,17 @@ go build
 
 ## Configuration
 
-**📚 For complete documentation, see [English Documentation](./docs/en-US/) or [Chinese Documentation](./docs/zh-CN/)**
+**📚 For complete documentation, see the [versioned documentation site](https://soulteary.github.io/webhook/), [English Documentation](./docs/en-US/), or [Chinese Documentation](./docs/zh-CN/).**
+
+Create, validate, and diagnose a configuration before starting the server:
+
+```bash
+webhook init
+WEBHOOK_SECRET='replace-with-a-random-secret' webhook validate --strict -template -hooks hooks/hooks.yaml
+WEBHOOK_SECRET='replace-with-a-random-secret' webhook doctor --strict -template -hooks hooks/hooks.yaml
+```
+
+The [Hook JSON Schema](schema/hooks.schema.json) enables editor completion and unknown-field detection. See [Configuration tools](docs/en-US/Configuration-Tools.md) for VS Code setup and command details.
 
 ### Basic Example
 
@@ -176,6 +197,7 @@ For more security options, see:
 - **Template Support**: Use Go templates in configuration files with `-template` flag - see [Templates](docs/en-US/Templates.md)
 - **Config UI**: Same binary, behavior by flags. Enable config generator Web UI with `-config-ui` (recommend debugging or intranet only). It runs on the same server port (default `9000`) and can be mounted with `-config-ui-path` (trailing slash normalized). In directory mode (default `./hooks` or explicit `-hooks-dir`), the UI can save generated configs directly to that directory and you can validate by calling the generated endpoint immediately after save. In explicit single-file mode (`-hooks`), generation/download still works but save-to-directory is not exposed. The `-urlprefix` value is used for the call URL shown in the UI. See [Webhook Parameters](docs/en-US/Webhook-Parameters.md) and [Config UI](cmd/README.md).
 - **OwlMail integration**: Receive signed email events from [OwlMail](https://github.com/soulteary/owlmail), verify the request body with HMAC-SHA256, map delivery metadata for correlation, and run controlled commands. See the [integration guide](docs/en-US/OwlMail-Integration.md) and [runnable example](example/owlmail/).
+- **Provider recipes**: CI-verified GitHub, GitLab, Gitea, Harbor, and Alertmanager configurations are available in [example/providers](example/providers/).
 - **HTTPS**: Use a reverse proxy (nginx, Traefik, Caddy) for HTTPS support
 - **CORS**: Set custom headers including CORS headers with `-header name=value`
 - **Hot Reload**: Update configurations without restarting using `-hotreload` or `kill -USR1`

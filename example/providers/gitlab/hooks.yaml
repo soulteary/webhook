@@ -1,0 +1,23 @@
+- id: gitlab-push
+  execute-command: /bin/echo
+  response-message: accepted gitlab push
+  include-command-output-in-response: true
+  pass-arguments-to-command:
+    - source: string
+      name: accepted
+  http-methods: [POST]
+  trigger-rule-mismatch-http-response-code: 401
+  trigger-rule:
+    and:
+      - match:
+          type: value
+          value: '{{ getenv "GITLAB_WEBHOOK_TOKEN" }}'
+          parameter:
+            source: header
+            name: X-Gitlab-Token
+      - match:
+          type: value
+          value: Push Hook
+          parameter:
+            source: header
+            name: X-Gitlab-Event

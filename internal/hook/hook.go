@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"net"
 	"net/textproto"
@@ -782,6 +783,19 @@ type Hooks []Hook
 // can be either JSON or YAML.  The asTemplate parameter causes the file
 // contents to be parsed as a Go text/template prior to unmarshalling.
 func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
+	return h.LoadFromFileWithOptions(path, asTemplate, false)
+}
+
+// LoadFromFileStrict loads a hook file and rejects fields that are not part of
+// the hook configuration contract. This catches misspelled keys before the
+// server starts while LoadFromFile remains backward compatible.
+func (h *Hooks) LoadFromFileStrict(path string, asTemplate bool) error {
+	return h.LoadFromFileWithOptions(path, asTemplate, true)
+}
+
+// LoadFromFileWithOptions loads hooks from JSON or YAML. When strict is true,
+// unknown object fields are rejected at every nesting level.
+func (h *Hooks) LoadFromFileWithOptions(path string, asTemplate, strict bool) error {
 	if path == "" {
 		return nil
 	}
@@ -811,7 +825,28 @@ func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
 		file = buf.Bytes()
 	}
 
-	err := yaml.Unmarshal(file, h)
+	var err error
+	if strict {
+		jsonFile, conversionErr := yaml.YAMLToJSON(file)
+		if conversionErr != nil {
+			return conversionErr
+		}
+		decoder := json.NewDecoder(bytes.NewReader(jsonFile))
+		decoder.DisallowUnknownFields()
+		err = decoder.Decode(h)
+		if err == nil {
+			var extra any
+			if extraErr := decoder.Decode(&extra); extraErr != io.EOF {
+				if extraErr == nil {
+					err = errors.New("hook file contains multiple JSON values")
+				} else {
+					err = extraErr
+				}
+			}
+		}
+	} else {
+		err = yaml.Unmarshal(file, h)
+	}
 	if err != nil {
 		return err
 	}

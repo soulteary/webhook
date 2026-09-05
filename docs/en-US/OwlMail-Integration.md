@@ -21,7 +21,7 @@ OwlMail also maintains the sender-side example in
 
 ## Configure WebHook
 
-Start from [`hooks.json.tmpl`](../../example/owlmail/hooks.json.tmpl). It defines
+Start from [`hooks.json.tmpl`](https://github.com/soulteary/webhook/blob/main/example/owlmail/hooks.json.tmpl). It defines
 `POST /hooks/owlmail`, requires `application/json`, validates
 `X-OwlMail-Signature`, and maps `event`, `emailId`, `title`, `message`, `from`,
 `to`, and `receivedAt` to fixed `OWLMAIL_*` command environment variables. It

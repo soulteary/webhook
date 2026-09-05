@@ -1,0 +1,2 @@
+mkdocs-material==9.7.7
+mike==2.2.0

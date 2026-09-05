@@ -883,3 +883,35 @@ func TestValidateFileReadable(t *testing.T) {
 	// Test readable file
 	assert.NoError(t, validator.ValidateFileReadable(filePath))
 }
+
+func TestValidateRejectsEmptyHMACSecret(t *testing.T) {
+	tempDir := t.TempDir()
+	hookFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: signed
+  execute-command: /bin/echo
+  trigger-rule:
+    match:
+      type: payload-hmac-sha256
+      secret: ""
+      parameter:
+        source: header
+        name: X-Signature
+`), 0o600))
+
+	rules.LockHooksFiles()
+	oldHooksFiles := rules.HooksFiles
+	rules.HooksFiles = []string{hookFile}
+	rules.UnlockHooksFiles()
+	defer func() {
+		rules.LockHooksFiles()
+		rules.HooksFiles = oldHooksFiles
+		rules.UnlockHooksFiles()
+	}()
+
+	appFlags := createValidFlags()
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "must not be empty for an HMAC rule")
+}

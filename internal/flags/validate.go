@@ -238,7 +238,12 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 
 		// 尝试加载 Hook 文件以验证格式
 		var hooks hook.Hooks
-		err := hooks.LoadFromFile(hookFile, flags.AsTemplate)
+		var err error
+		if flags.ValidateStrict {
+			err = hooks.LoadFromFileStrict(hookFile, flags.AsTemplate)
+		} else {
+			err = hooks.LoadFromFile(hookFile, flags.AsTemplate)
+		}
 		if err != nil {
 			result.AddError(fmt.Sprintf("hook-file[%s]", hookFile),
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_FILE_LOAD_ERROR, hookFile, err))
@@ -268,9 +273,39 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_ID_DUPLICATE, h.ID))
 		}
 		hookIDs[h.ID] = true
+		validateRuleContent(result, fmt.Sprintf("hook-file[%s].hooks[%d].trigger-rule", hookFile, i), h.TriggerRule)
 
 		// 验证命令路径（如果指定了允许的命令路径）
 		// 注意：这里只做基本验证，实际执行时的安全检查在 security 模块中
+	}
+}
+
+func validateRuleContent(result *ValidationResult, field string, rule *hook.Rules) {
+	if rule == nil {
+		return
+	}
+	if rule.Match != nil {
+		switch rule.Match.Type {
+		case hook.MatchHMACSHA1, hook.MatchHMACSHA256, hook.MatchHMACSHA512,
+			hook.MatchHashSHA1, hook.MatchHashSHA256, hook.MatchHashSHA512:
+			if strings.TrimSpace(rule.Match.Secret) == "" {
+				result.AddError(field+".match.secret", "must not be empty for an HMAC rule")
+			}
+		}
+	}
+	if rule.And != nil {
+		for i := range *rule.And {
+			validateRuleContent(result, fmt.Sprintf("%s.and[%d]", field, i), &(*rule.And)[i])
+		}
+	}
+	if rule.Or != nil {
+		for i := range *rule.Or {
+			validateRuleContent(result, fmt.Sprintf("%s.or[%d]", field, i), &(*rule.Or)[i])
+		}
+	}
+	if rule.Not != nil {
+		notRule := hook.Rules(*rule.Not)
+		validateRuleContent(result, field+".not", &notRule)
 	}
 }
 

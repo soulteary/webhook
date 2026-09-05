@@ -1,0 +1,15 @@
+- id: hello
+  execute-command: /bin/echo
+  command-working-directory: /tmp
+  response-message: accepted
+  http-methods: [POST]
+  pass-arguments-to-command:
+    - source: payload
+      name: message
+  trigger-rule:
+    match:
+      type: payload-hmac-sha256
+      secret: '{{ getenv "DEMO_SECRET" }}'
+      parameter:
+        source: header
+        name: X-Webhook-Signature
