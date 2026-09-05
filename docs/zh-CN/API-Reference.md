@@ -217,6 +217,8 @@ curl http://localhost:9000/openapi
   - 成功: 来自 `response-message` 的自定义消息、命令输出（如果启用了 `include-command-output-in-response`）或默认消息
   - 错误: 为兼容既有客户端返回纯文本消息；请求 ID 和 hook ID 仍可在日志及链路追踪中查询
 
+使用 JSON Content-Type 发送格式错误的非空 JSON 时，服务返回 `400 Bad Request` 和 `Invalid JSON payload.`，且不会继续计算触发规则或执行命令。为兼容对空 Payload 执行 HMAC 认证的 Hook，空请求体仍被接受。
+
 **示例 - 成功执行:**
 ```bash
 # 带 JSON 体的 POST 请求

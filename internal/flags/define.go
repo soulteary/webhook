@@ -10,6 +10,7 @@ const (
 	DEFAULT_URL_PREFIX   = "hooks"
 	DEFAULT_HTTP_METHODS = ""
 	DEFAULT_PID_FILE     = ""
+	DEFAULT_PROFILE      = "compat"
 
 	DEFAULT_ENABLE_VERBOSE        = false
 	DEFAULT_ENABLE_DEBUG          = false
@@ -90,8 +91,9 @@ const (
 )
 
 const (
-	ENV_KEY_HOST = "HOST"
-	ENV_KEY_PORT = "PORT"
+	ENV_KEY_HOST    = "HOST"
+	ENV_KEY_PORT    = "PORT"
+	ENV_KEY_PROFILE = "PROFILE"
 
 	ENV_KEY_VERBOSE    = "VERBOSE"
 	ENV_KEY_DEBUG      = "DEBUG"
@@ -176,6 +178,7 @@ const (
 )
 
 type AppFlags struct {
+	Profile            string
 	Host               string
 	Port               int
 	Verbose            bool

@@ -38,9 +38,13 @@ This fork (soulteary/webhook) is based on the original webhook project (adnanh/w
    - Better logging and debugging
 
 4. **Configuration Compatibility:**
-   - Fully compatible with original hook configurations
+   - Compatibility with original hook definitions is a maintained target, not a blanket guarantee across major versions
    - Additional security and performance parameters
-   - Backward compatible with existing setups
+   - The default `compat` profile preserves historical runtime defaults; `secure` is an explicit, stricter opt-in
+
+### Compatibility Contract
+
+Hook JSON/YAML compatibility is tested and regressions are treated as bugs. Runtime behavior, HTTP error contracts, CLI options, defaults, and release asset names may still change in a major release. Review every intervening release note and validate in staging; do not infer upgrade safety only from hook-schema compatibility.
 
 ### Migration Steps
 
@@ -52,8 +56,10 @@ This fork (soulteary/webhook) is based on the original webhook project (adnanh/w
 
 2. **Download New Version:**
    ```bash
-   # Download from releases
-   wget https://github.com/soulteary/webhook/releases/latest/download/webhook-linux-amd64
+   # Download a versioned release archive
+   VERSION=7.1.0
+   wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
+   tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    
    # Or use Docker
    docker pull soulteary/webhook:latest
@@ -121,11 +127,12 @@ webhook -hooks hooks.json
 4. **Update:**
    ```bash
    # Download new version
-   wget https://github.com/soulteary/webhook/releases/download/vX.X.X/webhook-linux-amd64
+   VERSION=X.X.X
+   wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
+   tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    
    # Replace binary
-   sudo mv webhook-linux-amd64 /usr/local/bin/webhook
-   sudo chmod +x /usr/local/bin/webhook
+   sudo install -m 0755 webhook /usr/local/bin/webhook
    ```
 
 5. **Restart Service:**
@@ -202,9 +209,9 @@ webhook \
 
 ### Configuration File Format
 
-**Status:** No breaking changes in hook configuration format.
+**Status:** Hook-definition compatibility is a project target, but it is not a substitute for reviewing major-version changes.
 
-Hook configurations remain fully compatible. All existing configurations will work without modification.
+Existing adnanh/webhook definitions should normally validate without modification under the `compat` profile. Validate the exact configuration and exercise its trigger and error paths before upgrading production.
 
 ### Command-Line Arguments
 
@@ -231,7 +238,8 @@ All original endpoints work as before. New endpoints (`/health`, `/metrics`) are
    - Better error context
 
 3. **Security:**
-   - Stricter default behaviors (can be configured)
+   - `compat` preserves historical defaults
+   - `secure` enables POST-only handling, strict argument checks, rate limiting, request IDs, and audit logging, and requires a command allowlist
    - Enhanced validation
    - Better error handling
 
@@ -502,4 +510,3 @@ If you encounter issues during migration:
 - [Performance Tuning](Performance-Tuning.md) - Performance optimization
 - [Troubleshooting Guide](Troubleshooting.md) - Common issues and solutions
 - [API Reference](API-Reference.md) - API documentation
-

@@ -12,6 +12,9 @@
 
 ### 基础配置
 
+- `-profile string`
+  配置 Profile：`compat` 保持历史默认行为；`secure` 应用生产安全默认值并要求配置命令白名单（默认值：`compat`）
+
 - `-ip string`
   指定 webhook 服务监听的 IP 地址（默认值：`0.0.0.0`）
 
@@ -177,6 +180,16 @@
 
 以下参数用于增强命令执行的安全性，防止命令注入攻击：
 
+生产环境建议使用 Secure Profile：
+
+```bash
+./webhook -profile secure \
+  -allowed-command-paths="/usr/bin,/opt/scripts" \
+  -hooks hooks.json
+```
+
+除非通过命令行参数或环境变量显式覆盖，该 Profile 会设置 `-http-methods=POST`、`-strict-mode=true`、`-rate-limit-enabled=true`、`-x-request-id=true` 和 `-audit-enabled=true`。如果命令白名单为空，启动校验会拒绝 Secure Profile。Hook 身份认证仍需在每个 Hook 中配置，推荐使用 HMAC 请求头规则。
+
 - `-allowed-command-paths string`
   指定允许执行的命令路径白名单（逗号分隔的目录或文件路径列表，默认值：空，表示不进行白名单检查）
   
@@ -298,6 +311,7 @@ Config UI 是**配置生成器**：用于在浏览器中生成单条 hook 的 YA
 
 | 环境变量 | 命令行参数 | 说明 | 默认值 |
 |---------|-----------|------|--------|
+| `PROFILE` | `-profile` | 配置 Profile（`compat` 或 `secure`） | `compat` |
 | `HOST` | `-ip` | 监听 IP 地址 | `0.0.0.0` |
 | `PORT` | `-port` | 监听端口 | `9000` |
 | `HOOKS` | `-hooks` | 钩子文件路径（多个用逗号分隔，显式启用单文件模式） | - |
@@ -454,6 +468,9 @@ export WRITE_TIMEOUT_SECONDS=60
 export ALLOWED_COMMAND_PATHS="/usr/bin,/opt/scripts"
 export MAX_ARG_LENGTH=1048576
 export STRICT_MODE=true
+
+# 或使用生产安全 Profile（命令白名单为必填项）
+export PROFILE=secure
 
 # 可选：启用 OpenAPI 规范（仅建议在调试或内网使用）
 # export OPENAPI_ENABLED=true

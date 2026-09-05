@@ -191,6 +191,31 @@ func TestCreateHookHandler_HookNotFound(t *testing.T) {
 	assert.Contains(t, string(body), "Hook not found")
 }
 
+func TestCreateHookHandler_RejectsMalformedJSON(t *testing.T) {
+	testHook := hook.Hook{
+		ID:              "test-hook",
+		ResponseMessage: "must not execute",
+	}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"test.json": {testHook},
+	}
+	rules.BuildIndex()
+
+	handler := createHookHandler(flags.AppFlags{}, nil)
+	req := httptest.NewRequest("POST", "/hooks/test-hook", bytes.NewBufferString(`{"broken":`))
+	req.Header.Set("Content-Type", "application/json")
+
+	app := testHookApp(handler)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Equal(t, "Invalid JSON payload.", string(body))
+}
+
 func TestCreateHookHandler_MethodNotAllowed(t *testing.T) {
 	// Setup
 	testHook := hook.Hook{

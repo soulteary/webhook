@@ -210,6 +210,14 @@ func parseRequestBody(w http.ResponseWriter, r *http.Request, req *hook.Request,
 		err := req.ParseJSONPayload()
 		if err != nil {
 			logger.Warnf("[%s] %s", requestID, err)
+			// Preserve the historical empty-body HMAC use case. A non-empty body
+			// that claims to be JSON must be valid and is rejected before trigger
+			// evaluation or command execution.
+			if len(req.Body) != 0 {
+				HandleErrorPlain(w, NewHTTPError(ErrorTypeClient, http.StatusBadRequest,
+					"Invalid JSON payload.", err), requestID, hookID)
+				return err
+			}
 		}
 
 	case strings.Contains(req.ContentType, "x-www-form-urlencoded"):

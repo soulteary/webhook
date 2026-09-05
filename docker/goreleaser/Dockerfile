@@ -1,9 +1,13 @@
-FROM alpine:3.19.0 as builder
-RUN apk --update add ca-certificates
+FROM alpine:3.24.1 AS certificates
+RUN apk add --no-cache ca-certificates && \
+    mkdir -p /var/lib/webhook/hooks
 
 FROM scratch
 LABEL maintainer "soulteary <soulteary@gmail.com>"
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY webhook /usr/bin/webhook
+COPY --from=certificates /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=certificates --chown=65532:65532 /var/lib/webhook /var/lib/webhook
+COPY --chown=65532:65532 webhook /usr/bin/webhook
+USER 65532:65532
+WORKDIR /var/lib/webhook
 EXPOSE 9000/tcp
-CMD ["/usr/bin/webhook"]
+ENTRYPOINT ["/usr/bin/webhook"]

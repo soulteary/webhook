@@ -20,6 +20,7 @@ func ParseConfig() AppFlags {
 	fs := flag.NewFlagSet("webhook", flag.ExitOnError)
 
 	// Define all flags
+	fs.String("profile", DEFAULT_PROFILE, "configuration profile: compat preserves historical defaults; secure enables production-safe defaults")
 	fs.String("ip", DEFAULT_HOST, "ip the webhook should serve hooks on")
 	fs.Int("port", DEFAULT_PORT, "port the webhook should serve hooks on")
 	fs.Bool("verbose", DEFAULT_ENABLE_VERBOSE, "show verbose output")
@@ -130,6 +131,7 @@ func ParseConfig() AppFlags {
 	var flags AppFlags
 
 	// Basic settings
+	flags.Profile = strings.ToLower(strings.TrimSpace(configutil.ResolveString(fs, "profile", ENV_KEY_PROFILE, DEFAULT_PROFILE, true)))
 	flags.Host = configutil.ResolveString(fs, "ip", ENV_KEY_HOST, DEFAULT_HOST, true)
 	flags.Port = configutil.ResolveInt(fs, "port", ENV_KEY_PORT, DEFAULT_PORT, false)
 	flags.Verbose = configutil.ResolveBool(fs, "verbose", ENV_KEY_VERBOSE, DEFAULT_ENABLE_VERBOSE)
@@ -210,6 +212,8 @@ func ParseConfig() AppFlags {
 	flags.ConfigUIEnabled = configutil.ResolveBool(fs, "config-ui", ENV_KEY_CONFIG_UI_ENABLED, DEFAULT_CONFIG_UI_ENABLED)
 	flags.ConfigUIPath = configutil.ResolveString(fs, "config-ui-path", ENV_KEY_CONFIG_UI_PATH, DEFAULT_CONFIG_UI_PATH, true)
 
+	applyProfileDefaults(&flags, visited)
+
 	// Hooks directory: when set, scan for hook files and optionally watch when empty
 	flags.HooksDir = configutil.ResolveString(fs, "hooks-dir", ENV_KEY_HOOKS_DIR, DEFAULT_HOOKS_DIR, true)
 	flags.HooksDir = strings.TrimSpace(flags.HooksDir)
@@ -276,4 +280,37 @@ func ParseConfig() AppFlags {
 	}
 
 	return flags
+}
+
+// applyProfileDefaults applies opinionated defaults without overriding explicit
+// CLI flags or environment variables. The compat profile intentionally leaves
+// historical behaviour unchanged.
+func applyProfileDefaults(appFlags *AppFlags, visited map[string]bool) {
+	if appFlags.Profile != "secure" {
+		return
+	}
+
+	if !configWasSet(visited, "http-methods", ENV_KEY_HTTP_METHODS) {
+		appFlags.HttpMethods = "POST"
+	}
+	if !configWasSet(visited, "strict-mode", ENV_KEY_STRICT_MODE) {
+		appFlags.StrictMode = true
+	}
+	if !configWasSet(visited, "rate-limit-enabled", ENV_KEY_RATE_LIMIT_ENABLED) {
+		appFlags.RateLimitEnabled = true
+	}
+	if !configWasSet(visited, "audit-enabled", ENV_KEY_AUDIT_ENABLED) {
+		appFlags.AuditEnabled = true
+	}
+	if !configWasSet(visited, "x-request-id", ENV_KEY_X_REQUEST_ID) {
+		appFlags.UseXRequestID = true
+	}
+}
+
+func configWasSet(visited map[string]bool, flagName, envName string) bool {
+	if visited[flagName] {
+		return true
+	}
+	value, ok := os.LookupEnv(envName)
+	return ok && strings.TrimSpace(value) != ""
 }

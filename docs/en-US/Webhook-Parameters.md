@@ -8,6 +8,7 @@ This document describes all available command-line parameters and environment va
 
 | Flag | Description | Default |
 |------|-------------|---------|
+| `-profile string` | Configuration profile: `compat` preserves historical defaults; `secure` applies production-safe defaults and requires a command allowlist | `compat` |
 | `-ip string` | IP address the webhook should serve hooks on | `0.0.0.0` |
 | `-port int` | Port the webhook should serve hooks on | `9000` |
 | `-hooks value` | Explicit single-file mode: path to JSON/YAML hook definitions (can be used multiple times) | - |
@@ -170,6 +171,7 @@ All command-line parameters can also be set via environment variables:
 
 | Environment Variable | CLI Flag | Description | Default |
 |---------------------|----------|-------------|---------|
+| `PROFILE` | `-profile` | Configuration profile (`compat` or `secure`) | `compat` |
 | `HOST` | `-ip` | Listen IP address | `0.0.0.0` |
 | `PORT` | `-port` | Listen port | `9000` |
 | `HOOKS` | `-hooks` | Hook file paths (comma-separated, explicit single-file mode) | - |
@@ -299,6 +301,18 @@ All command-line parameters can also be set via environment variables:
 
 ## Security Best Practices
 
+### Secure Profile
+
+Use `-profile secure` for production-oriented defaults:
+
+```bash
+./webhook -profile secure \
+  -allowed-command-paths="/usr/bin,/opt/scripts" \
+  -hooks hooks.json
+```
+
+Unless explicitly overridden by a CLI flag or environment variable, this profile sets `-http-methods=POST`, `-strict-mode=true`, `-rate-limit-enabled=true`, `-x-request-id=true`, and `-audit-enabled=true`. Startup validation rejects the secure profile when `-allowed-command-paths` is empty. Hook authentication is still configured per hook; prefer an HMAC header rule.
+
 ### Command Path Whitelisting
 
 Use `-allowed-command-paths` to restrict which commands can be executed:
@@ -354,12 +368,10 @@ Alternatively, use `-hotreload` (or `HOT_RELOAD=true`) for automatic hot reloadi
 # Explicit single-file mode (still supported)
 ./webhook -hooks hooks.json -verbose
 
-# With security settings
-./webhook -hooks hooks.json \
-  -allowed-command-paths="/usr/bin,/opt/scripts" \
-  -strict-mode \
-  -rate-limit-enabled \
-  -rate-limit-rps=100
+# With production-oriented security defaults
+./webhook -profile secure \
+  -hooks hooks.json \
+  -allowed-command-paths="/usr/bin,/opt/scripts"
 
 # With HTTP server tuning
 ./webhook -hooks hooks.json \

@@ -1,10 +1,12 @@
-FROM alpine:3.19.0 as builder
-RUN apk --update add ca-certificates
-
-FROM alpine:3.19.0
+FROM alpine:3.24.1
 LABEL maintainer "soulteary <soulteary@gmail.com>"
-RUN apk --update add bash curl wget jq yq
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY webhook /usr/bin/webhook
+RUN apk add --no-cache bash ca-certificates curl wget jq yq && \
+    addgroup -S -g 65532 webhook && \
+    adduser -S -D -H -u 65532 -G webhook webhook && \
+    mkdir -p /var/lib/webhook/hooks && \
+    chown -R webhook:webhook /var/lib/webhook
+COPY --chown=webhook:webhook webhook /usr/bin/webhook
+USER webhook:webhook
+WORKDIR /var/lib/webhook
 EXPOSE 9000/tcp
-CMD ["/usr/bin/webhook"]
+ENTRYPOINT ["/usr/bin/webhook"]

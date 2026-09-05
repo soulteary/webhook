@@ -1,3 +1,4 @@
+version: 2
 project_name: webhook
 
 builds:
@@ -263,3 +264,28 @@ docker_manifests:
       - "ghcr.io/soulteary/webhook:linux-armv7-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-armv6-{{ .Tag }}"
     skip_push: "false"
+
+# Generate an SPDX SBOM for every release archive. SBOMs are included in the
+# checksum file and uploaded as release assets by GoReleaser.
+sboms:
+  - artifacts: archive
+
+# Keyless Sigstore signature for the checksum file and all files it covers.
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    artifacts: checksum
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - --yes
+
+# Sign the published multi-architecture image manifests by immutable digest.
+docker_signs:
+  - cmd: cosign
+    artifacts: manifests
+    args:
+      - sign
+      - "${artifact}@${digest}"
+      - --yes

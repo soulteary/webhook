@@ -217,6 +217,8 @@ The request body can contain:
   - Success: Custom message from `response-message`, command output (if `include-command-output-in-response` is enabled), or default message
   - Error: Plain-text compatibility message. Request and hook identifiers remain available in logs and tracing.
 
+Malformed, non-empty JSON sent with a JSON content type returns `400 Bad Request` with `Invalid JSON payload.`. Trigger rules and the configured command are not evaluated after this parsing failure. An empty body remains valid for hooks that authenticate the exact empty payload with HMAC.
+
 **Example - Successful Execution:**
 ```bash
 # POST request with JSON body
