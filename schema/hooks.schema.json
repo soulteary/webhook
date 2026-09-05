@@ -52,6 +52,27 @@
         }
       ]
     },
+    "fileArgument": {
+      "allOf": [
+        { "$ref": "#/$defs/argument" },
+        {
+          "properties": {
+            "envname": { "type": "string", "pattern": "^[^/\\\\]*$" }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "not": { "required": ["envname"] } },
+              { "properties": { "envname": { "const": "" } }, "required": ["envname"] }
+            ]
+          },
+          "then": {
+            "properties": { "name": { "type": "string", "pattern": "^[^/\\\\]*$" } }
+          }
+        }
+      ]
+    },
     "header": {
       "type": "object",
       "additionalProperties": false,
@@ -151,7 +172,7 @@
         "include-command-output-in-response-on-error": { "type": "boolean" },
         "pass-environment-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
         "pass-arguments-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
-        "pass-file-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
+        "pass-file-to-command": { "type": "array", "items": { "$ref": "#/$defs/fileArgument" } },
         "parse-parameters-as-json": { "type": "array", "items": { "$ref": "#/$defs/jsonArgument" } },
         "trigger-rule": { "$ref": "#/$defs/rule" },
         "trigger-rule-mismatch-http-response-code": { "type": "integer", "minimum": 200, "maximum": 599 },

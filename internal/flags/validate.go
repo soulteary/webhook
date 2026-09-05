@@ -316,7 +316,7 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 			validateRuleContent(result, prefix+".trigger-rule", h.TriggerRule)
 			validateArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
 			validateArguments(result, prefix+".pass-arguments-to-command", h.PassArgumentsToCommand)
-			validateArguments(result, prefix+".pass-file-to-command", h.PassFileToCommand)
+			validateFileArguments(result, prefix+".pass-file-to-command", h.PassFileToCommand)
 			validateJSONArguments(result, prefix+".parse-parameters-as-json", h.JSONStringParameters)
 		}
 
@@ -340,6 +340,20 @@ func validateJSONArguments(result *ValidationResult, field string, arguments []h
 		case "":
 		default:
 			result.AddError(argumentField+".source", "must be one of: header, url, query, payload")
+		}
+	}
+}
+
+func validateFileArguments(result *ValidationResult, field string, arguments []hook.Argument) {
+	for i := range arguments {
+		argumentField := fmt.Sprintf("%s[%d]", field, i)
+		validateArgument(result, argumentField, arguments[i])
+		pattern := arguments[i].EnvName
+		if pattern == "" {
+			pattern = hook.EnvNamespace + strings.ToUpper(arguments[i].Name)
+		}
+		if strings.ContainsAny(pattern, `/\\`) {
+			result.AddError(argumentField+".envname", "effective temporary-file pattern must not contain path separators")
 		}
 	}
 }

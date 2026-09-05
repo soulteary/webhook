@@ -40,6 +40,19 @@ func Run(appFlags flags.AppFlags) []Check {
 			accessUID, accessGID = uid, gid
 		}
 	}
+	for subject, path := range map[string]string{
+		"log path": appFlags.LogPath,
+		"PID path": appFlags.PidPath,
+	} {
+		if path == "" {
+			continue
+		}
+		if err := checkWritableFilePath(path, accessUID, accessGID); err != nil {
+			checks = append(checks, Check{Subject: subject, Detail: err.Error()})
+		} else {
+			checks = append(checks, Check{OK: true, Subject: subject, Detail: filepath.Clean(path)})
+		}
+	}
 	if appFlags.HooksDir != "" {
 		useCurrentIdentity := appFlags.SetUID == 0 && appFlags.SetGID == 0
 		if err := checkHooksDirectory(appFlags.HooksDir, accessUID, accessGID, useCurrentIdentity); err != nil {
@@ -240,7 +253,26 @@ func checkTargetPathAccess(path string, uid, gid int, required uint32) error {
 	if uid == 0 && gid == 0 {
 		return nil
 	}
-	path = filepath.Clean(path)
+	path, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return err
+	}
+	if err := checkPathAndParentsAccess(path, uid, gid, required); err != nil {
+		return err
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return err
+	}
+	if resolved != path {
+		if err := checkPathAndParentsAccess(resolved, uid, gid, required); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkPathAndParentsAccess(path string, uid, gid int, required uint32) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -262,4 +294,23 @@ func checkTargetPathAccess(path string, uid, gid int, required uint32) error {
 		}
 	}
 	return nil
+}
+
+func checkWritableFilePath(path string, uid, gid int) error {
+	path = filepath.Clean(path)
+	info, err := os.Stat(path)
+	if err == nil {
+		if info.IsDir() {
+			return fmt.Errorf("not a file: %s", path)
+		}
+		return checkTargetPathAccess(path, uid, gid, 2)
+	}
+	if !os.IsNotExist(err) {
+		return err
+	}
+	parent, err := nearestExistingParent(path)
+	if err != nil {
+		return err
+	}
+	return checkTargetPathAccess(parent, uid, gid, 3)
 }

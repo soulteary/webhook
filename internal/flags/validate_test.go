@@ -1177,6 +1177,24 @@ func TestValidateRejectsInvalidJSONParameterSource(t *testing.T) {
 	assert.Contains(t, fmt.Sprint(result.Errors), "must be one of: header, url, query, payload")
 }
 
+func TestValidateRejectsInvalidPassFilePattern(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-file-pattern
+  execute-command: /bin/echo
+  pass-file-to-command:
+    - source: raw-request-body
+      envname: nested/file
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "must not contain path separators")
+}
+
 func TestValidateRejectsOutOfRangeHookResponseCodes(t *testing.T) {
 	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
 	require.NoError(t, os.WriteFile(hookFile, []byte(`

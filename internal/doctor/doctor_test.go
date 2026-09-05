@@ -37,6 +37,27 @@ func TestTargetIdentityRequiresWritablePassFileDirectory(t *testing.T) {
 	require.Error(t, checkTargetPathAccess(directory, 12345, 12345, 3))
 }
 
+func TestTargetIdentityChecksResolvedSymlinkParents(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.Chmod(root, 0o755))
+	publicDir := filepath.Join(root, "public")
+	privateDir := filepath.Join(root, "private")
+	require.NoError(t, os.Mkdir(publicDir, 0o755))
+	require.NoError(t, os.Mkdir(privateDir, 0o700))
+	target := filepath.Join(privateDir, "hook")
+	require.NoError(t, os.WriteFile(target, []byte("hook"), 0o644))
+	link := filepath.Join(publicDir, "hook")
+	require.NoError(t, os.Symlink(target, link))
+
+	require.Error(t, checkTargetPathAccess(link, 12345, 12345, 4))
+}
+
+func TestTargetIdentityChecksWritableFileParent(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.Chmod(root, 0o555))
+	require.Error(t, checkWritableFilePath(filepath.Join(root, "webhook.log"), 12345, 12345))
+}
+
 func TestRunReportsMissingCommand(t *testing.T) {
 	tempDir := t.TempDir()
 	hooksPath := filepath.Join(tempDir, "hooks.yaml")
