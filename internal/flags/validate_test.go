@@ -1030,6 +1030,20 @@ func TestValidateStrictRejectsInvalidHookHTTPMethod(t *testing.T) {
 	assert.Contains(t, result.Errors[0].Error(), `invalid HTTP method "PSOT"`)
 }
 
+func TestValidateStrictRejectsInvalidGlobalHTTPMethod(t *testing.T) {
+	tempDir := t.TempDir()
+	hookFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte("- id: ok\n  execute-command: /bin/echo\n"), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HttpMethods = "POST,PSOT"
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), `unsupported HTTP method "PSOT"`)
+}
+
 func TestValidateRejectsInvalidRuleShapesAndTypes(t *testing.T) {
 	for _, tt := range []struct {
 		name    string

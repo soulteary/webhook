@@ -75,7 +75,46 @@
         "value": { "type": "string" },
         "parameter": { "$ref": "#/$defs/argument" },
         "ip-range": { "type": "string" }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "enum": ["value", "regex", "payload-hmac-sha1", "payload-hmac-sha256", "payload-hmac-sha512", "payload-hash-sha1", "payload-hash-sha256", "payload-hash-sha512"] } },
+            "required": ["type"]
+          },
+          "then": { "required": ["parameter"] }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "regex" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["regex"],
+            "properties": { "regex": { "type": "string", "minLength": 1 } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "enum": ["payload-hmac-sha1", "payload-hmac-sha256", "payload-hmac-sha512", "payload-hash-sha1", "payload-hash-sha256", "payload-hash-sha512", "scalr-signature", "msteams-signature"] } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["secret"],
+            "properties": { "secret": { "type": "string", "pattern": "\\S" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "ip-whitelist" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["ip-range"],
+            "properties": { "ip-range": { "type": "string", "pattern": "\\S" } }
+          }
+        }
+      ]
     },
     "rule": {
       "type": "object",

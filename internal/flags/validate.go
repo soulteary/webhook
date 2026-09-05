@@ -44,6 +44,7 @@ func (r *ValidationResult) HasErrors() bool {
 // Validate 验证配置的有效性
 func Validate(flags AppFlags) *ValidationResult {
 	result := &ValidationResult{}
+	validateSemantics := flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor
 
 	switch flags.Profile {
 	case "", "compat", "secure":
@@ -57,6 +58,13 @@ func Validate(flags AppFlags) *ValidationResult {
 		result.AddError("setuid/setgid", "must be used together")
 	} else if flags.SetUID != 0 && !platform.SupportsPrivilegeDrop() {
 		result.AddError("setuid/setgid", "is not supported on this platform")
+	}
+	if validateSemantics && flags.HttpMethods != "" {
+		for i, method := range strings.Split(flags.HttpMethods, ",") {
+			if !hook.IsValidHTTPMethod(method) {
+				result.AddError(fmt.Sprintf("http-methods[%d]", i), fmt.Sprintf("unsupported HTTP method %q", method))
+			}
+		}
 	}
 
 	// 验证端口范围 - 使用 cli-kit/validator

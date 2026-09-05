@@ -886,6 +886,13 @@ func normalizeHTTPMethod(method string) (string, bool) {
 	return cleaned, cleaned != "" && validHTTPMethods[cleaned]
 }
 
+// IsValidHTTPMethod reports whether method is one of the HTTP methods accepted
+// by hook and global method allowlists.
+func IsValidHTTPMethod(method string) bool {
+	_, valid := normalizeHTTPMethod(method)
+	return valid
+}
+
 // SanitizeHTTPMethods 清理和验证 HTTP 方法，移除空白字符并转换为大写
 // 同时移除重复的方法和无效的方法
 func (h *Hook) SanitizeHTTPMethods() {
