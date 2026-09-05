@@ -46,7 +46,7 @@ func Validate(flags AppFlags) *ValidationResult {
 	default:
 		result.AddError("profile", "must be one of: compat, secure")
 	}
-	if flags.Profile == "secure" && strings.TrimSpace(flags.AllowedCommandPaths) == "" {
+	if flags.Profile == "secure" && !hasAllowedCommandPath(flags.AllowedCommandPaths) {
 		result.AddError("allowed-command-paths", "is required when profile is secure")
 	}
 
@@ -138,6 +138,15 @@ func Validate(flags AppFlags) *ValidationResult {
 	}
 
 	return result
+}
+
+func hasAllowedCommandPath(value string) bool {
+	for _, path := range strings.Split(value, ",") {
+		if strings.TrimSpace(path) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // validateFilePath 验证文件路径

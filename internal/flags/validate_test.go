@@ -42,6 +42,7 @@ func TestValidate_Profile(t *testing.T) {
 		{name: "compat profile", profile: "compat"},
 		{name: "secure profile with allowlist", profile: "secure", allowedPaths: "/opt/scripts"},
 		{name: "secure profile requires allowlist", profile: "secure", errorField: "allowed-command-paths"},
+		{name: "secure profile rejects separator-only allowlist", profile: "secure", allowedPaths: " , ,\t", errorField: "allowed-command-paths"},
 		{name: "unknown profile", profile: "unknown", errorField: "profile"},
 	}
 
