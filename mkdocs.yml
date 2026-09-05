@@ -13,7 +13,7 @@ theme:
     - navigation.top
     - content.code.copy
   logo: logo/logo-600x600.jpg
-  favicon: logo/logo-128x128.jpg
+  favicon: logo/logo-600x600.jpg
 plugins:
   - search
   - mike:
