@@ -177,9 +177,9 @@ curl http://localhost:9000/openapi
 
 ### 8. Hook 执行端点
 
-**端点:** `POST|GET|PUT|DELETE /hooks/{hook-id}`
+**端点:** 默认支持 `ANY /hooks/{hook-id}`；可通过 hook 配置或 `-http-methods` 限制
 
-**描述:** 执行配置的 hook。允许的 HTTP 方法取决于 hook 配置和 `-http-methods` 标志。
+**描述:** 执行配置的 hook。hook 自身的 `http-methods` 优先于全局 `-http-methods`。两者均未配置时，为保持向后兼容，允许服务器支持的所有标准 HTTP 方法。
 
 **URL 参数:**
 - `hook-id` (必需): 要执行的 hook 的 ID，在您的 hooks 配置文件中定义。
@@ -208,23 +208,14 @@ curl http://localhost:9000/openapi
   - 自定义状态码: 在 `success-http-response-code` 或 `trigger-rule-mismatch-http-response-code` 中配置
 
 - **Content-Type:** 
-  - `text/plain` (默认)
-  - `application/json` (如果发生错误)
+  - 默认成功和错误响应均为 `text/plain; charset=utf-8`
   - 在 `response-headers` 中配置
+
+- **405 响应头:** `Allow` 列出匹配 hook 配置允许的方法。
 
 - **响应体:**
   - 成功: 来自 `response-message` 的自定义消息、命令输出（如果启用了 `include-command-output-in-response`）或默认消息
-  - 错误: 包含详细信息的 JSON 错误响应
-
-**错误响应格式:**
-```json
-{
-  "error": "错误类型",
-  "message": "错误消息",
-  "request_id": "请求-id-这里",
-  "hook_id": "hook-id-这里"
-}
-```
+  - 错误: 为兼容既有客户端返回纯文本消息；请求 ID 和 hook ID 仍可在日志及链路追踪中查询
 
 **示例 - 成功执行:**
 ```bash
@@ -242,15 +233,7 @@ curl "http://localhost:9000/hooks/redeploy-webhook?branch=main&commit=abc123"
 curl -X POST http://localhost:9000/hooks/non-existent-hook
 ```
 
-**响应:**
-```json
-{
-  "error": "Not Found",
-  "message": "Hook not found.",
-  "request_id": "req-123",
-  "hook_id": "non-existent-hook"
-}
-```
+**响应:** `Hook not found.`
 
 **示例 - 方法不允许:**
 ```bash
@@ -258,15 +241,9 @@ curl -X POST http://localhost:9000/hooks/non-existent-hook
 curl -X GET http://localhost:9000/hooks/post-only-hook
 ```
 
-**响应:**
-```json
-{
-  "error": "Method Not Allowed",
-  "message": "HTTP GET method not allowed for hook \"post-only-hook\"",
-  "request_id": "req-456",
-  "hook_id": "post-only-hook"
-}
-```
+**响应:** `HTTP GET method not allowed for hook "post-only-hook"`
+
+**响应头:** `Allow: POST`
 
 ---
 
