@@ -7,6 +7,7 @@ import (
 
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/platform"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,6 +55,22 @@ func TestRunRejectsPartialPrivilegeConfiguration(t *testing.T) {
 	checks := Run(appFlags)
 	require.True(t, HasFailures(checks))
 	require.Contains(t, checks[0].Detail, "setuid/setgid")
+}
+
+func TestRunRejectsUnsupportedPrivilegeDrop(t *testing.T) {
+	if platform.SupportsPrivilegeDrop() {
+		t.Skip("privilege dropping is supported on this platform")
+	}
+	tempDir := t.TempDir()
+	hooksPath := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksPath, []byte("- id: ok\n  execute-command: /bin/echo\n"), 0o600))
+
+	appFlags := validFlags(hooksPath)
+	appFlags.SetUID = 1000
+	appFlags.SetGID = 1000
+	checks := Run(appFlags)
+	require.True(t, HasFailures(checks))
+	require.Contains(t, checks[0].Detail, "not supported")
 }
 
 func TestCheckCommandResolvesRelativeWorkingDirectoryAbsolutely(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/soulteary/cli-kit/validator"
+	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,7 +73,7 @@ func TestValidatePrivilegePair(t *testing.T) {
 		invalid bool
 	}{
 		{name: "neither configured"},
-		{name: "both configured", uid: 1000, gid: 1000},
+		{name: "both configured", uid: 1000, gid: 1000, invalid: !platform.SupportsPrivilegeDrop()},
 		{name: "only uid", uid: 1000, invalid: true},
 		{name: "only gid", gid: 1000, invalid: true},
 	} {

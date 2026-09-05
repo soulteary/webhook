@@ -9,6 +9,7 @@ import (
 	"github.com/soulteary/cli-kit/validator"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/i18n"
+	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/rules"
 )
 
@@ -51,6 +52,8 @@ func Validate(flags AppFlags) *ValidationResult {
 	}
 	if (flags.SetUID != 0) != (flags.SetGID != 0) {
 		result.AddError("setuid/setgid", "must be used together")
+	} else if flags.SetUID != 0 && !platform.SupportsPrivilegeDrop() {
+		result.AddError("setuid/setgid", "is not supported on this platform")
 	}
 
 	// 验证端口范围 - 使用 cli-kit/validator

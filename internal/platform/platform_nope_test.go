@@ -11,6 +11,7 @@ import (
 )
 
 func TestDropPrivileges_NotSupported(t *testing.T) {
+	assert.False(t, SupportsPrivilegeDrop())
 	// Test that DropPrivileges returns an error on unsupported platforms
 	err := DropPrivileges(1000, 1000)
 	assert.Error(t, err)

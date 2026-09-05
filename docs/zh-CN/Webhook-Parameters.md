@@ -87,10 +87,10 @@
   在指定路径创建 PID 文件
 
 - `-setuid int`
-  在打开监听端口后设置用户 ID；必须与 `setgid` 一起使用
+  在打开监听端口后设置用户 ID；必须与 `setgid` 一起使用；Linux 和 Windows 不支持
 
 - `-setgid int`
-  在打开监听端口后设置组 ID；必须与 `setuid` 一起使用
+  在打开监听端口后设置组 ID；必须与 `setuid` 一起使用；Linux 和 Windows 不支持
 
 ### 国际化
 
