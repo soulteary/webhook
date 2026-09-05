@@ -81,6 +81,70 @@ func TestSpec_WithServerURL(t *testing.T) {
 	assert.Equal(t, "https://example.com", srv["url"])
 }
 
+func TestSpec_DefaultHookMethodsMatchRuntime(t *testing.T) {
+	out, err := Spec(flags.AppFlags{HooksURLPrefix: "hooks"}, "")
+	require.NoError(t, err)
+
+	var spec map[string]any
+	require.NoError(t, json.Unmarshal(out, &spec))
+	paths, ok := spec["paths"].(map[string]any)
+	require.True(t, ok)
+	hookPath, ok := paths["/hooks/{id}"].(map[string]any)
+	require.True(t, ok)
+
+	for _, method := range []string{"get", "head", "post", "put", "patch", "delete", "options", "trace"} {
+		assert.Contains(t, hookPath, method)
+	}
+	assert.Equal(t, []any{"CONNECT"}, hookPath["x-webhook-additional-methods"])
+	assert.Equal(t, true, hookPath["x-webhook-allow-any-method"])
+}
+
+func TestSpec_OnlyRoutableNonOpenAPIMethodUsesExtension(t *testing.T) {
+	out, err := Spec(flags.AppFlags{HooksURLPrefix: "hooks", HttpMethods: "POST,CONNECT,CUSTOM"}, "")
+	require.NoError(t, err)
+
+	var spec map[string]any
+	require.NoError(t, json.Unmarshal(out, &spec))
+	paths := spec["paths"].(map[string]any)
+	hookPath := paths["/hooks/{id}"].(map[string]any)
+	assert.Contains(t, hookPath, "post")
+	assert.NotContains(t, hookPath, "connect")
+	assert.NotContains(t, hookPath, "custom")
+	assert.Equal(t, []any{"CONNECT"}, hookPath["x-webhook-additional-methods"])
+}
+
+func TestSpec_DoesNotAdvertiseUnroutableCustomMethod(t *testing.T) {
+	out, err := Spec(flags.AppFlags{HooksURLPrefix: "hooks", HttpMethods: "CUSTOM"}, "")
+	require.NoError(t, err)
+
+	var spec map[string]any
+	require.NoError(t, json.Unmarshal(out, &spec))
+	paths := spec["paths"].(map[string]any)
+	hookPath := paths["/hooks/{id}"].(map[string]any)
+	assert.NotContains(t, hookPath, "x-webhook-additional-methods")
+}
+
+func TestSpec_HookErrorsDescribePlainTextAndAllowHeader(t *testing.T) {
+	out, err := Spec(flags.AppFlags{HooksURLPrefix: "hooks", HttpMethods: "POST"}, "")
+	require.NoError(t, err)
+
+	var spec map[string]any
+	require.NoError(t, json.Unmarshal(out, &spec))
+	paths := spec["paths"].(map[string]any)
+	hookPath := paths["/hooks/{id}"].(map[string]any)
+	post := hookPath["post"].(map[string]any)
+	responses := post["responses"].(map[string]any)
+
+	for _, status := range []string{"400", "404", "405", "408", "429", "500", "503"} {
+		response := responses[status].(map[string]any)
+		content := response["content"].(map[string]any)
+		assert.Contains(t, content, "text/plain")
+	}
+	methodNotAllowed := responses["405"].(map[string]any)
+	headers := methodNotAllowed["headers"].(map[string]any)
+	assert.Contains(t, headers, "Allow")
+}
+
 func TestSpec_CustomURLPrefix(t *testing.T) {
 	appFlags := flags.AppFlags{
 		HooksURLPrefix: "api/webhooks",

@@ -118,8 +118,9 @@ func op(summary, description, contentType string) map[string]any {
 
 func hooksPathOp(appFlags flags.AppFlags) map[string]any {
 	methods := appFlags.HttpMethods
+	allowAnyMethod := methods == ""
 	if methods == "" {
-		methods = "POST,PUT,PATCH"
+		methods = "GET,HEAD,POST,PUT,PATCH,DELETE,CONNECT,OPTIONS,TRACE"
 	}
 	parts := strings.Split(methods, ",")
 	for i, p := range parts {
@@ -130,8 +131,21 @@ func hooksPathOp(appFlags flags.AppFlags) map[string]any {
 	}
 
 	ops := make(map[string]any)
+	additionalMethods := make([]string, 0)
 	for _, m := range parts {
 		if m == "" {
+			continue
+		}
+		switch m {
+		case "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE":
+			// OpenAPI 3.0 path-item operations.
+		case "CONNECT":
+			// Fiber routes CONNECT requests, but OpenAPI 3.0 has no CONNECT operation key.
+			additionalMethods = append(additionalMethods, m)
+			continue
+		default:
+			// Fiber returns 501 for methods outside its configured request-method list.
+			// Do not advertise methods that cannot reach the hook handler.
 			continue
 		}
 		ops[strings.ToLower(m)] = map[string]any{
@@ -162,14 +176,42 @@ func hooksPathOp(appFlags flags.AppFlags) map[string]any {
 						"application/json": map[string]any{"schema": map[string]any{"type": "object"}},
 					},
 				},
-				"400": map[string]any{"description": "Bad request or hook rules not satisfied"},
-				"404": map[string]any{"description": "Hook not found"},
-				"405": map[string]any{"description": "Method not allowed for this hook"},
-				"500": map[string]any{"description": "Internal server error during hook execution"},
-				"503": map[string]any{"description": "Server shutting down"},
+				"400": plainTextResponse("Bad request or hook rules not satisfied"),
+				"404": plainTextResponse("Hook not found"),
+				"405": methodNotAllowedResponse(),
+				"408": plainTextResponse("Hook execution timed out"),
+				"429": plainTextResponse("Rate limit exceeded"),
+				"500": plainTextResponse("Internal server error during hook execution"),
+				"503": plainTextResponse("Server shutting down"),
 			},
 		}
 	}
+	if len(additionalMethods) > 0 {
+		ops["x-webhook-additional-methods"] = additionalMethods
+	}
+	if allowAnyMethod {
+		ops["x-webhook-allow-any-method"] = true
+	}
 
 	return ops
+}
+
+func plainTextResponse(description string) map[string]any {
+	return map[string]any{
+		"description": description,
+		"content": map[string]any{
+			"text/plain": map[string]any{"schema": map[string]any{"type": "string"}},
+		},
+	}
+}
+
+func methodNotAllowedResponse() map[string]any {
+	response := plainTextResponse("Method not allowed for this hook")
+	response["headers"] = map[string]any{
+		"Allow": map[string]any{
+			"description": "Methods configured for the matched hook.",
+			"schema":      map[string]any{"type": "string"},
+		},
+	}
+	return response
 }
