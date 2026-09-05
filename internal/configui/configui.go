@@ -458,10 +458,12 @@ func Handler(basePath string, webhookBaseURL string, writeDir string, hooksURLPr
 	mux.Handle(staticPrefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			assetPath := strings.TrimPrefix(r.URL.Path, staticPrefix)
-			if _, err := fs.Stat(subFS, assetPath); err != nil {
-				// Preserve the file server's 404 response for resources that do not exist.
-				strippedStaticHandler.ServeHTTP(w, r)
-				return
+			if assetPath != "" {
+				if _, err := fs.Stat(subFS, assetPath); err != nil {
+					// Preserve the file server's 404 response for resources that do not exist.
+					strippedStaticHandler.ServeHTTP(w, r)
+					return
+				}
 			}
 			w.Header().Set("Allow", "GET, HEAD")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
