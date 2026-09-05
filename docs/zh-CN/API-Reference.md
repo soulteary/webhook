@@ -87,12 +87,16 @@ curl http://localhost:9000/readyz
 **响应:**
 - **状态码:** `200 OK`
 - **Content-Type:** `application/json`
-- **响应体:** 包含版本相关字段的 JSON（如 `version`、`commit`、`buildDate`、`branch`）。具体结构由版本库定义；启用 `-openapi` 时可查看 OpenAPI 规范获取完整 schema。
+- **响应头:** 始终包含 `X-Version`；存在对应构建元数据时，还会包含 `X-Commit`、`X-Build-Date` 和 `X-Branch`。
+- **响应体:** 包含 `version`、`commit`、`build_date`、`branch`、`go_version`、`platform` 和 `compiler` 的 JSON；值为空的可选字段可能省略。启用 `-openapi` 后可查看完整的对象 schema。
+- **其他方法:** 返回 `405 Method Not Allowed`，并携带 `Allow: GET, HEAD`。
 
 **示例:**
 ```bash
 curl http://localhost:9000/version
 ```
+
+`0.0.0.0` 是服务端监听地址，不是客户端访问地址。调用此端点时应使用 `localhost`、`127.0.0.1`，或服务器实际可访问的 IP 地址/域名。
 
 ---
 
@@ -394,4 +398,3 @@ curl -X POST http://localhost:9000/hooks/long-running-hook
 6. **优雅处理错误**: 检查状态码并适当解析错误响应。
 
 7. **使用健康检查**: 监控 `/health` 端点以了解服务可用性。
-

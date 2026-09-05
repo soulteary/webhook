@@ -87,12 +87,16 @@ curl http://localhost:9000/readyz
 **Response:**
 - **Status Code:** `200 OK`
 - **Content-Type:** `application/json`
-- **Body:** JSON with version fields (e.g. `version`, `commit`, `buildDate`, `branch`). Exact structure is defined by the version library; use the OpenAPI spec when `-openapi` is enabled for the full schema.
+- **Headers:** `X-Version` is always present. `X-Commit`, `X-Build-Date`, and `X-Branch` are included when the corresponding build metadata is available.
+- **Body:** JSON with `version`, `commit`, `build_date`, `branch`, `go_version`, `platform`, and `compiler`. Optional fields may be omitted when empty. The OpenAPI spec contains the complete object schema when `-openapi` is enabled.
+- **Other methods:** Return `405 Method Not Allowed` with `Allow: GET, HEAD`.
 
 **Example:**
 ```bash
 curl http://localhost:9000/version
 ```
+
+`0.0.0.0` is a bind address, not a client destination. Use `localhost`, `127.0.0.1`, or the server's reachable IP address or hostname when calling this endpoint.
 
 ---
 
@@ -394,4 +398,3 @@ The response will stream the command output as it is produced.
 6. **Handle Errors Gracefully**: Check status codes and parse error responses appropriately.
 
 7. **Use Health Checks**: Monitor the `/health` endpoint for service availability.
-

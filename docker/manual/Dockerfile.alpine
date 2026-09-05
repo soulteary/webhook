@@ -1,4 +1,8 @@
 FROM golang:1.27.0-alpine3.23 AS builder
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
+ARG BRANCH=
 RUN apk --update add ca-certificates upx
 ENV GOPROXY=https://goproxy.cn
 ENV CGO_ENABLED=0
@@ -8,7 +12,11 @@ COPY go.mod go.sum ./
 RUN go mod download -x
 # 再复制源代码
 COPY . .
-RUN go build -ldflags "-w -s" -o webhook .
+RUN go build -ldflags "-w -s \
+    -X github.com/soulteary/webhook/internal/version.Version=${VERSION} \
+    -X github.com/soulteary/webhook/internal/version.Commit=${COMMIT} \
+    -X github.com/soulteary/webhook/internal/version.BuildDate=${BUILD_DATE} \
+    -X github.com/soulteary/webhook/internal/version.Branch=${BRANCH}" -o webhook .
 RUN upx -9 -o webhook.minify webhook && \
     chmod +x webhook.minify
 
