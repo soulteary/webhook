@@ -19,11 +19,13 @@ func CheckFileModeAccess(info os.FileInfo, uid, gid int, required uint32) error 
 	permissions := uint32(info.Mode().Perm())
 	uidString := strconv.Itoa(uid)
 	gidString := strconv.Itoa(gid)
+	groups, groupsErr := os.Getgroups()
 	var allowed uint32
 	switch {
 	case uidString == strconv.FormatUint(uint64(stat.Uid), 10):
 		allowed = permissions >> 6
-	case gidString == strconv.FormatUint(uint64(stat.Gid), 10):
+	case gidString == strconv.FormatUint(uint64(stat.Gid), 10) ||
+		groupsErr == nil && supplementaryGroupsContain(groups, stat.Gid):
 		allowed = permissions >> 3
 	default:
 		allowed = permissions
@@ -32,6 +34,16 @@ func CheckFileModeAccess(info os.FileInfo, uid, gid int, required uint32) error 
 		return fmt.Errorf("UID %d/GID %d lacks required access to %s", uid, gid, info.Name())
 	}
 	return nil
+}
+
+func supplementaryGroupsContain(groups []int, fileGID uint32) bool {
+	fileGIDString := strconv.FormatUint(uint64(fileGID), 10)
+	for _, group := range groups {
+		if strconv.Itoa(group) == fileGIDString {
+			return true
+		}
+	}
+	return false
 }
 
 // EffectiveIdentity returns the process identity used for normal filesystem

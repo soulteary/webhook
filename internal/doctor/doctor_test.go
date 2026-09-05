@@ -1,8 +1,10 @@
 package doctor
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/soulteary/webhook/internal/flags"
@@ -56,6 +58,34 @@ func TestTargetIdentityChecksWritableFileParent(t *testing.T) {
 	root := t.TempDir()
 	require.NoError(t, os.Chmod(root, 0o555))
 	require.Error(t, checkWritableFilePath(filepath.Join(root, "webhook.log"), 12345, 12345))
+}
+
+func TestCheckWritableFilePathRejectsDanglingSymlinkTargetParent(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.Chmod(root, 0o755))
+	link := filepath.Join(root, "webhook.log")
+	require.NoError(t, os.Symlink(filepath.Join(root, "missing", "webhook.log"), link))
+
+	require.Error(t, checkWritableFilePath(link, 12345, 12345))
+}
+
+func TestRunRejectsPIDFileForLiveProcess(t *testing.T) {
+	pidPath := filepath.Join(t.TempDir(), "webhook.pid")
+	require.NoError(t, os.WriteFile(pidPath, []byte(fmt.Sprint(os.Getpid())), 0o600))
+	appFlags := validFlags("")
+	appFlags.HooksFiles = nil
+	appFlags.PidPath = pidPath
+
+	checks := Run(appFlags)
+	require.True(t, HasFailures(checks))
+	require.Condition(t, func() bool {
+		for _, check := range checks {
+			if check.Subject == "PID path" && strings.Contains(check.Detail, "pid file found") {
+				return true
+			}
+		}
+		return false
+	}, "%+v", checks)
 }
 
 func TestUsesFileAudit(t *testing.T) {

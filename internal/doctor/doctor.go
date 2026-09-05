@@ -11,6 +11,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/pidfile"
 	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/security"
 )
@@ -43,9 +44,10 @@ func Run(appFlags flags.AppFlags) []Check {
 	destinations := []struct {
 		subject string
 		path    string
+		pid     bool
 	}{
 		{subject: "log path", path: appFlags.LogPath},
-		{subject: "PID path", path: appFlags.PidPath},
+		{subject: "PID path", path: appFlags.PidPath, pid: true},
 	}
 	if usesFileAudit(appFlags) {
 		if strings.TrimSpace(appFlags.AuditFilePath) == "" {
@@ -54,6 +56,7 @@ func Run(appFlags flags.AppFlags) []Check {
 			destinations = append(destinations, struct {
 				subject string
 				path    string
+				pid     bool
 			}{subject: "audit file path", path: appFlags.AuditFilePath})
 		}
 	}
@@ -64,6 +67,12 @@ func Run(appFlags flags.AppFlags) []Check {
 		}
 		if err := checkWritableFilePath(path, accessUID, accessGID); err != nil {
 			checks = append(checks, Check{Subject: subject, Detail: err.Error()})
+		} else if destination.pid {
+			if err := pidfile.CheckExisting(path); err != nil {
+				checks = append(checks, Check{Subject: subject, Detail: err.Error()})
+			} else {
+				checks = append(checks, Check{OK: true, Subject: subject, Detail: filepath.Clean(path)})
+			}
 		} else {
 			checks = append(checks, Check{OK: true, Subject: subject, Detail: filepath.Clean(path)})
 		}
@@ -326,7 +335,10 @@ func checkPathAndParentsAccess(path string, uid, gid int, required uint32) error
 }
 
 func checkWritableFilePath(path string, uid, gid int) error {
-	path = filepath.Clean(path)
+	path, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return err
+	}
 	info, err := os.Stat(path)
 	if err == nil {
 		if info.IsDir() {
@@ -336,6 +348,32 @@ func checkWritableFilePath(path string, uid, gid int) error {
 	}
 	if !os.IsNotExist(err) {
 		return err
+	}
+	linkInfo, linkErr := os.Lstat(path)
+	if linkErr == nil && linkInfo.Mode()&os.ModeSymlink != 0 {
+		linkTarget, err := os.Readlink(path)
+		if err != nil {
+			return err
+		}
+		if !filepath.IsAbs(linkTarget) {
+			linkTarget = filepath.Join(filepath.Dir(path), linkTarget)
+		}
+		linkTarget = filepath.Clean(linkTarget)
+		if err := checkTargetPathAccess(filepath.Dir(path), uid, gid, 1); err != nil {
+			return err
+		}
+		targetParent := filepath.Dir(linkTarget)
+		targetInfo, err := os.Stat(targetParent)
+		if err != nil {
+			return fmt.Errorf("cannot access symlink target parent %s: %w", targetParent, err)
+		}
+		if !targetInfo.IsDir() {
+			return fmt.Errorf("symlink target parent is not a directory: %s", targetParent)
+		}
+		return checkTargetPathAccess(targetParent, uid, gid, 3)
+	}
+	if linkErr != nil && !os.IsNotExist(linkErr) {
+		return linkErr
 	}
 	parent, err := nearestExistingParent(path)
 	if err != nil {
