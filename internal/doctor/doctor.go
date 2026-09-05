@@ -43,13 +43,7 @@ func Run(appFlags flags.AppFlags) []Check {
 		return append(checks, Check{OK: true, Subject: "hooks", Detail: "no hook files discovered"})
 	}
 
-	seen := make(map[string]struct{})
 	for _, path := range appFlags.HooksFiles {
-		if _, ok := seen[path]; ok {
-			continue
-		}
-		seen[path] = struct{}{}
-
 		var hooks hook.Hooks
 		var err error
 		if appFlags.ValidateStrict {

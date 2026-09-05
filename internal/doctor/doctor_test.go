@@ -73,6 +73,18 @@ func TestRunRejectsUnsupportedPrivilegeDrop(t *testing.T) {
 	require.Contains(t, checks[0].Detail, "not supported")
 }
 
+func TestRunRejectsDuplicateHookFiles(t *testing.T) {
+	tempDir := t.TempDir()
+	hooksPath := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksPath, []byte("- id: ok\n  execute-command: /bin/echo\n"), 0o600))
+
+	appFlags := validFlags(hooksPath)
+	appFlags.HooksFiles = append(appFlags.HooksFiles, hooksPath)
+	checks := Run(appFlags)
+	require.True(t, HasFailures(checks))
+	require.Contains(t, checks[0].Detail, "duplicate hook file")
+}
+
 func TestCheckCommandResolvesRelativeWorkingDirectoryAbsolutely(t *testing.T) {
 	tempDir := t.TempDir()
 	scriptsDir := filepath.Join(tempDir, "scripts")

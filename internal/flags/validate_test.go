@@ -997,3 +997,15 @@ func TestValidateRejectsMissingExecuteCommand(t *testing.T) {
 	require.True(t, result.HasErrors())
 	assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "execute-command")
 }
+
+func TestValidateRejectsDuplicateHookFiles(t *testing.T) {
+	tempDir := t.TempDir()
+	hookFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte("- id: ok\n  execute-command: /bin/echo\n"), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.HooksFiles = []string{hookFile, filepath.Join(tempDir, ".", "hooks.yaml")}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, result.Errors[0].Error(), "duplicate hook file")
+}

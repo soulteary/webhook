@@ -202,11 +202,16 @@ func validateDirectory(result *ValidationResult, field, path string, mustExist b
 
 // validateHookFiles 验证 Hook 文件
 func validateHookFiles(result *ValidationResult, flags AppFlags) {
-	// 获取 Hook 文件列表
-	rules.RLockHooksFiles()
-	hooksFiles := make(hook.HooksFiles, len(rules.HooksFiles))
-	copy(hooksFiles, rules.HooksFiles)
-	rules.RUnlockHooksFiles()
+	// Prefer the effective parsed flags. The global list mirrors this slice
+	// after parsing and must not be merged with it, or every path appears twice.
+	hooksFiles := make(hook.HooksFiles, len(flags.HooksFiles))
+	copy(hooksFiles, flags.HooksFiles)
+	if len(hooksFiles) == 0 {
+		rules.RLockHooksFiles()
+		hooksFiles = make(hook.HooksFiles, len(rules.HooksFiles))
+		copy(hooksFiles, rules.HooksFiles)
+		rules.RUnlockHooksFiles()
+	}
 
 	// -hooks-dir 且当前无文件时，不验证（空目录由监控后续发现新文件）
 	if flags.HooksDir != "" && len(hooksFiles) == 0 {
@@ -218,19 +223,17 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 		return
 	}
 
-	// 合并命令行和环境的 Hook 文件
-	if len(flags.HooksFiles) > 0 {
-		hooksFiles = append(hooksFiles, flags.HooksFiles...)
-	}
-
-	// 去重
+	// Reject duplicate paths because runtime would load their Hook IDs twice.
 	seen := make(map[string]bool)
 	uniqueFiles := make(hook.HooksFiles, 0, len(hooksFiles))
 	for _, file := range hooksFiles {
-		if !seen[file] {
-			seen[file] = true
-			uniqueFiles = append(uniqueFiles, file)
+		cleanFile := filepath.Clean(file)
+		if seen[cleanFile] {
+			result.AddError("hooks", fmt.Sprintf("duplicate hook file %q", file))
+			continue
 		}
+		seen[cleanFile] = true
+		uniqueFiles = append(uniqueFiles, file)
 	}
 
 	// Hook IDs are global because the HTTP route namespace is shared across files.
