@@ -680,6 +680,10 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 			audit.LogHookNotFound(requestID, hookID, r.RemoteAddr, r.UserAgent())
 			return
 		}
+		// URL strings produced by the Fiber/fasthttp adaptor are backed by a
+		// reusable request buffer. Use the configured hook ID before any value is
+		// captured by asynchronous execution or retained by metrics and audit logs.
+		hookID = matchedHook.ID
 
 		// Check for allowed methods
 		if !isMethodAllowed(r.Method, matchedHook, appFlags) {
