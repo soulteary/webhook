@@ -99,7 +99,7 @@ func TestSpec_DefaultHookMethodsMatchRuntime(t *testing.T) {
 	assert.Equal(t, true, hookPath["x-webhook-allow-any-method"])
 }
 
-func TestSpec_CustomNonOpenAPIMethodUsesExtension(t *testing.T) {
+func TestSpec_OnlyRoutableNonOpenAPIMethodUsesExtension(t *testing.T) {
 	out, err := Spec(flags.AppFlags{HooksURLPrefix: "hooks", HttpMethods: "POST,CONNECT,CUSTOM"}, "")
 	require.NoError(t, err)
 
@@ -110,7 +110,18 @@ func TestSpec_CustomNonOpenAPIMethodUsesExtension(t *testing.T) {
 	assert.Contains(t, hookPath, "post")
 	assert.NotContains(t, hookPath, "connect")
 	assert.NotContains(t, hookPath, "custom")
-	assert.Equal(t, []any{"CONNECT", "CUSTOM"}, hookPath["x-webhook-additional-methods"])
+	assert.Equal(t, []any{"CONNECT"}, hookPath["x-webhook-additional-methods"])
+}
+
+func TestSpec_DoesNotAdvertiseUnroutableCustomMethod(t *testing.T) {
+	out, err := Spec(flags.AppFlags{HooksURLPrefix: "hooks", HttpMethods: "CUSTOM"}, "")
+	require.NoError(t, err)
+
+	var spec map[string]any
+	require.NoError(t, json.Unmarshal(out, &spec))
+	paths := spec["paths"].(map[string]any)
+	hookPath := paths["/hooks/{id}"].(map[string]any)
+	assert.NotContains(t, hookPath, "x-webhook-additional-methods")
 }
 
 func TestSpec_HookErrorsDescribePlainTextAndAllowHeader(t *testing.T) {
