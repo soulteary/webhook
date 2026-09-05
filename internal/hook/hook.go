@@ -808,7 +808,7 @@ func (h *Hooks) LoadFromFileWithOptions(path string, asTemplate, strict bool) er
 	}
 
 	if asTemplate {
-		funcMap := template.FuncMap{"getenv": getenv}
+		funcMap := template.FuncMap{"getenv": getenv, "getenvRequired": getenvRequired}
 
 		tmpl, err := template.New("hooks").Funcs(funcMap).Parse(string(file))
 		if err != nil {
@@ -1118,4 +1118,12 @@ func compare(a, b string) bool {
 // getenv provides a template function to retrieve OS environment variables.
 func getenv(s string) string {
 	return os.Getenv(s)
+}
+
+func getenvRequired(s string) (string, error) {
+	value := os.Getenv(s)
+	if strings.TrimSpace(value) == "" {
+		return "", fmt.Errorf("required environment variable %s is empty", s)
+	}
+	return value, nil
 }

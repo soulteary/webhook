@@ -144,6 +144,28 @@ func TestMakeSureCallable_RelativePath(t *testing.T) {
 	assert.NotEmpty(t, cmdPath)
 }
 
+func TestMakeSureCallable_RelativeWorkingDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptsDir := filepath.Join(tempDir, "scripts")
+	require.NoError(t, os.Mkdir(scriptsDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(scriptsDir, "run.sh"), []byte("#!/bin/sh\n"), 0o700))
+
+	oldWorkingDirectory, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tempDir))
+	t.Cleanup(func() { require.NoError(t, os.Chdir(oldWorkingDirectory)) })
+
+	h := &hook.Hook{ExecuteCommand: "run.sh", CommandWorkingDirectory: "scripts"}
+	r := &hook.Request{ID: "test-request"}
+	cmdPath, err := makeSureCallable(context.Background(), h, r, flags.AppFlags{}, nil)
+	require.NoError(t, err)
+	require.True(t, filepath.IsAbs(cmdPath), cmdPath)
+}
+
 func TestMakeSureCallable_WithSpace(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping on Windows")

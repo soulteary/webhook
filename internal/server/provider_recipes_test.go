@@ -121,6 +121,31 @@ func TestExampleTemplateSecretsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestExampleTemplatesRejectMissingSecrets(t *testing.T) {
+	tests := []struct {
+		name      string
+		path      string
+		secretEnv string
+	}{
+		{name: "github", path: filepath.Join("providers", "github", "hooks.yaml"), secretEnv: "GITHUB_WEBHOOK_SECRET"},
+		{name: "gitlab", path: filepath.Join("providers", "gitlab", "hooks.yaml"), secretEnv: "GITLAB_WEBHOOK_TOKEN"},
+		{name: "gitea", path: filepath.Join("providers", "gitea", "hooks.yaml"), secretEnv: "GITEA_WEBHOOK_SECRET"},
+		{name: "harbor", path: filepath.Join("providers", "harbor", "hooks.yaml"), secretEnv: "HARBOR_WEBHOOK_TOKEN"},
+		{name: "alertmanager", path: filepath.Join("providers", "alertmanager", "hooks.yaml"), secretEnv: "ALERTMANAGER_WEBHOOK_TOKEN"},
+		{name: "quickstart", path: filepath.Join("quickstart", "hooks", "hooks.yaml"), secretEnv: "DEMO_SECRET"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(tt.secretEnv, "")
+			var configuredHooks hook.Hooks
+			path := filepath.Join("..", "..", "example", tt.path)
+			err := configuredHooks.LoadFromFileStrict(path, true)
+			require.ErrorContains(t, err, "required environment variable "+tt.secretEnv+" is empty")
+		})
+	}
+}
+
 func providerRequest(t *testing.T, app *fiber.App, hookID string, payload []byte, headers map[string]string) *http.Response {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/hooks/"+hookID, bytes.NewReader(payload))

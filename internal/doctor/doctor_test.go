@@ -56,6 +56,22 @@ func TestRunRejectsPartialPrivilegeConfiguration(t *testing.T) {
 	require.Contains(t, checks[0].Detail, "setuid/setgid")
 }
 
+func TestCheckCommandResolvesRelativeWorkingDirectoryAbsolutely(t *testing.T) {
+	tempDir := t.TempDir()
+	scriptsDir := filepath.Join(tempDir, "scripts")
+	require.NoError(t, os.Mkdir(scriptsDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(scriptsDir, "run.sh"), []byte("#!/bin/sh\n"), 0o700))
+
+	oldWorkingDirectory, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tempDir))
+	t.Cleanup(func() { require.NoError(t, os.Chdir(oldWorkingDirectory)) })
+
+	resolved, err := checkCommand("run.sh", "scripts")
+	require.NoError(t, err)
+	require.True(t, filepath.IsAbs(resolved), resolved)
+}
+
 func validFlags(hooksPath string) flags.AppFlags {
 	return flags.AppFlags{
 		Profile:                  "compat",

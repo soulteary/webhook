@@ -101,9 +101,9 @@ func checkCommand(command, workingDirectory string) (string, error) {
 	if command == "" {
 		return "", fmt.Errorf("execute-command is empty")
 	}
-	candidate := command
-	if !filepath.IsAbs(candidate) && workingDirectory != "" {
-		candidate = filepath.Join(workingDirectory, candidate)
+	candidate, err := security.ResolveCommandCandidate(command, workingDirectory)
+	if err != nil {
+		return "", err
 	}
 	resolved, err := exec.LookPath(candidate)
 	if err != nil && filepath.IsAbs(command) {

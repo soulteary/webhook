@@ -11,7 +11,7 @@
     and:
       - match:
           type: value
-          value: "{{ getenv "GITLAB_WEBHOOK_TOKEN" | js }}"
+          value: "{{ getenvRequired "GITLAB_WEBHOOK_TOKEN" | js }}"
           parameter:
             source: header
             name: X-Gitlab-Token

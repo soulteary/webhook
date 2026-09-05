@@ -9,7 +9,7 @@
   trigger-rule:
     match:
       type: payload-hmac-sha256
-      secret: "{{ getenv "DEMO_SECRET" | js }}"
+      secret: "{{ getenvRequired "DEMO_SECRET" | js }}"
       parameter:
         source: header
         name: X-Webhook-Signature

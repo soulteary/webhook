@@ -11,7 +11,7 @@
     and:
       - match:
           type: payload-hmac-sha256
-          secret: "{{ getenv "GITEA_WEBHOOK_SECRET" | js }}"
+          secret: "{{ getenvRequired "GITEA_WEBHOOK_SECRET" | js }}"
           parameter:
             source: header
             name: X-Gitea-Signature
