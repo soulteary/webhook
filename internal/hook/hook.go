@@ -851,12 +851,39 @@ func (h *Hooks) LoadFromFileWithOptions(path string, asTemplate, strict bool) er
 		return err
 	}
 
+	if strict {
+		for i := range *h {
+			for _, method := range (*h)[i].HTTPMethods {
+				if _, valid := normalizeHTTPMethod(method); !valid {
+					return fmt.Errorf("hook %q has invalid HTTP method %q", (*h)[i].ID, method)
+				}
+			}
+		}
+	}
+
 	// 清理和验证所有 hook 的 HTTP 方法
 	for i := range *h {
 		(*h)[i].SanitizeHTTPMethods()
 	}
 
 	return nil
+}
+
+var validHTTPMethods = map[string]bool{
+	"GET":     true,
+	"POST":    true,
+	"PUT":     true,
+	"PATCH":   true,
+	"DELETE":  true,
+	"HEAD":    true,
+	"OPTIONS": true,
+	"CONNECT": true,
+	"TRACE":   true,
+}
+
+func normalizeHTTPMethod(method string) (string, bool) {
+	cleaned := strings.ToUpper(strings.TrimSpace(method))
+	return cleaned, cleaned != "" && validHTTPMethods[cleaned]
 }
 
 // SanitizeHTTPMethods 清理和验证 HTTP 方法，移除空白字符并转换为大写
@@ -866,32 +893,14 @@ func (h *Hook) SanitizeHTTPMethods() {
 		return
 	}
 
-	// 有效的 HTTP 方法列表
-	validMethods := map[string]bool{
-		"GET":     true,
-		"POST":    true,
-		"PUT":     true,
-		"PATCH":   true,
-		"DELETE":  true,
-		"HEAD":    true,
-		"OPTIONS": true,
-		"CONNECT": true,
-		"TRACE":   true,
-	}
-
 	// 使用 map 去重并清理
 	seen := make(map[string]bool)
 	sanitized := make([]string, 0, len(h.HTTPMethods))
 
 	for _, method := range h.HTTPMethods {
 		// 清理：去除空白字符并转换为大写
-		cleaned := strings.ToUpper(strings.TrimSpace(method))
-		if cleaned == "" {
-			continue
-		}
-
-		// 验证方法是否有效
-		if !validMethods[cleaned] {
+		cleaned, valid := normalizeHTTPMethod(method)
+		if !valid {
 			logger.Warnf("invalid HTTP method '%s' for hook %s, ignoring", method, h.ID)
 			continue
 		}

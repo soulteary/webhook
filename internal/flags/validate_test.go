@@ -1009,3 +1009,20 @@ func TestValidateRejectsDuplicateHookFiles(t *testing.T) {
 	require.True(t, result.HasErrors())
 	assert.Contains(t, result.Errors[0].Error(), "duplicate hook file")
 }
+
+func TestValidateStrictRejectsInvalidHookHTTPMethod(t *testing.T) {
+	tempDir := t.TempDir()
+	hookFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-method
+  execute-command: /bin/echo
+  http-methods: [PSOT]
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, result.Errors[0].Error(), `invalid HTTP method "PSOT"`)
+}
