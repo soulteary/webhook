@@ -139,8 +139,13 @@ func hooksPathOp(appFlags flags.AppFlags) map[string]any {
 		switch m {
 		case "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE":
 			// OpenAPI 3.0 path-item operations.
-		default:
+		case "CONNECT":
+			// Fiber routes CONNECT requests, but OpenAPI 3.0 has no CONNECT operation key.
 			additionalMethods = append(additionalMethods, m)
+			continue
+		default:
+			// Fiber returns 501 for methods outside its configured request-method list.
+			// Do not advertise methods that cannot reach the hook handler.
 			continue
 		}
 		ops[strings.ToLower(m)] = map[string]any{
