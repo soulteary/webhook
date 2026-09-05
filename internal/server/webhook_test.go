@@ -1162,6 +1162,13 @@ func TestIsMethodAllowed(t *testing.T) {
 			expected: false,
 		},
 		{
+			name:     "explicit appFlags methods normalize to empty",
+			method:   "POST",
+			hook:     &hook.Hook{},
+			appFlags: flags.AppFlags{HttpMethods: ","},
+			expected: false,
+		},
+		{
 			name:     "default allow all",
 			method:   "ANY",
 			hook:     &hook.Hook{},
