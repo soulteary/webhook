@@ -1105,6 +1105,16 @@ func TestValidateRejectsInvalidRuleShapesAndTypes(t *testing.T) {
 			message: "unsupported request key",
 		},
 		{
+			name: "missing keyed source name",
+			rule: `
+    not:
+      match:
+        type: value
+        value: blocked
+        parameter: {source: header}`,
+			message: "must not be empty for a keyed source",
+		},
+		{
 			name: "empty IP whitelist",
 			rule: `
     match:
@@ -1134,6 +1144,23 @@ func TestValidateRejectsInvalidRuleShapesAndTypes(t *testing.T) {
 			assert.Contains(t, fmt.Sprint(result.Errors), tt.message)
 		})
 	}
+}
+
+func TestValidateRejectsInvalidJSONParameterSource(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-json-source
+  execute-command: /bin/echo
+  parse-parameters-as-json:
+    - source: raw-request-body
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "must be one of: header, url, query, payload")
 }
 
 func TestValidateRejectsOutOfRangeHookResponseCodes(t *testing.T) {

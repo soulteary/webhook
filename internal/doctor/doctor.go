@@ -11,6 +11,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/security"
 )
 
@@ -34,7 +35,7 @@ func Run(appFlags flags.AppFlags) []Check {
 	}
 	checks = append(checks, Check{OK: true, Subject: "configuration", Detail: "valid"})
 	if appFlags.HooksDir != "" {
-		if err := checkHooksDirectory(appFlags.HooksDir); err != nil {
+		if err := checkHooksDirectory(appFlags.HooksDir, appFlags.SetUID, appFlags.SetGID); err != nil {
 			checks = append(checks, Check{Subject: "hooks directory", Detail: err.Error()})
 			return checks
 		} else {
@@ -53,6 +54,10 @@ func Run(appFlags flags.AppFlags) []Check {
 	}
 
 	for _, path := range appFlags.HooksFiles {
+		if err := checkTargetPathAccess(path, appFlags.SetUID, appFlags.SetGID, 4); err != nil {
+			checks = append(checks, Check{Subject: path, Detail: err.Error()})
+			continue
+		}
 		var hooks hook.Hooks
 		var err error
 		if appFlags.ValidateStrict {
@@ -72,13 +77,20 @@ func Run(appFlags flags.AppFlags) []Check {
 			if err == nil {
 				err = commandValidator.ValidateCommandPath(resolvedCommand)
 			}
+			if err == nil {
+				err = checkTargetPathAccess(resolvedCommand, appFlags.SetUID, appFlags.SetGID, 1)
+			}
 			if err != nil {
 				checks = append(checks, Check{Subject: subject + " command", Detail: err.Error()})
 			} else {
 				checks = append(checks, Check{OK: true, Subject: subject + " command", Detail: resolvedCommand})
 			}
 			if configuredHook.CommandWorkingDirectory != "" {
-				if err := checkWorkingDirectory(configuredHook.CommandWorkingDirectory); err != nil {
+				err := checkWorkingDirectory(configuredHook.CommandWorkingDirectory)
+				if err == nil {
+					err = checkTargetPathAccess(configuredHook.CommandWorkingDirectory, appFlags.SetUID, appFlags.SetGID, 1)
+				}
+				if err != nil {
 					checks = append(checks, Check{Subject: subject + " working directory", Detail: err.Error()})
 				} else {
 					checks = append(checks, Check{OK: true, Subject: subject + " working directory", Detail: configuredHook.CommandWorkingDirectory})
@@ -143,9 +155,30 @@ func checkWorkingDirectory(path string) error {
 	return nil
 }
 
-func checkHooksDirectory(path string) error {
+func checkHooksDirectory(path string, uid, gid int) error {
 	path = filepath.Clean(path)
-	if err := os.MkdirAll(path, 0o750); err != nil {
+	if uid != 0 || gid != 0 {
+		info, err := os.Stat(path)
+		if err == nil {
+			if !info.IsDir() {
+				return fmt.Errorf("not a directory: %s", path)
+			}
+			if err := checkTargetPathAccess(path, uid, gid, 5); err != nil {
+				return err
+			}
+		} else if os.IsNotExist(err) {
+			parent, parentErr := nearestExistingParent(path)
+			if parentErr != nil {
+				return parentErr
+			}
+			if err := checkTargetPathAccess(parent, uid, gid, 3); err != nil {
+				return fmt.Errorf("cannot create %s: %w", path, err)
+			}
+			return nil
+		} else {
+			return err
+		}
+	} else if err := os.MkdirAll(path, 0o750); err != nil {
 		return fmt.Errorf("cannot create %s: %w", path, err)
 	}
 	info, err := os.Stat(path)
@@ -162,6 +195,54 @@ func checkHooksDirectory(path string) error {
 	defer func() { _ = watcher.Close() }()
 	if err := watcher.Add(path); err != nil {
 		return fmt.Errorf("cannot watch %s: %w", path, err)
+	}
+	return nil
+}
+
+func nearestExistingParent(path string) (string, error) {
+	for {
+		parent := filepath.Dir(path)
+		if parent == path {
+			return "", fmt.Errorf("no existing parent directory for %s", path)
+		}
+		info, err := os.Stat(parent)
+		if err == nil {
+			if !info.IsDir() {
+				return "", fmt.Errorf("not a directory: %s", parent)
+			}
+			return parent, nil
+		}
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+		path = parent
+	}
+}
+
+func checkTargetPathAccess(path string, uid, gid int, required uint32) error {
+	if uid == 0 && gid == 0 {
+		return nil
+	}
+	path = filepath.Clean(path)
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if err := platform.CheckFileModeAccess(info, uid, gid, required); err != nil {
+		return fmt.Errorf("target identity cannot access %s: %w", path, err)
+	}
+	for parent := filepath.Dir(path); ; parent = filepath.Dir(parent) {
+		info, err := os.Stat(parent)
+		if err != nil {
+			return err
+		}
+		if err := platform.CheckFileModeAccess(info, uid, gid, 1); err != nil {
+			return fmt.Errorf("target identity cannot traverse %s: %w", parent, err)
+		}
+		next := filepath.Dir(parent)
+		if next == parent {
+			break
+		}
 	}
 	return nil
 }

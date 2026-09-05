@@ -18,7 +18,39 @@
         "name": { "type": "string" },
         "envname": { "type": "string" },
         "base64decode": { "type": "boolean" }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "source": { "enum": ["header", "url", "query", "payload"] } },
+            "required": ["source"]
+          },
+          "then": {
+            "required": ["name"],
+            "properties": { "name": { "type": "string", "pattern": "\\S" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "source": { "const": "request" } },
+            "required": ["source"]
+          },
+          "then": {
+            "required": ["name"],
+            "properties": { "name": { "enum": ["method", "remote-addr"] } }
+          }
+        }
+      ]
+    },
+    "jsonArgument": {
+      "allOf": [
+        { "$ref": "#/$defs/argument" },
+        {
+          "properties": {
+            "source": { "enum": ["header", "url", "query", "payload"] }
+          }
+        }
+      ]
     },
     "header": {
       "type": "object",
@@ -81,7 +113,7 @@
         "pass-environment-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
         "pass-arguments-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
         "pass-file-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
-        "parse-parameters-as-json": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
+        "parse-parameters-as-json": { "type": "array", "items": { "$ref": "#/$defs/jsonArgument" } },
         "trigger-rule": { "$ref": "#/$defs/rule" },
         "trigger-rule-mismatch-http-response-code": { "type": "integer", "minimum": 200, "maximum": 599 },
         "trigger-signature-soft-failures": { "type": "boolean" },

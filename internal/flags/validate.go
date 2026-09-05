@@ -309,7 +309,7 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 			validateArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
 			validateArguments(result, prefix+".pass-arguments-to-command", h.PassArgumentsToCommand)
 			validateArguments(result, prefix+".pass-file-to-command", h.PassFileToCommand)
-			validateArguments(result, prefix+".parse-parameters-as-json", h.JSONStringParameters)
+			validateJSONArguments(result, prefix+".parse-parameters-as-json", h.JSONStringParameters)
 		}
 
 		// 验证命令路径（如果指定了允许的命令路径）
@@ -323,12 +323,27 @@ func validateArguments(result *ValidationResult, field string, arguments []hook.
 	}
 }
 
+func validateJSONArguments(result *ValidationResult, field string, arguments []hook.Argument) {
+	for i := range arguments {
+		argumentField := fmt.Sprintf("%s[%d]", field, i)
+		validateArgument(result, argumentField, arguments[i])
+		switch arguments[i].Source {
+		case hook.SourceHeader, hook.SourceQuery, hook.SourceQueryAlias, hook.SourcePayload:
+		case "":
+		default:
+			result.AddError(argumentField+".source", "must be one of: header, url, query, payload")
+		}
+	}
+}
+
 func validateArgument(result *ValidationResult, field string, argument hook.Argument) {
 	switch argument.Source {
-	case hook.SourceHeader, hook.SourceQuery, hook.SourceQueryAlias, hook.SourcePayload,
-		hook.SourceRawRequestBody, hook.SourceString,
+	case hook.SourceHeader, hook.SourceQuery, hook.SourceQueryAlias, hook.SourcePayload:
+		if strings.TrimSpace(argument.Name) == "" {
+			result.AddError(field+".name", "must not be empty for a keyed source")
+		}
+	case hook.SourceRawRequestBody, hook.SourceString,
 		hook.SourceEntirePayload, hook.SourceEntireQuery, hook.SourceEntireHeaders:
-		return
 	case hook.SourceRequest:
 		switch strings.ToLower(argument.Name) {
 		case "method", "remote-addr":

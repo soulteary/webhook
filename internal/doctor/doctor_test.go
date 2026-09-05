@@ -23,6 +23,12 @@ func TestRunChecksCommandsAndWorkingDirectories(t *testing.T) {
 	require.False(t, HasFailures(checks), "%+v", checks)
 }
 
+func TestTargetIdentityAccessUsesFileMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "private")
+	require.NoError(t, os.WriteFile(path, []byte("private"), 0o000))
+	require.Error(t, checkTargetPathAccess(path, 12345, 12345, 4))
+}
+
 func TestRunReportsMissingCommand(t *testing.T) {
 	tempDir := t.TempDir()
 	hooksPath := filepath.Join(tempDir, "hooks.yaml")
