@@ -94,6 +94,7 @@ func TestExampleTemplateSecretsRoundTrip(t *testing.T) {
 		{name: "gitea", path: filepath.Join("providers", "gitea", "hooks.yaml"), secretEnv: "GITEA_WEBHOOK_SECRET"},
 		{name: "harbor", path: filepath.Join("providers", "harbor", "hooks.yaml"), secretEnv: "HARBOR_WEBHOOK_TOKEN", prefix: "Bearer ", usesValue: true},
 		{name: "alertmanager", path: filepath.Join("providers", "alertmanager", "hooks.yaml"), secretEnv: "ALERTMANAGER_WEBHOOK_TOKEN", prefix: "Bearer ", usesValue: true},
+		{name: "quickstart", path: filepath.Join("quickstart", "hooks", "hooks.yaml"), secretEnv: "DEMO_SECRET"},
 	}
 
 	for _, tt := range tests {
@@ -131,7 +132,6 @@ func TestExampleTemplatesRejectMissingSecrets(t *testing.T) {
 		{name: "gitea", path: filepath.Join("providers", "gitea", "hooks.yaml"), secretEnv: "GITEA_WEBHOOK_SECRET"},
 		{name: "harbor", path: filepath.Join("providers", "harbor", "hooks.yaml"), secretEnv: "HARBOR_WEBHOOK_TOKEN"},
 		{name: "alertmanager", path: filepath.Join("providers", "alertmanager", "hooks.yaml"), secretEnv: "ALERTMANAGER_WEBHOOK_TOKEN"},
-		{name: "quickstart", path: filepath.Join("quickstart", "hooks", "hooks.yaml"), secretEnv: "DEMO_SECRET"},
 	}
 
 	for _, tt := range tests {
@@ -143,6 +143,12 @@ func TestExampleTemplatesRejectMissingSecrets(t *testing.T) {
 			require.ErrorContains(t, err, "required environment variable "+tt.secretEnv+" is empty")
 		})
 	}
+}
+
+func TestQuickstartProvidesDefaultSecret(t *testing.T) {
+	compose, err := os.ReadFile(filepath.Join("..", "..", "example", "quickstart", "compose.yaml"))
+	require.NoError(t, err)
+	require.Contains(t, string(compose), "DEMO_SECRET: ${DEMO_SECRET:-local-only-demo-secret}")
 }
 
 func providerRequest(t *testing.T, app *fiber.App, hookID string, payload []byte, headers map[string]string) *http.Response {
