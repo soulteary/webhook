@@ -10,6 +10,7 @@ builds:
           -X "github.com/soulteary/webhook/internal/version.Version={{ .Tag }}"
           -X "github.com/soulteary/webhook/internal/version.Commit={{ .FullCommit }}"
           -X "github.com/soulteary/webhook/internal/version.BuildDate={{ .Date }}"
+          -X "github.com/soulteary/webhook/internal/version.Branch={{ .Branch }}"
     id: macos
     goos: [darwin]
     goarch: [amd64, arm64]
