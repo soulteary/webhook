@@ -11,6 +11,7 @@ import (
 
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
+	webhookversion "github.com/soulteary/webhook/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -320,6 +321,88 @@ func TestLaunch_MetricsEndpoint(t *testing.T) {
 		defer func() { _ = resp.Body.Close() }()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	}
+}
+
+func TestLaunch_VersionEndpoint(t *testing.T) {
+	originalVersion := webhookversion.Version
+	originalCommit := webhookversion.Commit
+	originalBuildDate := webhookversion.BuildDate
+	originalBranch := webhookversion.Branch
+	webhookversion.Version = "7.2.0"
+	webhookversion.Commit = "0123456789abcdef"
+	webhookversion.BuildDate = "2026-09-05T00:00:00Z"
+	webhookversion.Branch = "main"
+	t.Cleanup(func() {
+		webhookversion.Version = originalVersion
+		webhookversion.Commit = originalCommit
+		webhookversion.BuildDate = originalBuildDate
+		webhookversion.Branch = originalBranch
+	})
+
+	appFlags := flags.AppFlags{
+		HooksURLPrefix:  "/hooks",
+		ResponseHeaders: hook.ResponseHeaders{},
+	}
+
+	ln, err := net.Listen("tcp4", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer func() { _ = ln.Close() }()
+
+	server := Launch(appFlags, ln.Addr().String(), ln)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = server.Shutdown(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	endpoint := "http://" + ln.Addr().String() + "/version"
+	resp, err := client.Get(endpoint)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+	assert.Equal(t, "7.2.0", resp.Header.Get("X-Version"))
+	assert.Equal(t, "0123456", resp.Header.Get("X-Commit"))
+	assert.Equal(t, "2026-09-05T00:00:00Z", resp.Header.Get("X-Build-Date"))
+	assert.Equal(t, "main", resp.Header.Get("X-Branch"))
+
+	var info struct {
+		Version   string `json:"version"`
+		Commit    string `json:"commit"`
+		BuildDate string `json:"build_date"`
+		Branch    string `json:"branch"`
+		GoVersion string `json:"go_version"`
+		Platform  string `json:"platform"`
+		Compiler  string `json:"compiler"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&info))
+	assert.Equal(t, "7.2.0", info.Version)
+	assert.Equal(t, "0123456789abcdef", info.Commit)
+	assert.Equal(t, "2026-09-05T00:00:00Z", info.BuildDate)
+	assert.Equal(t, "main", info.Branch)
+	assert.NotEmpty(t, info.GoVersion)
+	assert.NotEmpty(t, info.Platform)
+	assert.NotEmpty(t, info.Compiler)
+
+	headReq, err := http.NewRequest(http.MethodHead, endpoint, nil)
+	require.NoError(t, err)
+	headResp, err := client.Do(headReq)
+	require.NoError(t, err)
+	defer func() { _ = headResp.Body.Close() }()
+	assert.Equal(t, http.StatusOK, headResp.StatusCode)
+	assert.Equal(t, "7.2.0", headResp.Header.Get("X-Version"))
+
+	postReq, err := http.NewRequest(http.MethodPost, endpoint, nil)
+	require.NoError(t, err)
+	postResp, err := client.Do(postReq)
+	require.NoError(t, err)
+	defer func() { _ = postResp.Body.Close() }()
+	assert.Equal(t, http.StatusMethodNotAllowed, postResp.StatusCode)
+	assert.Equal(t, "GET, HEAD", postResp.Header.Get("Allow"))
 }
 
 func TestLaunch_OpenAPIEndpoint(t *testing.T) {

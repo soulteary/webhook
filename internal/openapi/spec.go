@@ -32,7 +32,7 @@ func Spec(appFlags flags.AppFlags, serverURL string) ([]byte, error) {
 			"get": op("Readiness", "Kubernetes-style readiness probe.", "application/json"),
 		},
 		"/version": map[string]any{
-			"get": op("Version", "Server version and build info.", "application/json"),
+			"get": versionOp(),
 		},
 		"/metrics": map[string]any{
 			"get": op("Metrics", "Prometheus metrics.", "text/plain"),
@@ -57,6 +57,48 @@ func Spec(appFlags flags.AppFlags, serverURL string) ([]byte, error) {
 	}
 
 	return json.MarshalIndent(spec, "", "  ")
+}
+
+func versionOp() map[string]any {
+	stringProperty := func(description string) map[string]any {
+		return map[string]any{
+			"type":        "string",
+			"description": description,
+		}
+	}
+
+	return map[string]any{
+		"summary":     "Version",
+		"description": "Server version and build info.",
+		"responses": map[string]any{
+			"200": map[string]any{
+				"description": "Success",
+				"headers": map[string]any{
+					"X-Version":    map[string]any{"schema": map[string]any{"type": "string"}},
+					"X-Commit":     map[string]any{"schema": map[string]any{"type": "string"}},
+					"X-Build-Date": map[string]any{"schema": map[string]any{"type": "string"}},
+					"X-Branch":     map[string]any{"schema": map[string]any{"type": "string"}},
+				},
+				"content": map[string]any{
+					"application/json": map[string]any{
+						"schema": map[string]any{
+							"type":     "object",
+							"required": []string{"version", "go_version", "platform", "compiler"},
+							"properties": map[string]any{
+								"version":    stringProperty("Application version."),
+								"commit":     stringProperty("Git commit hash."),
+								"build_date": stringProperty("Build timestamp."),
+								"branch":     stringProperty("Git branch name."),
+								"go_version": stringProperty("Go runtime version."),
+								"platform":   stringProperty("Runtime operating system and architecture."),
+								"compiler":   stringProperty("Go compiler."),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func op(summary, description, contentType string) map[string]any {

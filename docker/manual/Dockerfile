@@ -1,4 +1,8 @@
 FROM golang:1.27.0-bookworm AS builder
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
+ARG BRANCH=
 ENV GOPROXY=https://goproxy.cn
 ENV CGO_ENABLED=0
 WORKDIR /app
@@ -7,7 +11,11 @@ COPY go.mod go.sum ./
 RUN go mod download -x
 # 再复制源代码
 COPY . .
-RUN go build -ldflags "-w -s" -o webhook .
+RUN go build -ldflags "-w -s \
+    -X github.com/soulteary/webhook/internal/version.Version=${VERSION} \
+    -X github.com/soulteary/webhook/internal/version.Commit=${COMMIT} \
+    -X github.com/soulteary/webhook/internal/version.BuildDate=${BUILD_DATE} \
+    -X github.com/soulteary/webhook/internal/version.Branch=${BRANCH}" -o webhook .
 
 FROM debian:bullseye-slim
 LABEL maintainer "soulteary <soulteary@gmail.com>"

@@ -194,7 +194,13 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		handler(w, r)
 		metrics.RecordHTTPRequest(r.Method, "200", "/version", time.Since(startTime))
 	}
-	app.All("/version", adaptor.HTTPHandlerFunc(versionHandler))
+	versionHTTPHandler := adaptor.HTTPHandlerFunc(versionHandler)
+	app.Get("/version", versionHTTPHandler)
+	app.Head("/version", versionHTTPHandler)
+	app.All("/version", func(c fiber.Ctx) error {
+		c.Set("Allow", "GET, HEAD")
+		return c.Status(http.StatusMethodNotAllowed).SendString(http.StatusText(http.StatusMethodNotAllowed))
+	})
 
 	app.All("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
