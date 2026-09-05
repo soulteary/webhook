@@ -177,9 +177,9 @@ You can also print the spec to stdout at startup with `-openapi-print` (e.g. `./
 
 ### 8. Hook Execution Endpoint
 
-**Endpoint:** `POST|GET|PUT|DELETE /hooks/{hook-id}`
+**Endpoint:** `ANY /hooks/{hook-id}` by default; configurable per hook or with `-http-methods`
 
-**Description:** Execute a configured hook. The HTTP methods allowed depend on the hook configuration and the `-http-methods` flag.
+**Description:** Execute a configured hook. A hook-level `http-methods` list takes precedence over the `-http-methods` flag. When neither is configured, all standard HTTP methods accepted by the server are allowed for backward compatibility.
 
 **URL Parameters:**
 - `hook-id` (required): The ID of the hook to execute, as defined in your hooks configuration file.
@@ -208,23 +208,14 @@ The request body can contain:
   - Custom status code: As configured in `success-http-response-code` or `trigger-rule-mismatch-http-response-code`
 
 - **Content-Type:** 
-  - `text/plain` (default)
-  - `application/json` (if error occurs)
+  - `text/plain; charset=utf-8` for default success and error responses
   - As configured in `response-headers`
+
+- **405 response header:** `Allow` lists the methods configured for the matched hook.
 
 - **Response Body:**
   - Success: Custom message from `response-message`, command output (if `include-command-output-in-response` is enabled), or default message
-  - Error: JSON error response with details
-
-**Error Response Format:**
-```json
-{
-  "error": "Error Type",
-  "message": "Error message",
-  "request_id": "request-id-here",
-  "hook_id": "hook-id-here"
-}
-```
+  - Error: Plain-text compatibility message. Request and hook identifiers remain available in logs and tracing.
 
 **Example - Successful Execution:**
 ```bash
@@ -242,15 +233,7 @@ curl "http://localhost:9000/hooks/redeploy-webhook?branch=main&commit=abc123"
 curl -X POST http://localhost:9000/hooks/non-existent-hook
 ```
 
-**Response:**
-```json
-{
-  "error": "Not Found",
-  "message": "Hook not found.",
-  "request_id": "req-123",
-  "hook_id": "non-existent-hook"
-}
-```
+**Response:** `Hook not found.`
 
 **Example - Method Not Allowed:**
 ```bash
@@ -258,15 +241,9 @@ curl -X POST http://localhost:9000/hooks/non-existent-hook
 curl -X GET http://localhost:9000/hooks/post-only-hook
 ```
 
-**Response:**
-```json
-{
-  "error": "Method Not Allowed",
-  "message": "HTTP GET method not allowed for hook \"post-only-hook\"",
-  "request_id": "req-456",
-  "hook_id": "post-only-hook"
-}
-```
+**Response:** `HTTP GET method not allowed for hook "post-only-hook"`
+
+**Response header:** `Allow: POST`
 
 ---
 
