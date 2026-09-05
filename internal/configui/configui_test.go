@@ -397,6 +397,16 @@ func TestHandlerReadOnlyResourcesRejectOtherMethods(t *testing.T) {
 	if got := rec.Header().Get("Allow"); got != "" {
 		t.Fatalf("POST /config-ui/unknown: unexpected Allow header %q", got)
 	}
+
+	req = httptest.NewRequest(http.MethodPost, "http://test/config-ui/static/missing.js", nil)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("POST /config-ui/static/missing.js: status %d, want 404", rec.Code)
+	}
+	if got := rec.Header().Get("Allow"); got != "" {
+		t.Fatalf("POST /config-ui/static/missing.js: unexpected Allow header %q", got)
+	}
 }
 
 func TestHandlerAPISaveNoWriteDir(t *testing.T) {
