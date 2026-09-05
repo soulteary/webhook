@@ -387,6 +387,16 @@ func TestHandlerReadOnlyResourcesRejectOtherMethods(t *testing.T) {
 			}
 		})
 	}
+
+	req := httptest.NewRequest(http.MethodPost, "http://test/config-ui/unknown", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("POST /config-ui/unknown: status %d, want 404", rec.Code)
+	}
+	if got := rec.Header().Get("Allow"); got != "" {
+		t.Fatalf("POST /config-ui/unknown: unexpected Allow header %q", got)
+	}
 }
 
 func TestHandlerAPISaveNoWriteDir(t *testing.T) {
