@@ -5,6 +5,7 @@ package platform
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"syscall"
 )
 
@@ -16,11 +17,13 @@ func CheckFileModeAccess(info os.FileInfo, uid, gid int, required uint32) error 
 		return fmt.Errorf("cannot inspect ownership for %s", info.Name())
 	}
 	permissions := uint32(info.Mode().Perm())
+	uidString := strconv.Itoa(uid)
+	gidString := strconv.Itoa(gid)
 	var allowed uint32
 	switch {
-	case uint32(uid) == stat.Uid:
+	case uidString == strconv.FormatUint(uint64(stat.Uid), 10):
 		allowed = permissions >> 6
-	case uint32(gid) == stat.Gid:
+	case gidString == strconv.FormatUint(uint64(stat.Gid), 10):
 		allowed = permissions >> 3
 	default:
 		allowed = permissions
