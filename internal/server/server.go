@@ -151,7 +151,7 @@ func allowedHTTPMethods(h *hook.Hook, appFlags flags.AppFlags) []string {
 // isMethodAllowed 检查 HTTP 方法是否被允许。
 func isMethodAllowed(method string, h *hook.Hook, appFlags flags.AppFlags) bool {
 	allowedMethods := allowedHTTPMethods(h, appFlags)
-	if len(allowedMethods) == 0 {
+	if allowedMethods == nil {
 		return true
 	}
 	for _, allowed := range allowedMethods {
