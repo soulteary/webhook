@@ -41,7 +41,8 @@ func Run(appFlags flags.AppFlags) []Check {
 		}
 	}
 	if appFlags.HooksDir != "" {
-		if err := checkHooksDirectory(appFlags.HooksDir, accessUID, accessGID); err != nil {
+		useCurrentIdentity := appFlags.SetUID == 0 && appFlags.SetGID == 0
+		if err := checkHooksDirectory(appFlags.HooksDir, accessUID, accessGID, useCurrentIdentity); err != nil {
 			checks = append(checks, Check{Subject: "hooks directory", Detail: err.Error()})
 			return checks
 		} else {
@@ -169,9 +170,13 @@ func checkWorkingDirectory(path string) error {
 	return nil
 }
 
-func checkHooksDirectory(path string, uid, gid int) error {
+func checkHooksDirectory(path string, uid, gid int, useCurrentIdentity bool) error {
 	path = filepath.Clean(path)
-	if uid != 0 || gid != 0 {
+	if useCurrentIdentity {
+		if err := os.MkdirAll(path, 0o750); err != nil {
+			return fmt.Errorf("cannot create %s: %w", path, err)
+		}
+	} else {
 		info, err := os.Stat(path)
 		if err == nil {
 			if !info.IsDir() {
@@ -192,8 +197,6 @@ func checkHooksDirectory(path string, uid, gid int) error {
 		} else {
 			return err
 		}
-	} else if err := os.MkdirAll(path, 0o750); err != nil {
-		return fmt.Errorf("cannot create %s: %w", path, err)
 	}
 	info, err := os.Stat(path)
 	if err != nil {
