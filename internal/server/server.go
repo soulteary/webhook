@@ -122,32 +122,44 @@ func (trw *trackingResponseWriter) Flush() {
 	}
 }
 
-// isMethodAllowed 检查 HTTP 方法是否被允许
-// 优先级：hook 的 HTTPMethods > appFlags.HttpMethods > 默认允许所有方法
-func isMethodAllowed(method string, h *hook.Hook, appFlags flags.AppFlags) bool {
+// allowedHTTPMethods 返回 hook 的有效方法契约。
+// 优先级：hook 的 HTTPMethods > appFlags.HttpMethods > 默认不限制方法。
+// nil 表示为保持向后兼容而允许任意方法。
+func allowedHTTPMethods(h *hook.Hook, appFlags flags.AppFlags) []string {
 	// 如果 hook 配置了允许的方法，优先使用 hook 的配置
 	// HTTP 方法已在配置加载时清理和验证，直接比较即可
 	if len(h.HTTPMethods) != 0 {
-		for i := range h.HTTPMethods {
-			if method == h.HTTPMethods[i] {
-				return true
-			}
-		}
-		return false
+		return h.HTTPMethods
 	}
 
 	// 如果应用配置了默认允许的方法，使用应用配置
 	if appFlags.HttpMethods != "" {
-		for _, v := range strings.Split(appFlags.HttpMethods, ",") {
-			if method == v {
-				return true
+		parts := strings.Split(appFlags.HttpMethods, ",")
+		methods := make([]string, 0, len(parts))
+		for _, method := range parts {
+			method = strings.TrimSpace(strings.ToUpper(method))
+			if method != "" {
+				methods = append(methods, method)
 			}
 		}
-		return false
+		return methods
 	}
 
-	// 默认允许所有方法
-	return true
+	return nil
+}
+
+// isMethodAllowed 检查 HTTP 方法是否被允许。
+func isMethodAllowed(method string, h *hook.Hook, appFlags flags.AppFlags) bool {
+	allowedMethods := allowedHTTPMethods(h, appFlags)
+	if len(allowedMethods) == 0 {
+		return true
+	}
+	for _, allowed := range allowedMethods {
+		if method == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 // setResponseHeaders 设置响应头
@@ -686,6 +698,7 @@ func createHookHandler(appFlags flags.AppFlags, srv *Server) func(w http.Respons
 			err := NewHTTPError(ErrorTypeClient, http.StatusMethodNotAllowed,
 				fmt.Sprintf("HTTP %s method not allowed for hook %q", r.Method, hookID), nil)
 			statusCode = err.Status
+			wrappedWriter.Header().Set("Allow", strings.Join(allowedHTTPMethods(matchedHook, appFlags), ", "))
 			HandleErrorPlain(wrappedWriter, err, requestID, hookID)
 			// 记录审计日志：HTTP 方法不允许
 			audit.LogMethodNotAllowed(requestID, hookID, r.RemoteAddr, r.UserAgent(), r.Method)
