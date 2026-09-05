@@ -1058,6 +1058,23 @@ func TestValidateRejectsInvalidRuleShapesAndTypes(t *testing.T) {
 			rule:    "\n    and: []",
 			message: "at least one rule",
 		},
+		{
+			name: "invalid regex",
+			rule: `
+    match:
+      type: regex
+      regex: "["
+      parameter: {source: header, name: X-Event}`,
+			message: "invalid regular expression",
+		},
+		{
+			name: "invalid msteams key",
+			rule: `
+    match:
+      type: msteams-signature
+      secret: not-base64!`,
+			message: "valid base64",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
@@ -1072,4 +1089,20 @@ func TestValidateRejectsInvalidRuleShapesAndTypes(t *testing.T) {
 			assert.Contains(t, fmt.Sprint(result.Errors), tt.message)
 		})
 	}
+}
+
+func TestValidateRejectsOutOfRangeHookResponseCodes(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-code
+  execute-command: /bin/echo
+  success-http-response-code: 999
+  trigger-rule-mismatch-http-response-code: 99
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "between 100 and 599")
 }

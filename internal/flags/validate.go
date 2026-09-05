@@ -1,9 +1,11 @@
 package flags
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/soulteary/cli-kit/validator"
@@ -280,6 +282,15 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].execute-command", hookFile, i),
 				"must not be empty")
 		}
+		for field, code := range map[string]int{
+			"success-http-response-code":               h.SuccessHttpResponseCode,
+			"trigger-rule-mismatch-http-response-code": h.TriggerRuleMismatchHttpResponseCode,
+		} {
+			if code != 0 && (code < 100 || code > 599) {
+				result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].%s", hookFile, i, field),
+					"must be between 100 and 599")
+			}
+		}
 
 		// 检查重复的 Hook ID
 		if _, exists := hookOrigins[h.ID]; exists {
@@ -319,11 +330,23 @@ func validateRuleContent(result *ValidationResult, field string, rule *hook.Rule
 		switch rule.Match.Type {
 		case hook.MatchHMACSHA1, hook.MatchHMACSHA256, hook.MatchHMACSHA512,
 			hook.MatchHashSHA1, hook.MatchHashSHA256, hook.MatchHashSHA512,
-			hook.ScalrSignature, hook.MSTeamsSignature:
+			hook.ScalrSignature:
 			if strings.TrimSpace(rule.Match.Secret) == "" {
 				result.AddError(field+".match.secret", "must not be empty for a signature rule")
 			}
-		case hook.MatchValue, hook.MatchRegex, hook.IPWhitelist:
+		case hook.MSTeamsSignature:
+			if strings.TrimSpace(rule.Match.Secret) == "" {
+				result.AddError(field+".match.secret", "must not be empty for a signature rule")
+			} else if _, err := base64.StdEncoding.DecodeString(rule.Match.Secret); err != nil {
+				result.AddError(field+".match.secret", "must be valid base64 for an msteams-signature rule")
+			}
+		case hook.MatchRegex:
+			if rule.Match.Regex == "" {
+				result.AddError(field+".match.regex", "must not be empty for a regex rule")
+			} else if _, err := regexp.Compile(rule.Match.Regex); err != nil {
+				result.AddError(field+".match.regex", fmt.Sprintf("invalid regular expression: %v", err))
+			}
+		case hook.MatchValue, hook.IPWhitelist:
 		default:
 			result.AddError(field+".match.type", fmt.Sprintf("unsupported match type %q", rule.Match.Type))
 		}
