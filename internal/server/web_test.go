@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/metrics"
 	webhookversion "github.com/soulteary/webhook/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -396,6 +398,7 @@ func TestLaunch_VersionEndpoint(t *testing.T) {
 	assert.Equal(t, http.StatusOK, headResp.StatusCode)
 	assert.Equal(t, "7.2.0", headResp.Header.Get("X-Version"))
 
+	requestsBefore := testutil.ToFloat64(metrics.HTTPRequests.WithLabelValues(http.MethodPost, "405", "/version"))
 	postReq, err := http.NewRequest(http.MethodPost, endpoint, nil)
 	require.NoError(t, err)
 	postResp, err := client.Do(postReq)
@@ -403,6 +406,8 @@ func TestLaunch_VersionEndpoint(t *testing.T) {
 	defer func() { _ = postResp.Body.Close() }()
 	assert.Equal(t, http.StatusMethodNotAllowed, postResp.StatusCode)
 	assert.Equal(t, "GET, HEAD", postResp.Header.Get("Allow"))
+	requestsAfter := testutil.ToFloat64(metrics.HTTPRequests.WithLabelValues(http.MethodPost, "405", "/version"))
+	assert.Equal(t, requestsBefore+1, requestsAfter)
 }
 
 func TestLaunch_OpenAPIEndpoint(t *testing.T) {
