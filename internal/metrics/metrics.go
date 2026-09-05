@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -149,12 +150,15 @@ func initMetrics() {
 
 // RecordHookExecution 记录 hook 执行
 func RecordHookExecution(hookID, status string, duration time.Duration) {
+	hookID = strings.Clone(hookID)
+	status = strings.Clone(status)
 	HookExecutions.WithLabelValues(hookID, status).Inc()
 	HookDuration.WithLabelValues(hookID).Observe(duration.Seconds())
 }
 
 // IncrementConcurrentHooks 增加并发 hook 计数
 func IncrementConcurrentHooks(hookID string) {
+	hookID = strings.Clone(hookID)
 	concurrentHooksMu.Lock()
 	defer concurrentHooksMu.Unlock()
 	concurrentHooksMap[hookID]++
@@ -163,6 +167,7 @@ func IncrementConcurrentHooks(hookID string) {
 
 // DecrementConcurrentHooks 减少并发 hook 计数
 func DecrementConcurrentHooks(hookID string) {
+	hookID = strings.Clone(hookID)
 	concurrentHooksMu.Lock()
 	defer concurrentHooksMu.Unlock()
 	if count, exists := concurrentHooksMap[hookID]; exists && count > 0 {
@@ -176,6 +181,12 @@ func DecrementConcurrentHooks(hookID string) {
 
 // RecordHTTPRequest 记录 HTTP 请求
 func RecordHTTPRequest(method, statusCode, path string, duration time.Duration) {
+	// Fiber's net/http adaptor exposes request strings backed by fasthttp's
+	// reusable request buffer. Prometheus keeps label strings after the request
+	// returns, so each value must own its storage before it is retained.
+	method = strings.Clone(method)
+	statusCode = strings.Clone(statusCode)
+	path = strings.Clone(path)
 	HTTPRequests.WithLabelValues(method, statusCode, path).Inc()
 	HTTPRequestDuration.WithLabelValues(method, path).Observe(duration.Seconds())
 }
@@ -185,6 +196,8 @@ func RecordHTTPRequest(method, statusCode, path string, duration time.Duration) 
 // algorithm: "sha256", "sha512", "sha1", "md5" 等
 func RecordSignatureVerify(result, algorithm string) {
 	if SignatureVerify != nil {
+		result = strings.Clone(result)
+		algorithm = strings.Clone(algorithm)
 		SignatureVerify.WithLabelValues(result, algorithm).Inc()
 	}
 }
@@ -193,6 +206,7 @@ func RecordSignatureVerify(result, algorithm string) {
 // scope: "ip", "user", "hook", "global" 等
 func RecordRateLimitHit(scope string) {
 	if RateLimitHits != nil {
+		scope = strings.Clone(scope)
 		RateLimitHits.WithLabelValues(scope).Inc()
 	}
 }
@@ -201,6 +215,8 @@ func RecordRateLimitHit(scope string) {
 // result: "matched", "not_matched", "error"
 func RecordTriggerRuleEvaluation(hookID, result string) {
 	if TriggerRules != nil {
+		hookID = strings.Clone(hookID)
+		result = strings.Clone(result)
 		TriggerRules.WithLabelValues(hookID, result).Inc()
 	}
 }
@@ -302,29 +318,3 @@ func (RateLimitMetrics) RecordHookHit() {
 // RecordGlobalHit 记录全局限流命中
 func (RateLimitMetrics) RecordGlobalHit() {
 	RecordRateLimitHit("global")
-}
-
-// TriggerRuleMetrics 提供触发规则指标的便捷方法
-type TriggerRuleMetrics struct{}
-
-// RecordMatched 记录规则匹配
-func (TriggerRuleMetrics) RecordMatched(hookID string) {
-	RecordTriggerRuleEvaluation(hookID, "matched")
-}
-
-// RecordNotMatched 记录规则不匹配
-func (TriggerRuleMetrics) RecordNotMatched(hookID string) {
-	RecordTriggerRuleEvaluation(hookID, "not_matched")
-}
-
-// RecordError 记录规则评估错误
-func (TriggerRuleMetrics) RecordError(hookID string) {
-	RecordTriggerRuleEvaluation(hookID, "error")
-}
-
-// 全局便捷实例
-var (
-	Signature   SignatureMetrics
-	RateLimit   RateLimitMetrics
-	TriggerRule TriggerRuleMetrics
-)
