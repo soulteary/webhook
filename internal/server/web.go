@@ -35,6 +35,20 @@ type Server struct {
 	shutdown bool
 }
 
+func registerReadOnlyRoute(app *fiber.App, path string, handler fiber.Handler) {
+	app.Get(path, handler)
+	app.Head(path, handler)
+	app.All(path, func(c fiber.Ctx) error {
+		startTime := time.Now()
+		method := strings.Clone(c.Method())
+		defer func() {
+			metrics.RecordHTTPRequest(method, "405", path, time.Since(startTime))
+		}()
+		c.Set("Allow", "GET, HEAD")
+		return c.Status(http.StatusMethodNotAllowed).SendString(http.StatusText(http.StatusMethodNotAllowed))
+	})
+}
+
 // Launch 启动 HTTP 服务器并返回 Server 实例（基于 fiber.App）
 func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	// Clean up input
@@ -160,7 +174,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		statusCode := healthkit.HTTPStatusCode(result.Status)
 		metrics.RecordHTTPRequest(r.Method, fmt.Sprintf("%d", statusCode), "/health", duration)
 	}
-	app.All("/health", adaptor.HTTPHandlerFunc(healthHandler))
+	registerReadOnlyRoute(app, "/health", adaptor.HTTPHandlerFunc(healthHandler))
 
 	livezHandler := func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
@@ -168,7 +182,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		handler(w, r)
 		metrics.RecordHTTPRequest(r.Method, "200", "/livez", time.Since(startTime))
 	}
-	app.All("/livez", adaptor.HTTPHandlerFunc(livezHandler))
+	registerReadOnlyRoute(app, "/livez", adaptor.HTTPHandlerFunc(livezHandler))
 
 	readyzHandler := func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
@@ -179,7 +193,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		statusCode := healthkit.HTTPStatusCode(result.Status)
 		metrics.RecordHTTPRequest(r.Method, fmt.Sprintf("%d", statusCode), "/readyz", duration)
 	}
-	app.All("/readyz", adaptor.HTTPHandlerFunc(readyzHandler))
+	registerReadOnlyRoute(app, "/readyz", adaptor.HTTPHandlerFunc(readyzHandler))
 
 	versionInfo := version.GetVersionInfo()
 	versionConfig := versionkit.HandlerConfig{
@@ -194,20 +208,9 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		handler(w, r)
 		metrics.RecordHTTPRequest(r.Method, "200", "/version", time.Since(startTime))
 	}
-	versionHTTPHandler := adaptor.HTTPHandlerFunc(versionHandler)
-	app.Get("/version", versionHTTPHandler)
-	app.Head("/version", versionHTTPHandler)
-	app.All("/version", func(c fiber.Ctx) error {
-		startTime := time.Now()
-		method := c.Method()
-		defer func() {
-			metrics.RecordHTTPRequest(method, "405", "/version", time.Since(startTime))
-		}()
-		c.Set("Allow", "GET, HEAD")
-		return c.Status(http.StatusMethodNotAllowed).SendString(http.StatusText(http.StatusMethodNotAllowed))
-	})
+	registerReadOnlyRoute(app, "/version", adaptor.HTTPHandlerFunc(versionHandler))
 
-	app.All("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+	registerReadOnlyRoute(app, "/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
 	rootHandler := func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
@@ -217,7 +220,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		setResponseHeaders(w, appFlags.ResponseHeaders)
 		_, _ = fmt.Fprint(w, "OK")
 	}
-	app.All("/", adaptor.HTTPHandlerFunc(rootHandler))
+	registerReadOnlyRoute(app, "/", adaptor.HTTPHandlerFunc(rootHandler))
 
 	var openapiPathLogged string
 	if appFlags.OpenAPIEnabled {
