@@ -1096,6 +1096,15 @@ func TestValidateRejectsInvalidRuleShapesAndTypes(t *testing.T) {
 			message: "unsupported source",
 		},
 		{
+			name: "unsupported request key",
+			rule: `
+    match:
+      type: value
+      value: push
+      parameter: {source: request, name: path}`,
+			message: "unsupported request key",
+		},
+		{
 			name: "empty IP whitelist",
 			rule: `
     match:

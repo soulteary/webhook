@@ -326,9 +326,16 @@ func validateArguments(result *ValidationResult, field string, arguments []hook.
 func validateArgument(result *ValidationResult, field string, argument hook.Argument) {
 	switch argument.Source {
 	case hook.SourceHeader, hook.SourceQuery, hook.SourceQueryAlias, hook.SourcePayload,
-		hook.SourceRawRequestBody, hook.SourceRequest, hook.SourceString,
+		hook.SourceRawRequestBody, hook.SourceString,
 		hook.SourceEntirePayload, hook.SourceEntireQuery, hook.SourceEntireHeaders:
 		return
+	case hook.SourceRequest:
+		switch strings.ToLower(argument.Name) {
+		case "method", "remote-addr":
+			return
+		default:
+			result.AddError(field+".name", fmt.Sprintf("unsupported request key %q", argument.Name))
+		}
 	case "":
 		result.AddError(field+".source", "must not be empty")
 	default:

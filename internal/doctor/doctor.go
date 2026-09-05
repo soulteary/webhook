@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/security"
@@ -32,6 +33,14 @@ func Run(appFlags flags.AppFlags) []Check {
 		return checks
 	}
 	checks = append(checks, Check{OK: true, Subject: "configuration", Detail: "valid"})
+	if appFlags.HooksDir != "" {
+		if err := checkHooksDirectory(appFlags.HooksDir); err != nil {
+			checks = append(checks, Check{Subject: "hooks directory", Detail: err.Error()})
+			return checks
+		} else {
+			checks = append(checks, Check{OK: true, Subject: "hooks directory", Detail: filepath.Clean(appFlags.HooksDir)})
+		}
+	}
 	commandValidator := security.NewCommandValidator()
 	for _, allowedPath := range strings.Split(appFlags.AllowedCommandPaths, ",") {
 		if allowedPath = strings.TrimSpace(allowedPath); allowedPath != "" {
@@ -130,6 +139,29 @@ func checkWorkingDirectory(path string) error {
 	}
 	if !info.IsDir() {
 		return fmt.Errorf("not a directory: %s", path)
+	}
+	return nil
+}
+
+func checkHooksDirectory(path string) error {
+	path = filepath.Clean(path)
+	if err := os.MkdirAll(path, 0o750); err != nil {
+		return fmt.Errorf("cannot create %s: %w", path, err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("not a directory: %s", path)
+	}
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("cannot create file watcher: %w", err)
+	}
+	defer func() { _ = watcher.Close() }()
+	if err := watcher.Add(path); err != nil {
+		return fmt.Errorf("cannot watch %s: %w", path, err)
 	}
 	return nil
 }

@@ -85,6 +85,31 @@ func TestRunRejectsDuplicateHookFiles(t *testing.T) {
 	require.Contains(t, checks[0].Detail, "duplicate hook file")
 }
 
+func TestRunCreatesAndChecksHooksDirectory(t *testing.T) {
+	hooksDir := filepath.Join(t.TempDir(), "new", "hooks")
+	appFlags := validFlags("")
+	appFlags.HooksFiles = nil
+	appFlags.HooksDir = hooksDir
+
+	checks := Run(appFlags)
+	require.False(t, HasFailures(checks), "%+v", checks)
+	info, err := os.Stat(hooksDir)
+	require.NoError(t, err)
+	require.True(t, info.IsDir())
+}
+
+func TestRunRejectsUnusableHooksDirectory(t *testing.T) {
+	parentFile := filepath.Join(t.TempDir(), "not-a-directory")
+	require.NoError(t, os.WriteFile(parentFile, []byte("file"), 0o600))
+	appFlags := validFlags("")
+	appFlags.HooksFiles = nil
+	appFlags.HooksDir = filepath.Join(parentFile, "hooks")
+
+	checks := Run(appFlags)
+	require.True(t, HasFailures(checks))
+	require.Contains(t, checks[len(checks)-1].Subject, "hooks directory")
+}
+
 func TestCheckCommandResolvesRelativeWorkingDirectoryAbsolutely(t *testing.T) {
 	tempDir := t.TempDir()
 	scriptsDir := filepath.Join(tempDir, "scripts")
