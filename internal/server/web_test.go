@@ -325,6 +325,49 @@ func TestLaunch_MetricsEndpoint(t *testing.T) {
 	}
 }
 
+func TestLaunch_ReadOnlyEndpointsRejectOtherMethods(t *testing.T) {
+	appFlags := flags.AppFlags{
+		HooksURLPrefix:  "/hooks",
+		ResponseHeaders: hook.ResponseHeaders{},
+	}
+
+	ln, err := net.Listen("tcp4", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer func() { _ = ln.Close() }()
+
+	server := Launch(appFlags, ln.Addr().String(), ln)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = server.Shutdown(ctx)
+	}()
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	baseURL := "http://" + ln.Addr().String()
+	require.Eventually(t, func() bool {
+		resp, requestErr := client.Get(baseURL + "/")
+		if requestErr != nil {
+			return false
+		}
+		_ = resp.Body.Close()
+		return resp.StatusCode == http.StatusOK
+	}, time.Second, 10*time.Millisecond)
+
+	for _, path := range []string{"/", "/health", "/livez", "/readyz", "/version", "/metrics"} {
+		for _, method := range []string{http.MethodPost, http.MethodOptions} {
+			t.Run(method+" "+path, func(t *testing.T) {
+				req, requestErr := http.NewRequest(method, baseURL+path, nil)
+				require.NoError(t, requestErr)
+				resp, requestErr := client.Do(req)
+				require.NoError(t, requestErr)
+				defer func() { _ = resp.Body.Close() }()
+				assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+				assert.Equal(t, "GET, HEAD", resp.Header.Get("Allow"))
+			})
+		}
+	}
+}
+
 func TestLaunch_VersionEndpoint(t *testing.T) {
 	originalVersion := webhookversion.Version
 	originalCommit := webhookversion.Commit

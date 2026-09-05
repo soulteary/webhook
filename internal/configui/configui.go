@@ -217,6 +217,7 @@ func requestToHook(req *generateRequest) *hook.Hook {
 
 func runGenerate(w http.ResponseWriter, r *http.Request, webhookBaseURL string, hooksURLPrefix string) {
 	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -280,6 +281,7 @@ type saveRequest struct {
 
 func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
 	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -451,7 +453,24 @@ func Handler(basePath string, webhookBaseURL string, writeDir string, hooksURLPr
 	// Register more specific routes before "/" so they match when basePath is "/".
 	// Static files: basePath/static/ or /static/ when basePath is "/"
 	// Strip pathPrefix+"/static/" so path becomes "css/..." or "js/..." for subFS (root is static dir).
-	mux.Handle(pathPrefix+"/static/", http.StripPrefix(pathPrefix+"/static/", staticHandler))
+	staticPrefix := pathPrefix + "/static/"
+	strippedStaticHandler := http.StripPrefix(staticPrefix, staticHandler)
+	mux.Handle(staticPrefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			assetPath := strings.TrimPrefix(r.URL.Path, staticPrefix)
+			if assetPath != "" {
+				if _, err := fs.Stat(subFS, assetPath); err != nil {
+					// Preserve the file server's 404 response for resources that do not exist.
+					strippedStaticHandler.ServeHTTP(w, r)
+					return
+				}
+			}
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		strippedStaticHandler.ServeHTTP(w, r)
+	}))
 
 	// API: basePath/api/generate or /api/generate when basePath is "/"
 	mux.HandleFunc(pathPrefix+"/api/generate", func(w http.ResponseWriter, r *http.Request) {
@@ -466,6 +485,7 @@ func Handler(basePath string, webhookBaseURL string, writeDir string, hooksURLPr
 	// API: basePath/api/capabilities — whether save-to-dir is available
 	mux.HandleFunc(pathPrefix+"/api/capabilities", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
@@ -478,6 +498,11 @@ func Handler(basePath string, webhookBaseURL string, writeDir string, hooksURLPr
 		path := r.URL.Path
 		if path != basePath && path != basePath+"/" {
 			http.NotFound(w, r)
+			return
+		}
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

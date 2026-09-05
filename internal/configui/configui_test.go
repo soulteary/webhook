@@ -330,6 +330,9 @@ func TestHandlerAPIGenerateMethodNotAllowed(t *testing.T) {
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /api/generate: status %d, want 405", w.Code)
 	}
+	if got := w.Header().Get("Allow"); got != http.MethodPost {
+		t.Errorf("GET /api/generate: Allow %q, want POST", got)
+	}
 }
 
 func TestHandlerAPICapabilitiesMethodNotAllowed(t *testing.T) {
@@ -342,6 +345,9 @@ func TestHandlerAPICapabilitiesMethodNotAllowed(t *testing.T) {
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("POST /api/capabilities: status %d, want 405", w.Code)
+	}
+	if got := w.Header().Get("Allow"); got != http.MethodGet {
+		t.Errorf("POST /api/capabilities: Allow %q, want GET", got)
 	}
 }
 
@@ -356,6 +362,50 @@ func TestHandlerAPISaveMethodNotAllowed(t *testing.T) {
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /api/save: status %d, want 405", w.Code)
+	}
+	if got := w.Header().Get("Allow"); got != http.MethodPost {
+		t.Errorf("GET /api/save: Allow %q, want POST", got)
+	}
+}
+
+func TestHandlerReadOnlyResourcesRejectOtherMethods(t *testing.T) {
+	h, err := Handler("/config-ui", "http://localhost:9000", "", "/hooks")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range []string{"/config-ui", "/config-ui/", "/config-ui/static/", "/config-ui/static/js/app.js"} {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "http://test"+path, nil)
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			if rec.Code != http.StatusMethodNotAllowed {
+				t.Fatalf("POST %s: status %d, want 405", path, rec.Code)
+			}
+			if got := rec.Header().Get("Allow"); got != "GET, HEAD" {
+				t.Fatalf("POST %s: Allow %q, want GET, HEAD", path, got)
+			}
+		})
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "http://test/config-ui/unknown", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("POST /config-ui/unknown: status %d, want 404", rec.Code)
+	}
+	if got := rec.Header().Get("Allow"); got != "" {
+		t.Fatalf("POST /config-ui/unknown: unexpected Allow header %q", got)
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "http://test/config-ui/static/missing.js", nil)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("POST /config-ui/static/missing.js: status %d, want 404", rec.Code)
+	}
+	if got := rec.Header().Get("Allow"); got != "" {
+		t.Fatalf("POST /config-ui/static/missing.js: unexpected Allow header %q", got)
 	}
 }
 
