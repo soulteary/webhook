@@ -1174,9 +1174,9 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 }
 
 func writeHttpResponseCode(w http.ResponseWriter, rid, hookId string, responseCode int) {
-	// RFC 9110 defines status codes as three digits in the 100-599 range.
-	// Unassigned codes are still valid and clients handle them by class.
-	if responseCode >= 100 && responseCode <= 599 {
+	// A configured final response must not be informational (1xx), because
+	// net/http treats those as interim responses and waits for a final status.
+	if responseCode >= 200 && responseCode <= 599 {
 		w.WriteHeader(responseCode)
 	} else {
 		logger.Warnf("[%s] %s got matched, but the configured return code %d is invalid - defaulting to 200", rid, hookId, responseCode)

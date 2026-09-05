@@ -9,6 +9,7 @@
     "argument": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["source"],
       "properties": {
         "source": {
           "type": "string",
@@ -82,10 +83,10 @@
         "pass-file-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
         "parse-parameters-as-json": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
         "trigger-rule": { "$ref": "#/$defs/rule" },
-        "trigger-rule-mismatch-http-response-code": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "trigger-rule-mismatch-http-response-code": { "type": "integer", "minimum": 200, "maximum": 599 },
         "trigger-signature-soft-failures": { "type": "boolean" },
         "incoming-payload-content-type": { "type": "string" },
-        "success-http-response-code": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "success-http-response-code": { "type": "integer", "minimum": 200, "maximum": 599 },
         "http-methods": {
           "type": "array",
           "items": {

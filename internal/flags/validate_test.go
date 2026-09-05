@@ -941,6 +941,7 @@ func TestValidateRejectsEmptySignatureSecrets(t *testing.T) {
 			}()
 
 			appFlags := createValidFlags()
+			appFlags.ValidateConfig = true
 			appFlags.HooksFiles = []string{hookFile}
 			result := Validate(appFlags)
 			require.True(t, result.HasErrors())
@@ -993,6 +994,7 @@ func TestValidateRejectsMissingExecuteCommand(t *testing.T) {
 	}()
 
 	appFlags := createValidFlags()
+	appFlags.ValidateConfig = true
 	appFlags.HooksFiles = []string{hookFile}
 	result := Validate(appFlags)
 	require.True(t, result.HasErrors())
@@ -1075,6 +1077,40 @@ func TestValidateRejectsInvalidRuleShapesAndTypes(t *testing.T) {
       secret: not-base64!`,
 			message: "valid base64",
 		},
+		{
+			name: "missing parameter source",
+			rule: `
+    match:
+      type: value
+      value: push
+      parameter: {name: X-Event}`,
+			message: "must not be empty",
+		},
+		{
+			name: "unsupported parameter source",
+			rule: `
+    match:
+      type: value
+      value: push
+      parameter: {source: cookie, name: event}`,
+			message: "unsupported source",
+		},
+		{
+			name: "empty IP whitelist",
+			rule: `
+    match:
+      type: ip-whitelist
+      ip-range: ""`,
+			message: "must not be empty",
+		},
+		{
+			name: "invalid IP whitelist",
+			rule: `
+    match:
+      type: ip-whitelist
+      ip-range: 192.168.1.0/99`,
+			message: "invalid IP range",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
@@ -1101,8 +1137,9 @@ func TestValidateRejectsOutOfRangeHookResponseCodes(t *testing.T) {
 `), 0o600))
 
 	appFlags := createValidFlags()
+	appFlags.ValidateConfig = true
 	appFlags.HooksFiles = []string{hookFile}
 	result := Validate(appFlags)
 	require.True(t, result.HasErrors())
-	assert.Contains(t, fmt.Sprint(result.Errors), "between 100 and 599")
+	assert.Contains(t, fmt.Sprint(result.Errors), "between 200 and 599")
 }

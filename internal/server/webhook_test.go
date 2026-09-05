@@ -41,6 +41,7 @@ func TestWriteHttpResponseCode(t *testing.T) {
 		{"Valid 404", 404, true},
 		{"Valid 500", 500, true},
 		{"Valid unassigned 599", 599, true},
+		{"Invalid informational code", 199, false},
 		{"Invalid code", 999, false},
 	}
 

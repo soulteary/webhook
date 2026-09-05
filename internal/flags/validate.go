@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -265,12 +266,13 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 		}
 
 		// 验证 Hook 内容
-		validateHookContent(result, hookFile, hooks, hookOrigins)
+		validateHookContent(result, hookFile, hooks, hookOrigins,
+			flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor)
 	}
 }
 
 // validateHookContent 验证 Hook 内容
-func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string) {
+func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string, validateSemantics bool) {
 	for i, h := range hooks {
 		// 验证 Hook ID
 		if h.ID == "" {
@@ -278,17 +280,19 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_ID_EMPTY))
 			continue
 		}
-		if strings.TrimSpace(h.ExecuteCommand) == "" {
+		if validateSemantics && strings.TrimSpace(h.ExecuteCommand) == "" {
 			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].execute-command", hookFile, i),
 				"must not be empty")
 		}
-		for field, code := range map[string]int{
-			"success-http-response-code":               h.SuccessHttpResponseCode,
-			"trigger-rule-mismatch-http-response-code": h.TriggerRuleMismatchHttpResponseCode,
-		} {
-			if code != 0 && (code < 100 || code > 599) {
-				result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].%s", hookFile, i, field),
-					"must be between 100 and 599")
+		if validateSemantics {
+			for field, code := range map[string]int{
+				"success-http-response-code":               h.SuccessHttpResponseCode,
+				"trigger-rule-mismatch-http-response-code": h.TriggerRuleMismatchHttpResponseCode,
+			} {
+				if code != 0 && (code < 200 || code > 599) {
+					result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].%s", hookFile, i, field),
+						"must be between 200 and 599")
+				}
 			}
 		}
 
@@ -299,11 +303,54 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 		} else {
 			hookOrigins[h.ID] = hookFile
 		}
-		validateRuleContent(result, fmt.Sprintf("hook-file[%s].hooks[%d].trigger-rule", hookFile, i), h.TriggerRule)
+		if validateSemantics {
+			prefix := fmt.Sprintf("hook-file[%s].hooks[%d]", hookFile, i)
+			validateRuleContent(result, prefix+".trigger-rule", h.TriggerRule)
+			validateArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
+			validateArguments(result, prefix+".pass-arguments-to-command", h.PassArgumentsToCommand)
+			validateArguments(result, prefix+".pass-file-to-command", h.PassFileToCommand)
+			validateArguments(result, prefix+".parse-parameters-as-json", h.JSONStringParameters)
+		}
 
 		// 验证命令路径（如果指定了允许的命令路径）
 		// 注意：这里只做基本验证，实际执行时的安全检查在 security 模块中
 	}
+}
+
+func validateArguments(result *ValidationResult, field string, arguments []hook.Argument) {
+	for i := range arguments {
+		validateArgument(result, fmt.Sprintf("%s[%d]", field, i), arguments[i])
+	}
+}
+
+func validateArgument(result *ValidationResult, field string, argument hook.Argument) {
+	switch argument.Source {
+	case hook.SourceHeader, hook.SourceQuery, hook.SourceQueryAlias, hook.SourcePayload,
+		hook.SourceRawRequestBody, hook.SourceRequest, hook.SourceString,
+		hook.SourceEntirePayload, hook.SourceEntireQuery, hook.SourceEntireHeaders:
+		return
+	case "":
+		result.AddError(field+".source", "must not be empty")
+	default:
+		result.AddError(field+".source", fmt.Sprintf("unsupported source %q", argument.Source))
+	}
+}
+
+func validateIPRange(value string) error {
+	ranges := strings.Fields(value)
+	if len(ranges) == 0 {
+		return errors.New("must not be empty")
+	}
+	for _, value := range ranges {
+		if strings.Contains(value, "/") {
+			if _, _, err := net.ParseCIDR(value); err != nil {
+				return fmt.Errorf("invalid IP range %q: %w", value, err)
+			}
+		} else if net.ParseIP(value) == nil {
+			return fmt.Errorf("invalid IP address %q", value)
+		}
+	}
+	return nil
 }
 
 func validateRuleContent(result *ValidationResult, field string, rule *hook.Rules) {
@@ -329,8 +376,12 @@ func validateRuleContent(result *ValidationResult, field string, rule *hook.Rule
 	if rule.Match != nil {
 		switch rule.Match.Type {
 		case hook.MatchHMACSHA1, hook.MatchHMACSHA256, hook.MatchHMACSHA512,
-			hook.MatchHashSHA1, hook.MatchHashSHA256, hook.MatchHashSHA512,
-			hook.ScalrSignature:
+			hook.MatchHashSHA1, hook.MatchHashSHA256, hook.MatchHashSHA512:
+			if strings.TrimSpace(rule.Match.Secret) == "" {
+				result.AddError(field+".match.secret", "must not be empty for a signature rule")
+			}
+			validateArgument(result, field+".match.parameter", rule.Match.Parameter)
+		case hook.ScalrSignature:
 			if strings.TrimSpace(rule.Match.Secret) == "" {
 				result.AddError(field+".match.secret", "must not be empty for a signature rule")
 			}
@@ -346,7 +397,13 @@ func validateRuleContent(result *ValidationResult, field string, rule *hook.Rule
 			} else if _, err := regexp.Compile(rule.Match.Regex); err != nil {
 				result.AddError(field+".match.regex", fmt.Sprintf("invalid regular expression: %v", err))
 			}
-		case hook.MatchValue, hook.IPWhitelist:
+			validateArgument(result, field+".match.parameter", rule.Match.Parameter)
+		case hook.MatchValue:
+			validateArgument(result, field+".match.parameter", rule.Match.Parameter)
+		case hook.IPWhitelist:
+			if err := validateIPRange(rule.Match.IPRange); err != nil {
+				result.AddError(field+".match.ip-range", err.Error())
+			}
 		default:
 			result.AddError(field+".match.type", fmt.Sprintf("unsupported match type %q", rule.Match.Type))
 		}
