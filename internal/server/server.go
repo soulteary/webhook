@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -552,12 +553,17 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 }
 
 // executeAsyncHook 执行异步 hook
-func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, acquireTimeout time.Duration, requestID, hookID string, startTime time.Time) {
+func executeAsyncHook(w http.ResponseWriter, _ context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, acquireTimeout time.Duration, requestID, hookID string, startTime time.Time) {
+	// Fiber/fasthttp reuses its request buffers as soon as the handler returns.
+	// Detach every value consumed by the background command before starting it.
+	asyncRequest := cloneRequestForAsync(req)
+	asyncContext := context.Background()
+
 	// 获取请求信息用于审计日志（在 goroutine 外获取，避免请求对象被回收）
 	var ip, userAgent string
-	if req.RawRequest != nil {
-		ip = req.RawRequest.RemoteAddr
-		userAgent = req.RawRequest.UserAgent()
+	if asyncRequest.RawRequest != nil {
+		ip = asyncRequest.RawRequest.RemoteAddr
+		userAgent = asyncRequest.RawRequest.UserAgent()
 	}
 
 	// 异步执行，但仍需要并发控制和超时
@@ -565,7 +571,7 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 	asyncHookWaitGroup.Add(1)
 	go func() {
 		defer asyncHookWaitGroup.Done()
-		_, err := executor.Execute(ctx, matchedHook, req, nil, acquireTimeout)
+		_, err := executor.Execute(asyncContext, matchedHook, asyncRequest, nil, acquireTimeout)
 		duration := time.Since(startTime)
 		durationMS := duration.Milliseconds()
 
@@ -602,6 +608,75 @@ func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *h
 	}
 
 	_, _ = fmt.Fprint(w, matchedHook.ResponseMessage)
+}
+
+func cloneRequestForAsync(req *hook.Request) *hook.Request {
+	if req == nil {
+		return nil
+	}
+
+	cloned := &hook.Request{
+		ID:                   strings.Clone(req.ID),
+		ContentType:          strings.Clone(req.ContentType),
+		Body:                 bytes.Clone(req.Body),
+		Headers:              cloneRequestValues(req.Headers),
+		Query:                cloneRequestValues(req.Query),
+		Payload:              cloneRequestValues(req.Payload),
+		AllowSignatureErrors: req.AllowSignatureErrors,
+	}
+	if req.RawRequest != nil {
+		cloned.RawRequest = &http.Request{
+			Method:     strings.Clone(req.RawRequest.Method),
+			RemoteAddr: strings.Clone(req.RawRequest.RemoteAddr),
+			Header:     make(http.Header, len(req.RawRequest.Header)),
+		}
+		for key, values := range req.RawRequest.Header {
+			clonedValues := make([]string, len(values))
+			for i, value := range values {
+				clonedValues[i] = strings.Clone(value)
+			}
+			cloned.RawRequest.Header[strings.Clone(key)] = clonedValues
+		}
+	}
+
+	return cloned
+}
+
+func cloneRequestValues(values map[string]interface{}) map[string]interface{} {
+	if values == nil {
+		return nil
+	}
+
+	cloned := make(map[string]interface{}, len(values))
+	for key, value := range values {
+		cloned[strings.Clone(key)] = cloneRequestValue(value)
+	}
+	return cloned
+}
+
+func cloneRequestValue(value interface{}) interface{} {
+	switch value := value.(type) {
+	case string:
+		return strings.Clone(value)
+	case []byte:
+		return bytes.Clone(value)
+	case []string:
+		cloned := make([]string, len(value))
+		for i, item := range value {
+			cloned[i] = strings.Clone(item)
+		}
+		return cloned
+	case []interface{}:
+		cloned := make([]interface{}, len(value))
+		for i, item := range value {
+			cloned[i] = cloneRequestValue(item)
+		}
+		return cloned
+	case map[string]interface{}:
+		return cloneRequestValues(value)
+	default:
+		return value
+	}
 }
 
 func resolveHookTimeouts(appFlags flags.AppFlags) (commandTimeout, acquireTimeout time.Duration) {
