@@ -318,3 +318,29 @@ func (RateLimitMetrics) RecordHookHit() {
 // RecordGlobalHit 记录全局限流命中
 func (RateLimitMetrics) RecordGlobalHit() {
 	RecordRateLimitHit("global")
+}
+
+// TriggerRuleMetrics 提供触发规则指标的便捷方法
+type TriggerRuleMetrics struct{}
+
+// RecordMatched 记录规则匹配
+func (TriggerRuleMetrics) RecordMatched(hookID string) {
+	RecordTriggerRuleEvaluation(hookID, "matched")
+}
+
+// RecordNotMatched 记录规则不匹配
+func (TriggerRuleMetrics) RecordNotMatched(hookID string) {
+	RecordTriggerRuleEvaluation(hookID, "not_matched")
+}
+
+// RecordError 记录规则评估错误
+func (TriggerRuleMetrics) RecordError(hookID string) {
+	RecordTriggerRuleEvaluation(hookID, "error")
+}
+
+// 全局便捷实例
+var (
+	Signature   SignatureMetrics
+	RateLimit   RateLimitMetrics
+	TriggerRule TriggerRuleMetrics
+)
