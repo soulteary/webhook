@@ -33,3 +33,9 @@ func CheckFileModeAccess(info os.FileInfo, uid, gid int, required uint32) error 
 	}
 	return nil
 }
+
+// EffectiveIdentity returns the process identity used for normal filesystem
+// access when no post-drop UID/GID is configured.
+func EffectiveIdentity() (uid, gid int, ok bool) {
+	return os.Geteuid(), os.Getegid(), true
+}

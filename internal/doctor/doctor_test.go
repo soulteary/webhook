@@ -29,6 +29,14 @@ func TestTargetIdentityAccessUsesFileMode(t *testing.T) {
 	require.Error(t, checkTargetPathAccess(path, 12345, 12345, 4))
 }
 
+func TestTargetIdentityRequiresWritablePassFileDirectory(t *testing.T) {
+	parent := t.TempDir()
+	require.NoError(t, os.Chmod(parent, 0o755))
+	directory := filepath.Join(parent, "read-only")
+	require.NoError(t, os.Mkdir(directory, 0o555))
+	require.Error(t, checkTargetPathAccess(directory, 12345, 12345, 3))
+}
+
 func TestRunReportsMissingCommand(t *testing.T) {
 	tempDir := t.TempDir()
 	hooksPath := filepath.Join(tempDir, "hooks.yaml")

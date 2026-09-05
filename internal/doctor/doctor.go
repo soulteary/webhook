@@ -34,8 +34,14 @@ func Run(appFlags flags.AppFlags) []Check {
 		return checks
 	}
 	checks = append(checks, Check{OK: true, Subject: "configuration", Detail: "valid"})
+	accessUID, accessGID := appFlags.SetUID, appFlags.SetGID
+	if accessUID == 0 && accessGID == 0 {
+		if uid, gid, ok := platform.EffectiveIdentity(); ok {
+			accessUID, accessGID = uid, gid
+		}
+	}
 	if appFlags.HooksDir != "" {
-		if err := checkHooksDirectory(appFlags.HooksDir, appFlags.SetUID, appFlags.SetGID); err != nil {
+		if err := checkHooksDirectory(appFlags.HooksDir, accessUID, accessGID); err != nil {
 			checks = append(checks, Check{Subject: "hooks directory", Detail: err.Error()})
 			return checks
 		} else {
@@ -54,7 +60,7 @@ func Run(appFlags flags.AppFlags) []Check {
 	}
 
 	for _, path := range appFlags.HooksFiles {
-		if err := checkTargetPathAccess(path, appFlags.SetUID, appFlags.SetGID, 4); err != nil {
+		if err := checkTargetPathAccess(path, accessUID, accessGID, 4); err != nil {
 			checks = append(checks, Check{Subject: path, Detail: err.Error()})
 			continue
 		}
@@ -78,22 +84,30 @@ func Run(appFlags flags.AppFlags) []Check {
 				err = commandValidator.ValidateCommandPath(resolvedCommand)
 			}
 			if err == nil {
-				err = checkTargetPathAccess(resolvedCommand, appFlags.SetUID, appFlags.SetGID, 1)
+				err = checkTargetPathAccess(resolvedCommand, accessUID, accessGID, 1)
 			}
 			if err != nil {
 				checks = append(checks, Check{Subject: subject + " command", Detail: err.Error()})
 			} else {
 				checks = append(checks, Check{OK: true, Subject: subject + " command", Detail: resolvedCommand})
 			}
-			if configuredHook.CommandWorkingDirectory != "" {
-				err := checkWorkingDirectory(configuredHook.CommandWorkingDirectory)
+			directoryToCheck := configuredHook.CommandWorkingDirectory
+			if directoryToCheck == "" && len(configuredHook.PassFileToCommand) != 0 {
+				directoryToCheck = os.TempDir()
+			}
+			if directoryToCheck != "" {
+				err := checkWorkingDirectory(directoryToCheck)
 				if err == nil {
-					err = checkTargetPathAccess(configuredHook.CommandWorkingDirectory, appFlags.SetUID, appFlags.SetGID, 1)
+					required := uint32(1)
+					if len(configuredHook.PassFileToCommand) != 0 {
+						required |= 2
+					}
+					err = checkTargetPathAccess(directoryToCheck, accessUID, accessGID, required)
 				}
 				if err != nil {
 					checks = append(checks, Check{Subject: subject + " working directory", Detail: err.Error()})
 				} else {
-					checks = append(checks, Check{OK: true, Subject: subject + " working directory", Detail: configuredHook.CommandWorkingDirectory})
+					checks = append(checks, Check{OK: true, Subject: subject + " working directory", Detail: directoryToCheck})
 				}
 			}
 		}
