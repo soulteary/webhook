@@ -40,10 +40,25 @@ func Run(appFlags flags.AppFlags) []Check {
 			accessUID, accessGID = uid, gid
 		}
 	}
-	for subject, path := range map[string]string{
-		"log path": appFlags.LogPath,
-		"PID path": appFlags.PidPath,
-	} {
+	destinations := []struct {
+		subject string
+		path    string
+	}{
+		{subject: "log path", path: appFlags.LogPath},
+		{subject: "PID path", path: appFlags.PidPath},
+	}
+	if usesFileAudit(appFlags) {
+		if strings.TrimSpace(appFlags.AuditFilePath) == "" {
+			checks = append(checks, Check{Subject: "audit file path", Detail: "is required for file-backed audit storage"})
+		} else {
+			destinations = append(destinations, struct {
+				subject string
+				path    string
+			}{subject: "audit file path", path: appFlags.AuditFilePath})
+		}
+	}
+	for _, destination := range destinations {
+		subject, path := destination.subject, destination.path
 		if path == "" {
 			continue
 		}
@@ -127,6 +142,20 @@ func Run(appFlags flags.AppFlags) []Check {
 		}
 	}
 	return checks
+}
+
+func usesFileAudit(appFlags flags.AppFlags) bool {
+	if !appFlags.AuditEnabled {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(appFlags.AuditStorageType)) {
+	case "file":
+		return true
+	case "redis":
+		return appFlags.RedisEnabled
+	default:
+		return false
+	}
 }
 
 // HasFailures reports whether any diagnostic failed.

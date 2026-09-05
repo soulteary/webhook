@@ -1195,6 +1195,43 @@ func TestValidateRejectsInvalidPassFilePattern(t *testing.T) {
 	assert.Contains(t, fmt.Sprint(result.Errors), "must not contain path separators")
 }
 
+func TestValidateRejectsInvalidEnvironmentName(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-env
+  execute-command: /bin/echo
+  pass-environment-to-command:
+    - source: raw-request-body
+      envname: BAD=NAME
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "must not contain '=' or NUL")
+}
+
+func TestValidateRejectsCommandArgumentCountIncludingExecutable(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: too-many-args
+  execute-command: /bin/echo
+  pass-arguments-to-command:
+    - source: raw-request-body
+    - source: raw-request-body
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateConfig = true
+	appFlags.MaxArgsCount = 2
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "including argv[0]")
+}
+
 func TestValidateRejectsOutOfRangeHookResponseCodes(t *testing.T) {
 	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
 	require.NoError(t, os.WriteFile(hookFile, []byte(`

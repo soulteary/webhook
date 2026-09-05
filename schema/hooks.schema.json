@@ -52,9 +52,30 @@
         }
       ]
     },
-    "fileArgument": {
+    "environmentArgument": {
       "allOf": [
         { "$ref": "#/$defs/argument" },
+        {
+          "properties": {
+            "envname": { "type": "string", "pattern": "^[^=\\u0000]*$" }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "not": { "required": ["envname"] } },
+              { "properties": { "envname": { "const": "" } }, "required": ["envname"] }
+            ]
+          },
+          "then": {
+            "properties": { "name": { "type": "string", "pattern": "^[^=\\u0000]*$" } }
+          }
+        }
+      ]
+    },
+    "fileArgument": {
+      "allOf": [
+        { "$ref": "#/$defs/environmentArgument" },
         {
           "properties": {
             "envname": { "type": "string", "pattern": "^[^/\\\\]*$" }
@@ -170,7 +191,7 @@
         "include-command-output-in-response": { "type": "boolean" },
         "stream-command-output": { "type": "boolean" },
         "include-command-output-in-response-on-error": { "type": "boolean" },
-        "pass-environment-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
+        "pass-environment-to-command": { "type": "array", "items": { "$ref": "#/$defs/environmentArgument" } },
         "pass-arguments-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
         "pass-file-to-command": { "type": "array", "items": { "$ref": "#/$defs/fileArgument" } },
         "parse-parameters-as-json": { "type": "array", "items": { "$ref": "#/$defs/jsonArgument" } },

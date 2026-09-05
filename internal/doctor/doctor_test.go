@@ -58,6 +58,24 @@ func TestTargetIdentityChecksWritableFileParent(t *testing.T) {
 	require.Error(t, checkWritableFilePath(filepath.Join(root, "webhook.log"), 12345, 12345))
 }
 
+func TestUsesFileAudit(t *testing.T) {
+	require.True(t, usesFileAudit(flags.AppFlags{AuditEnabled: true, AuditStorageType: "file"}))
+	require.True(t, usesFileAudit(flags.AppFlags{AuditEnabled: true, AuditStorageType: "redis", RedisEnabled: true}))
+	require.False(t, usesFileAudit(flags.AppFlags{AuditEnabled: true, AuditStorageType: "redis"}))
+	require.False(t, usesFileAudit(flags.AppFlags{AuditStorageType: "file"}))
+}
+
+func TestRunRequiresFileBackedAuditPath(t *testing.T) {
+	appFlags := validFlags("")
+	appFlags.HooksFiles = nil
+	appFlags.AuditEnabled = true
+	appFlags.AuditStorageType = "file"
+	appFlags.AuditFilePath = ""
+
+	checks := Run(appFlags)
+	require.True(t, HasFailures(checks))
+}
+
 func TestRunReportsMissingCommand(t *testing.T) {
 	tempDir := t.TempDir()
 	hooksPath := filepath.Join(tempDir, "hooks.yaml")

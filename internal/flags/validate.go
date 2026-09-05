@@ -275,12 +275,13 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 
 		// 验证 Hook 内容
 		validateHookContent(result, hookFile, hooks, hookOrigins,
-			flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor)
+			flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor,
+			flags.MaxArgsCount)
 	}
 }
 
 // validateHookContent 验证 Hook 内容
-func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string, validateSemantics bool) {
+func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string, validateSemantics bool, maxArgsCount int) {
 	for i, h := range hooks {
 		// 验证 Hook ID
 		if h.ID == "" {
@@ -313,8 +314,12 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 		}
 		if validateSemantics {
 			prefix := fmt.Sprintf("hook-file[%s].hooks[%d]", hookFile, i)
+			if maxArgsCount > 0 && 1+len(h.PassArgumentsToCommand) > maxArgsCount {
+				result.AddError(prefix+".pass-arguments-to-command",
+					fmt.Sprintf("command would have %d arguments including argv[0], exceeding max-args-count %d", 1+len(h.PassArgumentsToCommand), maxArgsCount))
+			}
 			validateRuleContent(result, prefix+".trigger-rule", h.TriggerRule)
-			validateArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
+			validateEnvironmentArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
 			validateArguments(result, prefix+".pass-arguments-to-command", h.PassArgumentsToCommand)
 			validateFileArguments(result, prefix+".pass-file-to-command", h.PassFileToCommand)
 			validateJSONArguments(result, prefix+".parse-parameters-as-json", h.JSONStringParameters)
@@ -344,6 +349,27 @@ func validateJSONArguments(result *ValidationResult, field string, arguments []h
 	}
 }
 
+func effectiveEnvironmentName(argument hook.Argument) string {
+	if argument.EnvName != "" {
+		return argument.EnvName
+	}
+	return hook.EnvNamespace + argument.Name
+}
+
+func validateEnvironmentName(result *ValidationResult, field, name string) {
+	if strings.ContainsAny(name, "=\x00") {
+		result.AddError(field, "effective environment variable name must not contain '=' or NUL")
+	}
+}
+
+func validateEnvironmentArguments(result *ValidationResult, field string, arguments []hook.Argument) {
+	for i := range arguments {
+		argumentField := fmt.Sprintf("%s[%d]", field, i)
+		validateArgument(result, argumentField, arguments[i])
+		validateEnvironmentName(result, argumentField+".envname", effectiveEnvironmentName(arguments[i]))
+	}
+}
+
 func validateFileArguments(result *ValidationResult, field string, arguments []hook.Argument) {
 	for i := range arguments {
 		argumentField := fmt.Sprintf("%s[%d]", field, i)
@@ -352,6 +378,7 @@ func validateFileArguments(result *ValidationResult, field string, arguments []h
 		if pattern == "" {
 			pattern = hook.EnvNamespace + strings.ToUpper(arguments[i].Name)
 		}
+		validateEnvironmentName(result, argumentField+".envname", pattern)
 		if strings.ContainsAny(pattern, `/\\`) {
 			result.AddError(argumentField+".envname", "effective temporary-file pattern must not contain path separators")
 		}
