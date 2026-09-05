@@ -31,6 +31,19 @@ func TestRunReportsMissingCommand(t *testing.T) {
 	require.True(t, HasFailures(checks))
 }
 
+func TestRunRejectsCommandOutsideAllowlist(t *testing.T) {
+	tempDir := t.TempDir()
+	command := filepath.Join(tempDir, "command")
+	require.NoError(t, os.WriteFile(command, []byte("#!/bin/sh\n"), 0o700))
+	hooksPath := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksPath, []byte("- id: denied\n  execute-command: "+command+"\n"), 0o600))
+
+	appFlags := validFlags(hooksPath)
+	appFlags.AllowedCommandPaths = filepath.Join(tempDir, "allowed")
+	checks := Run(appFlags)
+	require.True(t, HasFailures(checks))
+}
+
 func validFlags(hooksPath string) flags.AppFlags {
 	return flags.AppFlags{
 		Profile:                  "compat",

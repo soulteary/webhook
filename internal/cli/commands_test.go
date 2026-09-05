@@ -53,3 +53,13 @@ func TestRunInitJSON(t *testing.T) {
 	var hooks hook.Hooks
 	require.NoError(t, hooks.LoadFromFileStrict(output, true))
 }
+
+func TestRunInitForceRestoresPrivatePermissions(t *testing.T) {
+	output := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(output, []byte("old"), 0o644))
+	var stdout, stderr bytes.Buffer
+	require.Equal(t, 0, RunInit([]string{"--force", "--output", output}, &stdout, &stderr), stderr.String())
+	info, err := os.Stat(output)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+}

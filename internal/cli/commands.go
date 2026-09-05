@@ -131,6 +131,11 @@ func RunInit(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "cannot create %s: %v\n", cleanOutput, err)
 		return 1
 	}
+	if err := file.Chmod(0o600); err != nil {
+		_ = file.Close()
+		fmt.Fprintf(stderr, "cannot secure %s: %v\n", cleanOutput, err)
+		return 1
+	}
 	if _, err := io.WriteString(file, data); err != nil {
 		_ = file.Close()
 		fmt.Fprintf(stderr, "cannot write %s: %v\n", cleanOutput, err)

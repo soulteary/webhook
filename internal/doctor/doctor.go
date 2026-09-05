@@ -10,6 +10,7 @@ import (
 
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/security"
 )
 
 // Check is one diagnostic produced by Run.
@@ -31,6 +32,12 @@ func Run(appFlags flags.AppFlags) []Check {
 		return checks
 	}
 	checks = append(checks, Check{OK: true, Subject: "configuration", Detail: "valid"})
+	commandValidator := security.NewCommandValidator()
+	for _, allowedPath := range strings.Split(appFlags.AllowedCommandPaths, ",") {
+		if allowedPath = strings.TrimSpace(allowedPath); allowedPath != "" {
+			commandValidator.AllowedPaths = append(commandValidator.AllowedPaths, allowedPath)
+		}
+	}
 
 	if len(appFlags.HooksFiles) == 0 {
 		return append(checks, Check{OK: true, Subject: "hooks", Detail: "no hook files discovered"})
@@ -58,10 +65,14 @@ func Run(appFlags flags.AppFlags) []Check {
 
 		for _, configuredHook := range hooks {
 			subject := fmt.Sprintf("hook %q", configuredHook.ID)
-			if err := checkCommand(configuredHook.ExecuteCommand, configuredHook.CommandWorkingDirectory); err != nil {
+			resolvedCommand, err := checkCommand(configuredHook.ExecuteCommand, configuredHook.CommandWorkingDirectory)
+			if err == nil {
+				err = commandValidator.ValidateCommandPath(resolvedCommand)
+			}
+			if err != nil {
 				checks = append(checks, Check{Subject: subject + " command", Detail: err.Error()})
 			} else {
-				checks = append(checks, Check{OK: true, Subject: subject + " command", Detail: configuredHook.ExecuteCommand})
+				checks = append(checks, Check{OK: true, Subject: subject + " command", Detail: resolvedCommand})
 			}
 			if configuredHook.CommandWorkingDirectory != "" {
 				if err := checkWorkingDirectory(configuredHook.CommandWorkingDirectory); err != nil {
@@ -85,10 +96,10 @@ func HasFailures(checks []Check) bool {
 	return false
 }
 
-func checkCommand(command, workingDirectory string) error {
+func checkCommand(command, workingDirectory string) (string, error) {
 	command = strings.TrimSpace(command)
 	if command == "" {
-		return fmt.Errorf("execute-command is empty")
+		return "", fmt.Errorf("execute-command is empty")
 	}
 	candidate := command
 	if !filepath.IsAbs(candidate) && workingDirectory != "" {
@@ -102,20 +113,20 @@ func checkCommand(command, workingDirectory string) error {
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("not found: %s", candidate)
+		return "", fmt.Errorf("not found: %s", candidate)
 	}
 	command = resolved
 	info, err := os.Stat(command)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !info.Mode().IsRegular() {
-		return fmt.Errorf("not a regular file: %s", command)
+		return "", fmt.Errorf("not a regular file: %s", command)
 	}
 	if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
-		return fmt.Errorf("not executable: %s", command)
+		return "", fmt.Errorf("not executable: %s", command)
 	}
-	return nil
+	return command, nil
 }
 
 func checkWorkingDirectory(path string) error {

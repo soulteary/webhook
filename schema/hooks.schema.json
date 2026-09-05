@@ -64,10 +64,10 @@
     "hook": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id"],
+      "required": ["id", "execute-command"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
-        "execute-command": { "type": "string" },
+        "execute-command": { "type": "string", "minLength": 1 },
         "command-working-directory": { "type": "string" },
         "response-message": { "type": "string" },
         "response-headers": { "type": "array", "items": { "$ref": "#/$defs/header" } },
