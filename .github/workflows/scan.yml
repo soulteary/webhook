@@ -32,7 +32,9 @@ jobs:
           go-version-file: go.mod
 
       - name: Vulnerability scan
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+        # v1.1.4 predates Go 1.27 and panics while building SSA. Pin the first
+        # upstream revision tested against the Go 1.27 toolchain instead.
+        run: go run golang.org/x/vuln/cmd/govulncheck@8fcedea455d953a0f8470e1f41420bb6f2e72665 ./...
 
       - name: Security scan
         run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 -fmt sarif -out results.sarif -exclude=G204 ./...

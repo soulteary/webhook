@@ -35,7 +35,7 @@ func TestSecurityWorkflowFailsClosed(t *testing.T) {
 	assert.NotContains(t, contents, "write-all")
 	assert.NotContains(t, contents, "@master")
 	assert.NotContains(t, contents, "-no-fail")
-	assert.Contains(t, contents, "govulncheck@v1.1.4")
+	assert.Contains(t, contents, "govulncheck@8fcedea455d953a0f8470e1f41420bb6f2e72665")
 	assert.Contains(t, contents, "gosec@v2.29.0")
 }
 
