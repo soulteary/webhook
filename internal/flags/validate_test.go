@@ -1,11 +1,13 @@
 package flags
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/soulteary/cli-kit/validator"
+	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,6 +62,33 @@ func TestValidate_Profile(t *testing.T) {
 
 			require.True(t, result.HasErrors())
 			assert.Contains(t, result.Errors[0].Error(), tt.errorField)
+		})
+	}
+}
+
+func TestValidatePrivilegePair(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		uid     int
+		gid     int
+		invalid bool
+	}{
+		{name: "neither configured"},
+		{name: "both configured", uid: 1000, gid: 1000, invalid: !platform.SupportsPrivilegeDrop()},
+		{name: "only uid", uid: 1000, invalid: true},
+		{name: "only gid", gid: 1000, invalid: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			appFlags := createValidFlags()
+			appFlags.SetUID = tt.uid
+			appFlags.SetGID = tt.gid
+			result := Validate(appFlags)
+			if !tt.invalid {
+				assert.False(t, result.HasErrors())
+				return
+			}
+			require.True(t, result.HasErrors())
+			assert.Contains(t, result.Errors[0].Error(), "setuid/setgid")
 		})
 	}
 }
@@ -882,4 +911,340 @@ func TestValidateFileReadable(t *testing.T) {
 
 	// Test readable file
 	assert.NoError(t, validator.ValidateFileReadable(filePath))
+}
+
+func TestValidateRejectsEmptySignatureSecrets(t *testing.T) {
+	for _, matchType := range []string{"payload-hmac-sha256", "scalr-signature", "msteams-signature"} {
+		t.Run(matchType, func(t *testing.T) {
+			tempDir := t.TempDir()
+			hookFile := filepath.Join(tempDir, "hooks.yaml")
+			require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: signed
+  execute-command: /bin/echo
+  trigger-rule:
+    match:
+      type: `+matchType+`
+      secret: ""
+      parameter:
+        source: header
+        name: X-Signature
+`), 0o600))
+
+			rules.LockHooksFiles()
+			oldHooksFiles := rules.HooksFiles
+			rules.HooksFiles = []string{hookFile}
+			rules.UnlockHooksFiles()
+			defer func() {
+				rules.LockHooksFiles()
+				rules.HooksFiles = oldHooksFiles
+				rules.UnlockHooksFiles()
+			}()
+
+			appFlags := createValidFlags()
+			appFlags.ValidateConfig = true
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "must not be empty for a signature rule")
+		})
+	}
+}
+
+func TestValidateRejectsDuplicateHookIDsAcrossFiles(t *testing.T) {
+	tempDir := t.TempDir()
+	firstFile := filepath.Join(tempDir, "first.yaml")
+	secondFile := filepath.Join(tempDir, "second.yaml")
+	for _, hookFile := range []string{firstFile, secondFile} {
+		require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: duplicate
+  execute-command: /bin/echo
+`), 0o600))
+	}
+
+	rules.LockHooksFiles()
+	oldHooksFiles := rules.HooksFiles
+	rules.HooksFiles = []string{firstFile, secondFile}
+	rules.UnlockHooksFiles()
+	defer func() {
+		rules.LockHooksFiles()
+		rules.HooksFiles = oldHooksFiles
+		rules.UnlockHooksFiles()
+	}()
+
+	appFlags := createValidFlags()
+	appFlags.HooksFiles = []string{firstFile, secondFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "duplicate")
+}
+
+func TestValidateRejectsMissingExecuteCommand(t *testing.T) {
+	tempDir := t.TempDir()
+	hookFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte("- id: missing-command\n"), 0o600))
+
+	rules.LockHooksFiles()
+	oldHooksFiles := rules.HooksFiles
+	rules.HooksFiles = []string{hookFile}
+	rules.UnlockHooksFiles()
+	defer func() {
+		rules.LockHooksFiles()
+		rules.HooksFiles = oldHooksFiles
+		rules.UnlockHooksFiles()
+	}()
+
+	appFlags := createValidFlags()
+	appFlags.ValidateConfig = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "execute-command")
+}
+
+func TestValidateRejectsDuplicateHookFiles(t *testing.T) {
+	tempDir := t.TempDir()
+	hookFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte("- id: ok\n  execute-command: /bin/echo\n"), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.HooksFiles = []string{hookFile, filepath.Join(tempDir, ".", "hooks.yaml")}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, result.Errors[0].Error(), "duplicate hook file")
+}
+
+func TestValidateStrictRejectsInvalidHookHTTPMethod(t *testing.T) {
+	tempDir := t.TempDir()
+	hookFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-method
+  execute-command: /bin/echo
+  http-methods: [PSOT]
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, result.Errors[0].Error(), `invalid HTTP method "PSOT"`)
+}
+
+func TestValidateStrictRejectsInvalidGlobalHTTPMethod(t *testing.T) {
+	tempDir := t.TempDir()
+	hookFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte("- id: ok\n  execute-command: /bin/echo\n"), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HttpMethods = "POST,PSOT"
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), `unsupported HTTP method "PSOT"`)
+}
+
+func TestValidateRejectsInvalidRuleShapesAndTypes(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		rule    string
+		message string
+	}{
+		{
+			name: "multiple operators",
+			rule: `
+    and: []
+    match:
+      type: value
+      value: push
+      parameter: {source: header, name: X-Event}`,
+			message: "exactly one",
+		},
+		{
+			name: "unsupported match type",
+			rule: `
+    match:
+      type: payload-hmac-sha265
+      secret: test
+      parameter: {source: header, name: X-Signature}`,
+			message: "unsupported match type",
+		},
+		{
+			name:    "empty and",
+			rule:    "\n    and: []",
+			message: "at least one rule",
+		},
+		{
+			name: "invalid regex",
+			rule: `
+    match:
+      type: regex
+      regex: "["
+      parameter: {source: header, name: X-Event}`,
+			message: "invalid regular expression",
+		},
+		{
+			name: "invalid msteams key",
+			rule: `
+    match:
+      type: msteams-signature
+      secret: not-base64!`,
+			message: "valid base64",
+		},
+		{
+			name: "missing parameter source",
+			rule: `
+    match:
+      type: value
+      value: push
+      parameter: {name: X-Event}`,
+			message: "must not be empty",
+		},
+		{
+			name: "unsupported parameter source",
+			rule: `
+    match:
+      type: value
+      value: push
+      parameter: {source: cookie, name: event}`,
+			message: "unsupported source",
+		},
+		{
+			name: "unsupported request key",
+			rule: `
+    match:
+      type: value
+      value: push
+      parameter: {source: request, name: path}`,
+			message: "unsupported request key",
+		},
+		{
+			name: "missing keyed source name",
+			rule: `
+    not:
+      match:
+        type: value
+        value: blocked
+        parameter: {source: header}`,
+			message: "must not be empty for a keyed source",
+		},
+		{
+			name: "empty IP whitelist",
+			rule: `
+    match:
+      type: ip-whitelist
+      ip-range: ""`,
+			message: "must not be empty",
+		},
+		{
+			name: "invalid IP whitelist",
+			rule: `
+    match:
+      type: ip-whitelist
+      ip-range: 192.168.1.0/99`,
+			message: "invalid IP range",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+			content := "- id: invalid-rule\n  execute-command: /bin/echo\n  trigger-rule:" + tt.rule + "\n"
+			require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+			appFlags := createValidFlags()
+			appFlags.ValidateStrict = true
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), tt.message)
+		})
+	}
+}
+
+func TestValidateRejectsInvalidJSONParameterSource(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-json-source
+  execute-command: /bin/echo
+  parse-parameters-as-json:
+    - source: raw-request-body
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "must be one of: header, url, query, payload")
+}
+
+func TestValidateRejectsInvalidPassFilePattern(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-file-pattern
+  execute-command: /bin/echo
+  pass-file-to-command:
+    - source: raw-request-body
+      envname: nested/file
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "must not contain path separators")
+}
+
+func TestValidateRejectsInvalidEnvironmentName(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-env
+  execute-command: /bin/echo
+  pass-environment-to-command:
+    - source: raw-request-body
+      envname: BAD=NAME
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "must not contain '=' or NUL")
+}
+
+func TestValidateRejectsCommandArgumentCountIncludingExecutable(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: too-many-args
+  execute-command: /bin/echo
+  pass-arguments-to-command:
+    - source: raw-request-body
+    - source: raw-request-body
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateConfig = true
+	appFlags.MaxArgsCount = 2
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "including argv[0]")
+}
+
+func TestValidateRejectsOutOfRangeHookResponseCodes(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: invalid-code
+  execute-command: /bin/echo
+  success-http-response-code: 999
+  trigger-rule-mismatch-http-response-code: 99
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateConfig = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "between 200 and 599")
 }

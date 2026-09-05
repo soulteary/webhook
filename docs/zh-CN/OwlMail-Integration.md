@@ -20,7 +20,7 @@ SMTP 客户端 -> OwlMail v0.9.0 -> 带签名的 HTTP POST -> WebHook -> 命令/
 
 ## 1. 配置 WebHook
 
-可以从 [`hooks.json.tmpl`](../../example/owlmail/hooks.json.tmpl) 开始。它定义了
+可以从 [`hooks.json.tmpl`](https://github.com/soulteary/webhook/blob/main/example/owlmail/hooks.json.tmpl) 开始。它定义了
 `POST /hooks/owlmail`，要求 `application/json`，验证 `X-OwlMail-Signature`，并将
 `event`、`emailId`、`title`、`message`、`from`、`to`、`receivedAt` 映射到固定的
 `OWLMAIL_*` 环境变量；同时把 `X-OwlMail-Delivery-ID` 请求头映射为

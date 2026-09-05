@@ -61,6 +61,24 @@ func NewCommandValidator() *CommandValidator {
 	}
 }
 
+// ResolveCommandCandidate builds the path used for executable lookup. When a
+// working directory is configured, returning an absolute path prevents the
+// command from being resolved a second time relative to cmd.Dir at execution.
+func ResolveCommandCandidate(command, workingDirectory string) (string, error) {
+	command = strings.TrimSpace(command)
+	if command == "" {
+		return "", fmt.Errorf("execute-command is empty")
+	}
+	if filepath.IsAbs(command) || workingDirectory == "" {
+		return command, nil
+	}
+	path, err := filepath.Abs(filepath.Join(workingDirectory, command))
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve command path: %w", err)
+	}
+	return path, nil
+}
+
 // ValidateCommandPath 验证命令路径是否在白名单中
 func (cv *CommandValidator) ValidateCommandPath(cmdPath string) error {
 	if len(cv.AllowedPaths) == 0 {

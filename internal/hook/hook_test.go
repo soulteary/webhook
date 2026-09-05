@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -524,6 +525,38 @@ func TestHooksLoadFromFile(t *testing.T) {
 		if (err == nil) != tt.ok {
 			t.Errorf("%v", err)
 		}
+	}
+}
+
+func TestHooksLoadFromFileStrictRejectsUnknownFields(t *testing.T) {
+	tempDir := t.TempDir()
+	path := filepath.Join(tempDir, "hooks.yaml")
+	if err := os.WriteFile(path, []byte("- id: strict\n  execute-command: /bin/echo\n  execute-comand: typo\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var strictHooks Hooks
+	err := strictHooks.LoadFromFileStrict(path, false)
+	if err == nil || !strings.Contains(err.Error(), "unknown field") {
+		t.Fatalf("expected unknown field error, got %v", err)
+	}
+
+	var compatibleHooks Hooks
+	if err := compatibleHooks.LoadFromFile(path, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUpstreamExampleCompatibility(t *testing.T) {
+	var jsonHooks, yamlHooks Hooks
+	if err := jsonHooks.LoadFromFileStrict("testdata/upstream/hooks.json", false); err != nil {
+		t.Fatalf("upstream JSON example is incompatible: %v", err)
+	}
+	if err := yamlHooks.LoadFromFileStrict("testdata/upstream/hooks.yaml", false); err != nil {
+		t.Fatalf("upstream YAML example is incompatible: %v", err)
+	}
+	if !reflect.DeepEqual(jsonHooks, yamlHooks) {
+		t.Fatalf("upstream JSON and YAML examples decoded differently:\nJSON: %#v\nYAML: %#v", jsonHooks, yamlHooks)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"net"
 	"net/textproto"
@@ -782,6 +783,19 @@ type Hooks []Hook
 // can be either JSON or YAML.  The asTemplate parameter causes the file
 // contents to be parsed as a Go text/template prior to unmarshalling.
 func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
+	return h.LoadFromFileWithOptions(path, asTemplate, false)
+}
+
+// LoadFromFileStrict loads a hook file and rejects fields that are not part of
+// the hook configuration contract. This catches misspelled keys before the
+// server starts while LoadFromFile remains backward compatible.
+func (h *Hooks) LoadFromFileStrict(path string, asTemplate bool) error {
+	return h.LoadFromFileWithOptions(path, asTemplate, true)
+}
+
+// LoadFromFileWithOptions loads hooks from JSON or YAML. When strict is true,
+// unknown object fields are rejected at every nesting level.
+func (h *Hooks) LoadFromFileWithOptions(path string, asTemplate, strict bool) error {
 	if path == "" {
 		return nil
 	}
@@ -794,7 +808,7 @@ func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
 	}
 
 	if asTemplate {
-		funcMap := template.FuncMap{"getenv": getenv}
+		funcMap := template.FuncMap{"getenv": getenv, "getenvRequired": getenvRequired}
 
 		tmpl, err := template.New("hooks").Funcs(funcMap).Parse(string(file))
 		if err != nil {
@@ -811,9 +825,40 @@ func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
 		file = buf.Bytes()
 	}
 
-	err := yaml.Unmarshal(file, h)
+	var err error
+	if strict {
+		jsonFile, conversionErr := yaml.YAMLToJSON(file)
+		if conversionErr != nil {
+			return conversionErr
+		}
+		decoder := json.NewDecoder(bytes.NewReader(jsonFile))
+		decoder.DisallowUnknownFields()
+		err = decoder.Decode(h)
+		if err == nil {
+			var extra any
+			if extraErr := decoder.Decode(&extra); extraErr != io.EOF {
+				if extraErr == nil {
+					err = errors.New("hook file contains multiple JSON values")
+				} else {
+					err = extraErr
+				}
+			}
+		}
+	} else {
+		err = yaml.Unmarshal(file, h)
+	}
 	if err != nil {
 		return err
+	}
+
+	if strict {
+		for i := range *h {
+			for _, method := range (*h)[i].HTTPMethods {
+				if _, valid := normalizeHTTPMethod(method); !valid {
+					return fmt.Errorf("hook %q has invalid HTTP method %q", (*h)[i].ID, method)
+				}
+			}
+		}
 	}
 
 	// 清理和验证所有 hook 的 HTTP 方法
@@ -824,24 +869,35 @@ func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
 	return nil
 }
 
+var validHTTPMethods = map[string]bool{
+	"GET":     true,
+	"POST":    true,
+	"PUT":     true,
+	"PATCH":   true,
+	"DELETE":  true,
+	"HEAD":    true,
+	"OPTIONS": true,
+	"CONNECT": true,
+	"TRACE":   true,
+}
+
+func normalizeHTTPMethod(method string) (string, bool) {
+	cleaned := strings.ToUpper(strings.TrimSpace(method))
+	return cleaned, cleaned != "" && validHTTPMethods[cleaned]
+}
+
+// IsValidHTTPMethod reports whether method is one of the HTTP methods accepted
+// by hook and global method allowlists.
+func IsValidHTTPMethod(method string) bool {
+	_, valid := normalizeHTTPMethod(method)
+	return valid
+}
+
 // SanitizeHTTPMethods 清理和验证 HTTP 方法，移除空白字符并转换为大写
 // 同时移除重复的方法和无效的方法
 func (h *Hook) SanitizeHTTPMethods() {
 	if len(h.HTTPMethods) == 0 {
 		return
-	}
-
-	// 有效的 HTTP 方法列表
-	validMethods := map[string]bool{
-		"GET":     true,
-		"POST":    true,
-		"PUT":     true,
-		"PATCH":   true,
-		"DELETE":  true,
-		"HEAD":    true,
-		"OPTIONS": true,
-		"CONNECT": true,
-		"TRACE":   true,
 	}
 
 	// 使用 map 去重并清理
@@ -850,13 +906,8 @@ func (h *Hook) SanitizeHTTPMethods() {
 
 	for _, method := range h.HTTPMethods {
 		// 清理：去除空白字符并转换为大写
-		cleaned := strings.ToUpper(strings.TrimSpace(method))
-		if cleaned == "" {
-			continue
-		}
-
-		// 验证方法是否有效
-		if !validMethods[cleaned] {
+		cleaned, valid := normalizeHTTPMethod(method)
+		if !valid {
 			logger.Warnf("invalid HTTP method '%s' for hook %s, ignoring", method, h.ID)
 			continue
 		}
@@ -1083,4 +1134,12 @@ func compare(a, b string) bool {
 // getenv provides a template function to retrieve OS environment variables.
 func getenv(s string) string {
 	return os.Getenv(s)
+}
+
+func getenvRequired(s string) (string, error) {
+	value := os.Getenv(s)
+	if strings.TrimSpace(value) == "" {
+		return "", fmt.Errorf("required environment variable %s is empty", s)
+	}
+	return value, nil
 }

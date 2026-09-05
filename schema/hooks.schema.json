@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/soulteary/webhook/main/schema/hooks.schema.json",
+  "title": "webhook hook configuration",
+  "description": "Hook configuration compatible with adnanh/webhook.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/hook" },
+  "$defs": {
+    "argument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["header", "url", "query", "payload", "raw-request-body", "request", "string", "entire-payload", "entire-query", "entire-headers"]
+        },
+        "name": { "type": "string" },
+        "envname": { "type": "string" },
+        "base64decode": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "source": { "enum": ["header", "url", "query", "payload"] } },
+            "required": ["source"]
+          },
+          "then": {
+            "required": ["name"],
+            "properties": { "name": { "type": "string", "pattern": "\\S" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "source": { "const": "request" } },
+            "required": ["source"]
+          },
+          "then": {
+            "required": ["name"],
+            "properties": { "name": { "enum": ["method", "remote-addr"] } }
+          }
+        }
+      ]
+    },
+    "jsonArgument": {
+      "allOf": [
+        { "$ref": "#/$defs/argument" },
+        {
+          "properties": {
+            "source": { "enum": ["header", "url", "query", "payload"] }
+          }
+        }
+      ]
+    },
+    "environmentArgument": {
+      "allOf": [
+        { "$ref": "#/$defs/argument" },
+        {
+          "properties": {
+            "envname": { "type": "string", "pattern": "^[^=\\u0000]*$" }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "not": { "required": ["envname"] } },
+              { "properties": { "envname": { "const": "" } }, "required": ["envname"] }
+            ]
+          },
+          "then": {
+            "properties": { "name": { "type": "string", "pattern": "^[^=\\u0000]*$" } }
+          }
+        }
+      ]
+    },
+    "fileArgument": {
+      "allOf": [
+        { "$ref": "#/$defs/environmentArgument" },
+        {
+          "properties": {
+            "envname": { "type": "string", "pattern": "^[^/\\\\]*$" }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "not": { "required": ["envname"] } },
+              { "properties": { "envname": { "const": "" } }, "required": ["envname"] }
+            ]
+          },
+          "then": {
+            "properties": { "name": { "type": "string", "pattern": "^[^/\\\\]*$" } }
+          }
+        }
+      ]
+    },
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value"],
+      "properties": {
+        "name": { "type": "string" },
+        "value": { "type": "string" }
+      }
+    },
+    "match": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["value", "regex", "payload-hmac-sha1", "payload-hmac-sha256", "payload-hmac-sha512", "payload-hash-sha1", "payload-hash-sha256", "payload-hash-sha512", "ip-whitelist", "scalr-signature", "msteams-signature"]
+        },
+        "regex": { "type": "string" },
+        "secret": { "type": "string" },
+        "value": { "type": "string" },
+        "parameter": { "$ref": "#/$defs/argument" },
+        "ip-range": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "enum": ["value", "regex", "payload-hmac-sha1", "payload-hmac-sha256", "payload-hmac-sha512", "payload-hash-sha1", "payload-hash-sha256", "payload-hash-sha512"] } },
+            "required": ["type"]
+          },
+          "then": { "required": ["parameter"] }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "regex" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["regex"],
+            "properties": { "regex": { "type": "string", "minLength": 1 } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "enum": ["payload-hmac-sha1", "payload-hmac-sha256", "payload-hmac-sha512", "payload-hash-sha1", "payload-hash-sha256", "payload-hash-sha512", "scalr-signature", "msteams-signature"] } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["secret"],
+            "properties": { "secret": { "type": "string", "pattern": "\\S" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "ip-whitelist" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["ip-range"],
+            "properties": { "ip-range": { "type": "string", "pattern": "\\S" } }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "and": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/rule" }
+        },
+        "or": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/rule" }
+        },
+        "not": { "$ref": "#/$defs/rule" },
+        "match": { "$ref": "#/$defs/match" }
+      }
+    },
+    "hook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "execute-command"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "execute-command": { "type": "string", "minLength": 1 },
+        "command-working-directory": { "type": "string" },
+        "response-message": { "type": "string" },
+        "response-headers": { "type": "array", "items": { "$ref": "#/$defs/header" } },
+        "include-command-output-in-response": { "type": "boolean" },
+        "stream-command-output": { "type": "boolean" },
+        "include-command-output-in-response-on-error": { "type": "boolean" },
+        "pass-environment-to-command": { "type": "array", "items": { "$ref": "#/$defs/environmentArgument" } },
+        "pass-arguments-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
+        "pass-file-to-command": { "type": "array", "items": { "$ref": "#/$defs/fileArgument" } },
+        "parse-parameters-as-json": { "type": "array", "items": { "$ref": "#/$defs/jsonArgument" } },
+        "trigger-rule": { "$ref": "#/$defs/rule" },
+        "trigger-rule-mismatch-http-response-code": { "type": "integer", "minimum": 200, "maximum": 599 },
+        "trigger-signature-soft-failures": { "type": "boolean" },
+        "incoming-payload-content-type": { "type": "string" },
+        "success-http-response-code": { "type": "integer", "minimum": 200, "maximum": 599 },
+        "http-methods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[\\t ]*(?:[Gg][Ee][Tt]|[Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee]|[Hh][Ee][Aa][Dd]|[Oo][Pp][Tt][Ii][Oo][Nn][Ss]|[Cc][Oo][Nn][Nn][Ee][Cc][Tt]|[Tt][Rr][Aa][Cc][Ee])[\\t ]*$"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

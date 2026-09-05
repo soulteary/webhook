@@ -494,14 +494,13 @@ If you discover a security vulnerability, please report it responsibly:
    - Suggested fix (if you have one)
 4. Allow time for the issue to be addressed before public disclosure
 
-For more information, see the [Security Policy](../../SECURITY.md).
+For more information, see the [Security Policy](https://github.com/soulteary/webhook/blob/main/SECURITY.md).
 
 ---
 
 ## Additional Resources
 
-- [Security Policy](../../SECURITY.md)
+- [Security Policy](https://github.com/soulteary/webhook/blob/main/SECURITY.md)
 - [Hook Rules](Hook-Rules.md) - Authentication and authorization rules
 - [Configuration Parameters](Webhook-Parameters.md) - Security-related parameters
 - [API Reference](API-Reference.md) - API security considerations
-
