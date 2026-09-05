@@ -212,6 +212,7 @@ func TestCreateHookHandler_MethodNotAllowed(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+	assert.Equal(t, "POST", resp.Header.Get("Allow"))
 }
 
 func TestCreateHookHandler_AppFlagsHttpMethods(t *testing.T) {
@@ -244,6 +245,7 @@ func TestCreateHookHandler_AppFlagsHttpMethods(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = resp2.Body.Close() }()
 	assert.Equal(t, http.StatusMethodNotAllowed, resp2.StatusCode)
+	assert.Equal(t, "POST, PUT", resp2.Header.Get("Allow"))
 }
 
 func TestHandleHook_StreamOutput(t *testing.T) {
