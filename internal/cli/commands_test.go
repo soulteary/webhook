@@ -54,6 +54,26 @@ func TestRunInitJSON(t *testing.T) {
 	require.NoError(t, hooks.LoadFromFileStrict(output, true))
 }
 
+func TestRunInitEscapesTemplateSecret(t *testing.T) {
+	secret := "quote=\" newline=\n slash=\\"
+	t.Setenv("WEBHOOK_SECRET", secret)
+
+	for _, format := range []string{"yaml", "json"} {
+		t.Run(format, func(t *testing.T) {
+			output := filepath.Join(t.TempDir(), "hooks."+format)
+			var stdout, stderr bytes.Buffer
+			require.Equal(t, 0, RunInit([]string{"--format", format, "--output", output}, &stdout, &stderr), stderr.String())
+
+			var hooks hook.Hooks
+			require.NoError(t, hooks.LoadFromFileStrict(output, true))
+			require.Len(t, hooks, 1)
+			require.NotNil(t, hooks[0].TriggerRule)
+			require.NotNil(t, hooks[0].TriggerRule.Match)
+			require.Equal(t, secret, hooks[0].TriggerRule.Match.Secret)
+		})
+	}
+}
+
 func TestRunInitForceRestoresPrivatePermissions(t *testing.T) {
 	output := filepath.Join(t.TempDir(), "hooks.yaml")
 	require.NoError(t, os.WriteFile(output, []byte("old"), 0o644))

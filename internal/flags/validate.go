@@ -227,6 +227,9 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 		}
 	}
 
+	// Hook IDs are global because the HTTP route namespace is shared across files.
+	hookOrigins := make(map[string]string)
+
 	// 验证每个 Hook 文件
 	for _, hookFile := range uniqueFiles {
 		if hookFile == "" {
@@ -251,14 +254,12 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 		}
 
 		// 验证 Hook 内容
-		validateHookContent(result, hookFile, hooks)
+		validateHookContent(result, hookFile, hooks, hookOrigins)
 	}
 }
 
 // validateHookContent 验证 Hook 内容
-func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks) {
-	hookIDs := make(map[string]bool)
-
+func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string) {
 	for i, h := range hooks {
 		// 验证 Hook ID
 		if h.ID == "" {
@@ -268,11 +269,12 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 		}
 
 		// 检查重复的 Hook ID
-		if hookIDs[h.ID] {
+		if _, exists := hookOrigins[h.ID]; exists {
 			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].id", hookFile, i),
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_ID_DUPLICATE, h.ID))
+		} else {
+			hookOrigins[h.ID] = hookFile
 		}
-		hookIDs[h.ID] = true
 		validateRuleContent(result, fmt.Sprintf("hook-file[%s].hooks[%d].trigger-rule", hookFile, i), h.TriggerRule)
 
 		// 验证命令路径（如果指定了允许的命令路径）
@@ -287,9 +289,10 @@ func validateRuleContent(result *ValidationResult, field string, rule *hook.Rule
 	if rule.Match != nil {
 		switch rule.Match.Type {
 		case hook.MatchHMACSHA1, hook.MatchHMACSHA256, hook.MatchHMACSHA512,
-			hook.MatchHashSHA1, hook.MatchHashSHA256, hook.MatchHashSHA512:
+			hook.MatchHashSHA1, hook.MatchHashSHA256, hook.MatchHashSHA512,
+			hook.ScalrSignature, hook.MSTeamsSignature:
 			if strings.TrimSpace(rule.Match.Secret) == "" {
-				result.AddError(field+".match.secret", "must not be empty for an HMAC rule")
+				result.AddError(field+".match.secret", "must not be empty for a signature rule")
 			}
 		}
 	}

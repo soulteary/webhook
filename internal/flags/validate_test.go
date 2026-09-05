@@ -884,24 +884,56 @@ func TestValidateFileReadable(t *testing.T) {
 	assert.NoError(t, validator.ValidateFileReadable(filePath))
 }
 
-func TestValidateRejectsEmptyHMACSecret(t *testing.T) {
-	tempDir := t.TempDir()
-	hookFile := filepath.Join(tempDir, "hooks.yaml")
-	require.NoError(t, os.WriteFile(hookFile, []byte(`
+func TestValidateRejectsEmptySignatureSecrets(t *testing.T) {
+	for _, matchType := range []string{"payload-hmac-sha256", "scalr-signature", "msteams-signature"} {
+		t.Run(matchType, func(t *testing.T) {
+			tempDir := t.TempDir()
+			hookFile := filepath.Join(tempDir, "hooks.yaml")
+			require.NoError(t, os.WriteFile(hookFile, []byte(`
 - id: signed
   execute-command: /bin/echo
   trigger-rule:
     match:
-      type: payload-hmac-sha256
+      type: `+matchType+`
       secret: ""
       parameter:
         source: header
         name: X-Signature
 `), 0o600))
 
+			rules.LockHooksFiles()
+			oldHooksFiles := rules.HooksFiles
+			rules.HooksFiles = []string{hookFile}
+			rules.UnlockHooksFiles()
+			defer func() {
+				rules.LockHooksFiles()
+				rules.HooksFiles = oldHooksFiles
+				rules.UnlockHooksFiles()
+			}()
+
+			appFlags := createValidFlags()
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "must not be empty for a signature rule")
+		})
+	}
+}
+
+func TestValidateRejectsDuplicateHookIDsAcrossFiles(t *testing.T) {
+	tempDir := t.TempDir()
+	firstFile := filepath.Join(tempDir, "first.yaml")
+	secondFile := filepath.Join(tempDir, "second.yaml")
+	for _, hookFile := range []string{firstFile, secondFile} {
+		require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: duplicate
+  execute-command: /bin/echo
+`), 0o600))
+	}
+
 	rules.LockHooksFiles()
 	oldHooksFiles := rules.HooksFiles
-	rules.HooksFiles = []string{hookFile}
+	rules.HooksFiles = []string{firstFile, secondFile}
 	rules.UnlockHooksFiles()
 	defer func() {
 		rules.LockHooksFiles()
@@ -910,8 +942,8 @@ func TestValidateRejectsEmptyHMACSecret(t *testing.T) {
 	}()
 
 	appFlags := createValidFlags()
-	appFlags.HooksFiles = []string{hookFile}
+	appFlags.HooksFiles = []string{firstFile, secondFile}
 	result := Validate(appFlags)
 	require.True(t, result.HasErrors())
-	assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "must not be empty for an HMAC rule")
+	assert.Contains(t, result.Errors[len(result.Errors)-1].Error(), "duplicate")
 }
