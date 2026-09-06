@@ -1259,6 +1259,64 @@ func TestValidateRejectsUnreachableHookIDs(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsHookIDsWithLineBreaks(t *testing.T) {
+	for _, id := range []string{"foo\nbar", "foo\rbar"} {
+		hookFile := filepath.Join(t.TempDir(), "hooks.json")
+		content := fmt.Sprintf(`[{"id":%q,"execute-command":"/bin/echo"}]`, id)
+		require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+		appFlags := createValidFlags()
+		appFlags.ValidateConfig = true
+		appFlags.HooksFiles = []string{hookFile}
+		result := Validate(appFlags)
+		require.True(t, result.HasErrors())
+		assert.Contains(t, fmt.Sprint(result.Errors), "carriage returns or line feeds")
+	}
+}
+
+func TestValidateRejectsEmptyExplicitHookSet(t *testing.T) {
+	tempDir := t.TempDir()
+	first := filepath.Join(tempDir, "empty.yaml")
+	second := filepath.Join(tempDir, "empty.json")
+	require.NoError(t, os.WriteFile(first, []byte("[]\n"), 0o600))
+	require.NoError(t, os.WriteFile(second, []byte("[]\n"), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksDir = ""
+	appFlags.HooksFiles = []string{first, second}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "must contain at least one hook")
+}
+
+func TestValidateAllowsEmptyHookFileInDirectoryMode(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "empty.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte("[]\n"), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksDir = filepath.Dir(hookFile)
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.False(t, result.HasErrors(), "%+v", result.Errors)
+}
+
+func TestValidateAllowsExplicitHookSetContainingAHook(t *testing.T) {
+	tempDir := t.TempDir()
+	empty := filepath.Join(tempDir, "empty.yaml")
+	populated := filepath.Join(tempDir, "populated.yaml")
+	require.NoError(t, os.WriteFile(empty, []byte("[]\n"), 0o600))
+	require.NoError(t, os.WriteFile(populated, []byte("- id: ok\n  execute-command: /bin/echo\n"), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksDir = ""
+	appFlags.HooksFiles = []string{empty, populated}
+	result := Validate(appFlags)
+	require.False(t, result.HasErrors(), "%+v", result.Errors)
+}
+
 func TestValidateRejectsStaticallyOversizedCommandArguments(t *testing.T) {
 	for _, tt := range []struct {
 		name           string

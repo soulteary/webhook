@@ -249,6 +249,8 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 
 	// Hook IDs are global because the HTTP route namespace is shared across files.
 	hookOrigins := make(map[string]string)
+	loadedFiles := 0
+	loadedHooks := 0
 
 	// 验证每个 Hook 文件
 	for _, hookFile := range uniqueFiles {
@@ -272,11 +274,16 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_FILE_LOAD_ERROR, hookFile, err))
 			continue
 		}
+		loadedFiles++
+		loadedHooks += len(hooks)
 
 		// 验证 Hook 内容
 		validateHookContent(result, hookFile, hooks, hookOrigins,
 			flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor,
 			flags.MaxArgsCount, flags.MaxArgLength, flags.MaxTotalArgsLength)
+	}
+	if flags.HooksDir == "" && loadedFiles > 0 && loadedHooks == 0 {
+		result.AddError("hooks", "explicitly configured hook files must contain at least one hook")
 	}
 }
 
@@ -292,6 +299,9 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 		}
 		if strings.TrimSpace(h.ID) != h.ID {
 			result.AddError(idField, "must not contain leading or trailing whitespace")
+		}
+		if strings.ContainsAny(h.ID, "\r\n") {
+			result.AddError(idField, "must not contain carriage returns or line feeds")
 		}
 		if validateSemantics && strings.TrimSpace(h.ExecuteCommand) == "" {
 			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].execute-command", hookFile, i),

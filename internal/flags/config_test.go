@@ -274,7 +274,7 @@ func TestParseConfig_ExplicitHooksPreferSingleFile(t *testing.T) {
 	os.Args = []string{"webhook", "-hooks", "single.json"}
 
 	result := ParseConfig()
-	assert.Equal(t, filepath.Clean(DEFAULT_HOOKS_DIR), result.HooksDir)
+	assert.Empty(t, result.HooksDir)
 	assert.Contains(t, result.HooksFiles, "single.json")
 }
 

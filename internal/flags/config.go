@@ -257,11 +257,14 @@ func ParseConfig() AppFlags {
 		} else {
 			flags.HooksFiles = scanned
 		}
-	} else if len(hooksFiles) > 0 {
-		flags.HooksFiles = hooksFiles
 	} else {
-		// Try environment variable
-		if hooksEnv != "" {
+		// Explicit file mode must not retain the default directory, otherwise
+		// validation and startup incorrectly treat an empty file set as watchable.
+		flags.HooksDir = ""
+		if len(hooksFiles) > 0 {
+			flags.HooksFiles = hooksFiles
+		} else if hooksEnv != "" {
+			// Try environment variable.
 			hooks := strings.Split(hooksEnv, ",")
 			for _, hookPath := range hooks {
 				hookPath = strings.TrimSpace(hookPath)
