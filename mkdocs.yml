@@ -44,6 +44,7 @@ nav:
       - Testing: en-US/Testing-Guide.md
       - Troubleshooting: en-US/Troubleshooting.md
       - Migration: en-US/Migration-Guide.md
+      - Release guide: en-US/Release-Guide.md
       - OwlMail integration: en-US/OwlMail-Integration.md
   - 中文:
       - 容器镜像: zh-CN/Container-Images.md
@@ -59,4 +60,5 @@ nav:
       - 测试: zh-CN/Testing-Guide.md
       - 故障排除: zh-CN/Troubleshooting.md
       - 迁移: zh-CN/Migration-Guide.md
+      - 发布指南: zh-CN/Release-Guide.md
       - OwlMail 集成: zh-CN/OwlMail-Integration.md

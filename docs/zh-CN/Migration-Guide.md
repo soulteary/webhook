@@ -57,7 +57,7 @@
 2. **下载新版本:**
    ```bash
    # 下载带版本号的 Release 压缩包
-   VERSION=7.2.0
+   VERSION=7.3.0
    wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
    tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    

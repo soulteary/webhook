@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir -p "${RUNNER_TEMP}/webhook-container"
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -ldflags '-w -s -X github.com/soulteary/webhook/internal/version.Version=7.2.0-test' \
+            -ldflags '-w -s -X github.com/soulteary/webhook/internal/version.Version=ci-test' \
             -o "${RUNNER_TEMP}/webhook-container/webhook" .
 
       - name: Build all runtime variants
@@ -70,7 +70,7 @@ jobs:
         run: |
           for variant in core runner extended; do
             test "$(docker image inspect --format '{{ .Config.User }}' "webhook:${variant}-test")" = "65532:65532"
-            docker run --rm "webhook:${variant}-test" -version | grep '7.2.0-test'
+            docker run --rm "webhook:${variant}-test" -version | grep 'ci-test'
           done
 
           if docker run --rm --entrypoint /bin/sh webhook:core-test -c true; then
