@@ -223,8 +223,12 @@ func main() {
 		}
 	}
 
-	// load and parse hooks
-	rules.ParseAndLoadHooks(appFlags.AsTemplate)
+	// Load initial hooks with the same strict and semantic policy used by
+	// watchers and signal-triggered reloads.
+	hookLoadOptions := monitor.HookLoadOptions(appFlags)
+	if err := rules.ParseAndLoadHooksWithOptions(appFlags.AsTemplate, hookLoadOptions); err != nil {
+		logger.Fatalf("couldn't load initial hooks: %v", err)
+	}
 
 	// 使用 -hooks-dir 时允许暂时无 hook（空目录或待监控）
 	if !appFlags.Verbose && !appFlags.NoPanic && rules.LenLoadedHooks() == 0 && appFlags.HooksDir == "" {
@@ -282,9 +286,8 @@ func main() {
 
 	// Set the OS signal watcher with the same validation policy used by file
 	// watchers, so SIGHUP/SIGUSR1 cannot bypass strict reload validation.
-	reloadOptions := monitor.HookLoadOptions(appFlags)
 	reloadFn := func() {
-		rules.ReloadAllHooksWithOptions(appFlags.AsTemplate, reloadOptions)
+		rules.ReloadAllHooksWithOptions(appFlags.AsTemplate, hookLoadOptions)
 	}
 	signals = platform.SetupSignalsWithShutdown(signals, reloadFn, shutdownFn, pidFile, nil)
 

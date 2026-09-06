@@ -413,6 +413,72 @@ func TestParseAndLoadHooks_InvalidFile(t *testing.T) {
 	assert.NotContains(t, rules.HooksFiles, invalidFile)
 }
 
+func TestParseAndLoadHooksWithOptionsRejectsUnknownFields(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{
+			"id": "protected-hook",
+			"execute-command": "/bin/echo",
+			"trigger-rules": {}
+		}
+	]`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+
+	err := rules.ParseAndLoadHooksWithOptions(false, rules.LoadOptions{Strict: true})
+
+	require.Error(t, err)
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.NotContains(t, rules.HooksFiles, hooksFile)
+	assert.Nil(t, rules.MatchLoadedHook("protected-hook"))
+}
+
+func TestParseAndLoadHooksWithOptionsRejectsSemanticErrors(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`
+- id: protected-hook
+  execute-command: /bin/echo
+  pass-arguments-to-command:
+    - source: string
+      name: unsafe;argument
+`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+	appFlags := flags.AppFlags{ValidateStrict: true, StrictMode: true}
+	options := rules.LoadOptions{
+		Strict: true,
+		Validate: func(path string, hooks hook.Hooks) error {
+			return flags.ValidateLoadedHooks(appFlags, path, hooks)
+		},
+	}
+
+	err := rules.ParseAndLoadHooksWithOptions(false, options)
+
+	require.Error(t, err)
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.NotContains(t, rules.HooksFiles, hooksFile)
+	assert.Nil(t, rules.MatchLoadedHook("protected-hook"))
+}
+
+func TestParseAndLoadHooksWithOptionsRejectsEmptyExplicitAggregate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte("[]\n"), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+
+	err := rules.ParseAndLoadHooksWithOptions(false, rules.LoadOptions{RequireNonEmpty: true})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at least one hook")
+	assert.Zero(t, rules.LenLoadedHooks())
+}
+
 func TestRemoveHooks_WithVerbose(t *testing.T) {
 	// Setup
 	rules.HooksFiles = []string{"test1.json"}

@@ -1,11 +1,21 @@
 package rules
 
 import (
-	"github.com/soulteary/webhook/internal/hook"
+	"errors"
+	"fmt"
+
 	"github.com/soulteary/webhook/internal/logger"
 )
 
 func ParseAndLoadHooks(isAsTemplate bool) {
+	_ = ParseAndLoadHooksWithOptions(isAsTemplate, LoadOptions{})
+}
+
+// ParseAndLoadHooksWithOptions applies the same parsing and semantic policy
+// used by reloads to the hooks that become active during initial startup.
+func ParseAndLoadHooksWithOptions(isAsTemplate bool, options LoadOptions) error {
+	var loadErrors []error
+
 	// 加读锁读取 HooksFiles
 	hooksMutex.RLock()
 	hooksFilesCopy := make([]string, len(HooksFiles))
@@ -25,11 +35,10 @@ func ParseAndLoadHooks(isAsTemplate bool) {
 	for _, hooksFilePath := range hooksFilesCopy {
 		logger.Infof("attempting to load hooks from %s", hooksFilePath)
 
-		newHooks := hook.Hooks{}
-
-		err := newHooks.LoadFromFile(hooksFilePath, isAsTemplate)
+		newHooks, err := loadHooksFile(hooksFilePath, isAsTemplate, options)
 		if err != nil {
-			logger.Errorf("couldn't load hooks from file! %+v", err)
+			logger.Errorf("couldn't load or validate hooks from file! %+v", err)
+			loadErrors = append(loadErrors, fmt.Errorf("load hooks from %s: %w", hooksFilePath, err))
 		} else {
 			logger.Infof("found %d hook(s) in file", len(newHooks))
 
@@ -57,7 +66,12 @@ func ParseAndLoadHooks(isAsTemplate bool) {
 		}
 	}
 	HooksFiles = newHooksFiles
+	if options.RequireNonEmpty && lenLoadedHooksLocked() == 0 {
+		loadErrors = append(loadErrors, errors.New("explicit hook configuration must contain at least one hook"))
+	}
 	hooksMutex.Unlock()
+
+	return errors.Join(loadErrors...)
 }
 
 // AddAndLoadHooksFile adds a hook config file path to HooksFiles and loads it.
