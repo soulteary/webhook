@@ -69,6 +69,31 @@ func TestCheckWritableFilePathRejectsDanglingSymlinkTargetParent(t *testing.T) {
 	require.Error(t, checkWritableFilePath(link, 12345, 12345))
 }
 
+func TestCheckWritableFilePathRejectsChainedDanglingSymlinkTargetParent(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.Chmod(root, 0o755))
+	first := filepath.Join(root, "webhook.log")
+	second := filepath.Join(root, "next.log")
+	require.NoError(t, os.Symlink("next.log", first))
+	require.NoError(t, os.Symlink(filepath.Join("missing", "webhook.log"), second))
+
+	err := checkWritableFilePath(first, 0, 0)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "symlink target parent")
+}
+
+func TestResolveSymlinkChainRejectsLoop(t *testing.T) {
+	root := t.TempDir()
+	first := filepath.Join(root, "first")
+	second := filepath.Join(root, "second")
+	require.NoError(t, os.Symlink("second", first))
+	require.NoError(t, os.Symlink("first", second))
+
+	_, err := resolveSymlinkChain(first, 0, 0)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "symlink loop")
+}
+
 func TestCheckWritableFilePathRejectsMissingImmediateParent(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "missing", "audit.log")
 

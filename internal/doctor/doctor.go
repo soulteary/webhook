@@ -351,23 +351,26 @@ func checkWritableFilePath(path string, uid, gid int) error {
 	}
 	linkInfo, linkErr := os.Lstat(path)
 	if linkErr == nil && linkInfo.Mode()&os.ModeSymlink != 0 {
-		linkTarget, err := os.Readlink(path)
+		linkTarget, err := resolveSymlinkChain(path, uid, gid)
 		if err != nil {
 			return err
 		}
-		if !filepath.IsAbs(linkTarget) {
-			linkTarget = filepath.Join(filepath.Dir(path), linkTarget)
+		targetInfo, targetErr := os.Stat(linkTarget)
+		if targetErr == nil {
+			if targetInfo.IsDir() {
+				return fmt.Errorf("symlink target is not a file: %s", linkTarget)
+			}
+			return checkTargetPathAccess(linkTarget, uid, gid, 2)
 		}
-		linkTarget = filepath.Clean(linkTarget)
-		if err := checkTargetPathAccess(filepath.Dir(path), uid, gid, 1); err != nil {
-			return err
+		if !os.IsNotExist(targetErr) {
+			return targetErr
 		}
 		targetParent := filepath.Dir(linkTarget)
-		targetInfo, err := os.Stat(targetParent)
+		targetParentInfo, err := os.Stat(targetParent)
 		if err != nil {
 			return fmt.Errorf("cannot access symlink target parent %s: %w", targetParent, err)
 		}
-		if !targetInfo.IsDir() {
+		if !targetParentInfo.IsDir() {
 			return fmt.Errorf("symlink target parent is not a directory: %s", targetParent)
 		}
 		return checkTargetPathAccess(targetParent, uid, gid, 3)
@@ -384,4 +387,42 @@ func checkWritableFilePath(path string, uid, gid int) error {
 		return fmt.Errorf("immediate parent is not a directory: %s", parent)
 	}
 	return checkTargetPathAccess(parent, uid, gid, 3)
+}
+
+func resolveSymlinkChain(path string, uid, gid int) (string, error) {
+	seen := make(map[string]bool)
+	for {
+		absolutePath, err := filepath.Abs(filepath.Clean(path))
+		if err != nil {
+			return "", err
+		}
+		path = absolutePath
+		if seen[path] {
+			return "", fmt.Errorf("symlink loop detected at %s", path)
+		}
+		seen[path] = true
+
+		info, err := os.Lstat(path)
+		if os.IsNotExist(err) {
+			return path, nil
+		}
+		if err != nil {
+			return "", err
+		}
+		if info.Mode()&os.ModeSymlink == 0 {
+			return path, nil
+		}
+		if err := checkTargetPathAccess(filepath.Dir(path), uid, gid, 1); err != nil {
+			return "", err
+		}
+
+		target, err := os.Readlink(path)
+		if err != nil {
+			return "", err
+		}
+		if !filepath.IsAbs(target) {
+			target = filepath.Join(filepath.Dir(path), target)
+		}
+		path = target
+	}
 }
