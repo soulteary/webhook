@@ -90,7 +90,7 @@ func TestOwlMailConfigAndDocumentation(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, required := range []string{
-		"soulteary/webhook:runner-7.2.0",
+		"soulteary/webhook:runner-7.3.0",
 		"ghcr.io/soulteary/owlmail:0.9.0",
 		"127.0.0.1:9000:9000",
 		"127.0.0.1:1025:1025",

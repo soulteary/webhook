@@ -75,14 +75,14 @@ Download pre-built binaries for Linux and macOS from the [Releases page](https:/
 # Latest stable core image
 docker pull soulteary/webhook:latest
 
-# Minimal scratch image (the unprefixed 7.2.0 tag is an alias)
-docker pull soulteary/webhook:core-7.2.0
+# Minimal scratch image (the unprefixed 7.3.0 tag is an alias)
+docker pull soulteary/webhook:core-7.3.0
 
 # Shell-script runtime
-docker pull soulteary/webhook:runner-7.2.0
+docker pull soulteary/webhook:runner-7.3.0
 
 # Runtime with debugging and network tools
-docker pull soulteary/webhook:extended-7.2.0
+docker pull soulteary/webhook:extended-7.3.0
 ```
 
 | Variant | Contents | Intended use |
@@ -91,7 +91,7 @@ docker pull soulteary/webhook:extended-7.2.0
 | `runner` | Alpine, BusyBox utilities, Bash, and CA certificates | Normal shell-script hooks without bundled debugging clients |
 | `extended` | `runner` plus curl, jq, and yq | Troubleshooting and scripts that explicitly need these tools |
 
-All release variants run as UID/GID `65532` from `/var/lib/webhook`. The unprefixed `<version>` and `latest` tags point to `core`. The historical `extend-<version>` name remains a compatibility alias for `extended-<version>` in 7.2.0, but new deployments should use `extended-*`.
+All release variants run as UID/GID `65532` from `/var/lib/webhook`. The unprefixed `<version>` and `latest` tags point to `core`. The historical `extend-<version>` name remains a compatibility alias for `extended-<version>` since 7.2.0, but new deployments should use `extended-*`.
 
 Prefer `core` or `runner` in production. `extended` has a deliberately larger package set and attack surface; do not select it only for interactive convenience. Ensure mounted hooks, commands, and audit paths are readable or writable by UID/GID `65532`. See [Container images](docs/en-US/Container-Images.md) for the complete tag and migration contract.
 
@@ -234,6 +234,7 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 - [Testing Guide](docs/en-US/Testing-Guide.md) - How to run tests, generate coverage reports, and key testing scenarios
 - [Troubleshooting](docs/en-US/Troubleshooting.md) - Common issues and solutions
 - [Migration Guide](docs/en-US/Migration-Guide.md) - Upgrading from previous versions
+- [Release Guide](docs/en-US/Release-Guide.md) - Maintainer sequence for publishing a version safely
 
 ### Security
 - [Security Policy](SECURITY.md) - Security features and vulnerability reporting
@@ -243,18 +244,18 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 Tagged releases publish SPDX SBOMs, a keyless Sigstore bundle for the checksum file, signed multi-architecture container manifests, and GitHub build-provenance attestations. Examples:
 
 ```bash
-gh attestation verify webhook_7.2.0_linux_amd64.tar.gz -R soulteary/webhook
+gh attestation verify webhook_7.3.0_linux_amd64.tar.gz -R soulteary/webhook
 
 cosign verify-blob \
-  --bundle webhook_7.2.0_checksums.txt.sigstore.json \
+  --bundle webhook_7.3.0_checksums.txt.sigstore.json \
   --certificate-identity-regexp='^https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/.+$' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  webhook_7.2.0_checksums.txt
+  webhook_7.3.0_checksums.txt
 
 cosign verify \
-  --certificate-identity='https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/7.2.0' \
+  --certificate-identity='https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/7.3.0' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  ghcr.io/soulteary/webhook:runner-7.2.0
+  ghcr.io/soulteary/webhook:runner-7.3.0
 ```
 
 ## About This Fork

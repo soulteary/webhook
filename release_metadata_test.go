@@ -57,6 +57,23 @@ func TestGoReleaserDoesNotPublishDuplicateConfigUIBinary(t *testing.T) {
 	}
 }
 
+func TestReleaseWorkflowIsTagOnlyAndRetrySafe(t *testing.T) {
+	data, err := os.ReadFile(".github/workflows/build.yml")
+	require.NoError(t, err)
+	workflow := string(data)
+
+	assert.NotContains(t, workflow, "workflow_dispatch:",
+		"the publishing workflow must not be manually dispatchable")
+	assert.Contains(t, workflow, "group: release-${{ github.ref }}")
+	assert.Contains(t, workflow, "cancel-in-progress: false")
+	assert.Contains(t, workflow, "github.event_name == 'push' && github.ref_type == 'tag'")
+	assert.Contains(t, workflow, "  publish:")
+	assert.Contains(t, workflow, "  attest:\n")
+	assert.Contains(t, workflow, "    needs: publish")
+	assert.Contains(t, workflow, "  verify:\n")
+	assert.Contains(t, workflow, "    needs: attest")
+}
+
 func TestGoReleaserPublishesSupplyChainMetadata(t *testing.T) {
 	data, err := os.ReadFile(".goreleaser.yaml")
 	require.NoError(t, err)
