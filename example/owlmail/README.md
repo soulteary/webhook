@@ -8,7 +8,7 @@ set of environment variables.
 OwlMail `v0.9.0` adds a durable local outbox, optional Redis-backed recovery,
 and replay-aware signature metadata to the webhook pipeline. The Compose demo
 pins `ghcr.io/soulteary/owlmail:0.9.0` and
-`soulteary/webhook:extend-7.1.0`, and keeps OwlMail's safe default delivery
+`soulteary/webhook:runner-7.2.0`, and keeps OwlMail's safe default delivery
 concurrency of `8` explicit.
 
 ## Run

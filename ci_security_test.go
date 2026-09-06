@@ -56,4 +56,27 @@ func TestReleaseWorkflowPinsSupplyChainTools(t *testing.T) {
 	assert.Contains(t, contents, "actions/attest@")
 	assert.Contains(t, contents, "id-token: write")
 	assert.Contains(t, contents, "attestations: write")
+	assert.Contains(t, contents, "git diff --exit-code -- go.mod go.sum")
+	assert.Contains(t, contents, "gh attestation verify")
+	assert.Contains(t, contents, "cosign verify")
+}
+
+func TestReleaseWorkflowOnlyPublishesTags(t *testing.T) {
+	data, err := os.ReadFile(".github/workflows/build.yml")
+	require.NoError(t, err)
+	contents := string(data)
+
+	assert.Contains(t, contents, "github.ref_type == 'tag'")
+	assert.NotContains(t, contents, "branches:\n      - \"main\"")
+	assert.Contains(t, contents, "permissions:\n  contents: read")
+}
+
+func TestContainerWorkflowExercisesAllRuntimeVariants(t *testing.T) {
+	data, err := os.ReadFile(".github/workflows/test.yml")
+	require.NoError(t, err)
+	contents := string(data)
+
+	assert.Contains(t, contents, "for variant in core runner extended; do")
+	assert.Contains(t, contents, "webhook:${variant}-test")
+	assert.Contains(t, contents, "WEBHOOK_IMAGE: webhook:runner-test")
 }

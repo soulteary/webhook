@@ -53,8 +53,9 @@ func TestGoReleaserPublishesSupplyChainMetadata(t *testing.T) {
 
 func TestReleaseDockerfilesRunAsNonRoot(t *testing.T) {
 	for _, path := range []string{
-		"docker/goreleaser/Dockerfile",
-		"docker/goreleaser/Dockerfile.extend",
+		"docker/goreleaser/Dockerfile.core",
+		"docker/goreleaser/Dockerfile.runner",
+		"docker/goreleaser/Dockerfile.extended",
 	} {
 		t.Run(path, func(t *testing.T) {
 			data, err := os.ReadFile(path)
@@ -64,4 +65,52 @@ func TestReleaseDockerfilesRunAsNonRoot(t *testing.T) {
 			assert.NotContains(t, contents, "alpine:3.19")
 		})
 	}
+}
+
+func TestReleaseDockerfilesPreserveRuntimeBoundaries(t *testing.T) {
+	read := func(path string) string {
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+		return string(data)
+	}
+
+	core := read("docker/goreleaser/Dockerfile.core")
+	_, coreRuntime, found := strings.Cut(core, "FROM scratch")
+	require.True(t, found)
+	assert.NotContains(t, coreRuntime, "apk add")
+
+	runner := read("docker/goreleaser/Dockerfile.runner")
+	assert.Contains(t, runner, "FROM alpine:3.24.1")
+	assert.Contains(t, runner, "bash")
+	for _, tool := range []string{"curl", "jq", "yq"} {
+		assert.NotContains(t, runner, tool)
+	}
+
+	extended := read("docker/goreleaser/Dockerfile.extended")
+	for _, tool := range []string{"bash", "curl", "jq", "yq"} {
+		assert.Contains(t, extended, tool)
+	}
+}
+
+func TestGoReleaserPublishesContainerVariantTags(t *testing.T) {
+	data, err := os.ReadFile(".goreleaser.yaml")
+	require.NoError(t, err)
+	contents := string(data)
+
+	for _, registry := range []string{"soulteary/webhook", "ghcr.io/soulteary/webhook"} {
+		for _, tag := range []string{
+			":{{ .Tag }}",
+			":core-{{ .Tag }}",
+			":runner-{{ .Tag }}",
+			":extended-{{ .Tag }}",
+			":extend-{{ .Tag }}",
+			":latest",
+		} {
+			assert.Contains(t, contents, "name_template: \""+registry+tag+"\"")
+		}
+	}
+
+	assert.Contains(t, contents, "docker/goreleaser/Dockerfile.core")
+	assert.Contains(t, contents, "docker/goreleaser/Dockerfile.runner")
+	assert.Contains(t, contents, "docker/goreleaser/Dockerfile.extended")
 }

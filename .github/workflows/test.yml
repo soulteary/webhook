@@ -38,3 +38,64 @@ jobs:
 
       - name: Run tests
         run: go test -race ./...
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build container test context
+        run: |
+          mkdir -p "${RUNNER_TEMP}/webhook-container"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags '-w -s -X github.com/soulteary/webhook/internal/version.Version=7.2.0-test' \
+            -o "${RUNNER_TEMP}/webhook-container/webhook" .
+
+      - name: Build all runtime variants
+        run: |
+          for variant in core runner extended; do
+            docker build \
+              --file "docker/goreleaser/Dockerfile.${variant}" \
+              --tag "webhook:${variant}-test" \
+              "${RUNNER_TEMP}/webhook-container"
+          done
+
+      - name: Verify runtime boundaries
+        run: |
+          for variant in core runner extended; do
+            test "$(docker image inspect --format '{{ .Config.User }}' "webhook:${variant}-test")" = "65532:65532"
+            docker run --rm "webhook:${variant}-test" -version | grep '7.2.0-test'
+          done
+
+          if docker run --rm --entrypoint /bin/sh webhook:core-test -c true; then
+            echo 'core image unexpectedly contains a shell' >&2
+            exit 1
+          fi
+
+          docker run --rm --entrypoint /bin/sh webhook:runner-test -c 'test "$(id -u)" = 65532'
+          docker run --rm --entrypoint /bin/bash webhook:runner-test -c 'test "$(id -u)" = 65532'
+
+          for tool in curl jq yq; do
+            docker run --rm --entrypoint "/usr/bin/${tool}" "webhook:extended-test" --version
+          done
+
+      - name: Smoke test the secure quickstart
+        env:
+          WEBHOOK_IMAGE: webhook:runner-test
+        run: |
+          cleanup() {
+            docker compose -f example/quickstart/compose.yaml down --volumes
+          }
+          trap cleanup EXIT
+
+          docker compose -f example/quickstart/compose.yaml up -d --wait
+          test "$(curl --fail-with-body http://127.0.0.1:9000/hooks/hello \
+            -H 'Content-Type: application/json' \
+            -H 'X-Webhook-Signature: sha256=fc2f94757ec900bc605b39b984b3431fa13f3ea2eb7881f2861c1c747d9ffdbd' \
+            --data-binary '{"message":"hello from webhook"}')" = accepted

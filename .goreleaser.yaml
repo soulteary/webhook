@@ -48,7 +48,8 @@ dockers:
       - "soulteary/webhook:linux-amd64"
       - "ghcr.io/soulteary/webhook:linux-amd64-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-amd64"
-    dockerfile: docker/goreleaser/Dockerfile
+    dockerfile: docker/goreleaser/Dockerfile.core
+    ids: [linux]
     use: buildx
     goarch: amd64
     build_flag_templates:
@@ -68,7 +69,8 @@ dockers:
       - "soulteary/webhook:linux-arm64"
       - "ghcr.io/soulteary/webhook:linux-arm64-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-arm64"
-    dockerfile: docker/goreleaser/Dockerfile
+    dockerfile: docker/goreleaser/Dockerfile.core
+    ids: [linux]
     use: buildx
     goos: linux
     goarch: arm64
@@ -90,7 +92,8 @@ dockers:
       - "soulteary/webhook:linux-armv7"
       - "ghcr.io/soulteary/webhook:linux-armv7-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-armv7"
-    dockerfile: docker/goreleaser/Dockerfile
+    dockerfile: docker/goreleaser/Dockerfile.core
+    ids: [linux]
     use: buildx
     goos: linux
     goarch: arm
@@ -112,7 +115,8 @@ dockers:
       - "soulteary/webhook:linux-armv6"
       - "ghcr.io/soulteary/webhook:linux-armv6-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-armv6"
-    dockerfile: docker/goreleaser/Dockerfile
+    dockerfile: docker/goreleaser/Dockerfile.core
+    ids: [linux]
     use: buildx
     goos: linux
     goarch: arm
@@ -129,12 +133,108 @@ dockers:
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.licenses=MIT"
 
+  # Runner images add Alpine, BusyBox utilities, Bash, and CA certificates for
+  # common shell-script hooks without bundling debugging/network clients.
+  - image_templates:
+      - "soulteary/webhook:linux-amd64-runner-{{ .Tag }}"
+      - "soulteary/webhook:linux-amd64-runner"
+      - "ghcr.io/soulteary/webhook:linux-amd64-runner-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-amd64-runner"
+    dockerfile: docker/goreleaser/Dockerfile.runner
+    ids: [linux]
+    use: buildx
+    goarch: amd64
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}-runner"
+      - "--label=org.opencontainers.image.description=Non-root WebHook runner for shell-script hooks"
+      - "--label=org.opencontainers.image.url=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.source=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  - image_templates:
+      - "soulteary/webhook:linux-arm64-runner-{{ .Tag }}"
+      - "soulteary/webhook:linux-arm64-runner"
+      - "ghcr.io/soulteary/webhook:linux-arm64-runner-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-arm64-runner"
+    dockerfile: docker/goreleaser/Dockerfile.runner
+    ids: [linux]
+    use: buildx
+    goos: linux
+    goarch: arm64
+    goarm: ""
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}-runner"
+      - "--label=org.opencontainers.image.description=Non-root WebHook runner for shell-script hooks"
+      - "--label=org.opencontainers.image.url=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.source=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  - image_templates:
+      - "soulteary/webhook:linux-armv7-runner-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv7-runner"
+      - "ghcr.io/soulteary/webhook:linux-armv7-runner-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv7-runner"
+    dockerfile: docker/goreleaser/Dockerfile.runner
+    ids: [linux]
+    use: buildx
+    goos: linux
+    goarch: arm
+    goarm: "7"
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm/v7"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}-runner"
+      - "--label=org.opencontainers.image.description=Non-root WebHook runner for shell-script hooks"
+      - "--label=org.opencontainers.image.url=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.source=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  - image_templates:
+      - "soulteary/webhook:linux-armv6-runner-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv6-runner"
+      - "ghcr.io/soulteary/webhook:linux-armv6-runner-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv6-runner"
+    dockerfile: docker/goreleaser/Dockerfile.runner
+    ids: [linux]
+    use: buildx
+    goos: linux
+    goarch: arm
+    goarm: "6"
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm/v6"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}-runner"
+      - "--label=org.opencontainers.image.description=Non-root WebHook runner for shell-script hooks"
+      - "--label=org.opencontainers.image.url=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.source=https://github.com/soulteary/webhook"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  # Extended images retain the historical extend architecture tags. The
+  # multi-architecture manifests below publish both extended-* and extend-*
+  # names so existing deployments keep working.
   - image_templates:
       - "soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
       - "soulteary/webhook:linux-amd64-extend"
       - "ghcr.io/soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-amd64-extend"
-    dockerfile: docker/goreleaser/Dockerfile.extend
+    dockerfile: docker/goreleaser/Dockerfile.extended
+    ids: [linux]
     use: buildx
     goarch: amd64
     build_flag_templates:
@@ -154,7 +254,8 @@ dockers:
       - "soulteary/webhook:linux-arm64-extend"
       - "ghcr.io/soulteary/webhook:linux-arm64-extend-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-arm64-extend"
-    dockerfile: docker/goreleaser/Dockerfile.extend
+    dockerfile: docker/goreleaser/Dockerfile.extended
+    ids: [linux]
     use: buildx
     goos: linux
     goarch: arm64
@@ -176,7 +277,8 @@ dockers:
       - "soulteary/webhook:linux-armv7-extend"
       - "ghcr.io/soulteary/webhook:linux-armv7-extend-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-armv7-extend"
-    dockerfile: docker/goreleaser/Dockerfile.extend
+    dockerfile: docker/goreleaser/Dockerfile.extended
+    ids: [linux]
     use: buildx
     goos: linux
     goarch: arm
@@ -198,7 +300,8 @@ dockers:
       - "soulteary/webhook:linux-armv6-extend"
       - "ghcr.io/soulteary/webhook:linux-armv6-extend-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-armv6-extend"
-    dockerfile: docker/goreleaser/Dockerfile.extend
+    dockerfile: docker/goreleaser/Dockerfile.extended
+    ids: [linux]
     use: buildx
     goos: linux
     goarch: arm
@@ -216,6 +319,7 @@ dockers:
       - "--label=org.opencontainers.image.licenses=MIT"
 
 docker_manifests:
+  # The unprefixed version and latest tags remain aliases for core.
   - name_template: "soulteary/webhook:{{ .Tag }}"
     image_templates:
       - "soulteary/webhook:linux-amd64-{{ .Tag }}"
@@ -224,6 +328,31 @@ docker_manifests:
       - "soulteary/webhook:linux-armv6-{{ .Tag }}"
     skip_push: "false"
 
+  - name_template: "soulteary/webhook:core-{{ .Tag }}"
+    image_templates:
+      - "soulteary/webhook:linux-amd64-{{ .Tag }}"
+      - "soulteary/webhook:linux-arm64-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv7-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv6-{{ .Tag }}"
+    skip_push: "false"
+
+  - name_template: "soulteary/webhook:runner-{{ .Tag }}"
+    image_templates:
+      - "soulteary/webhook:linux-amd64-runner-{{ .Tag }}"
+      - "soulteary/webhook:linux-arm64-runner-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv7-runner-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv6-runner-{{ .Tag }}"
+    skip_push: "false"
+
+  - name_template: "soulteary/webhook:extended-{{ .Tag }}"
+    image_templates:
+      - "soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-arm64-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv7-extend-{{ .Tag }}"
+      - "soulteary/webhook:linux-armv6-extend-{{ .Tag }}"
+    skip_push: "false"
+
+  # Deprecated compatibility alias; prefer extended-<version>.
   - name_template: "soulteary/webhook:extend-{{ .Tag }}"
     image_templates:
       - "soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
@@ -240,13 +369,37 @@ docker_manifests:
       - "soulteary/webhook:linux-armv6-{{ .Tag }}"
     skip_push: "false"
 
-  # GHCR multi-arch manifests
+  # GHCR publishes the same tag contract.
   - name_template: "ghcr.io/soulteary/webhook:{{ .Tag }}"
     image_templates:
       - "ghcr.io/soulteary/webhook:linux-amd64-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-arm64-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-armv7-{{ .Tag }}"
       - "ghcr.io/soulteary/webhook:linux-armv6-{{ .Tag }}"
+    skip_push: "false"
+
+  - name_template: "ghcr.io/soulteary/webhook:core-{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/soulteary/webhook:linux-amd64-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-arm64-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv7-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv6-{{ .Tag }}"
+    skip_push: "false"
+
+  - name_template: "ghcr.io/soulteary/webhook:runner-{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/soulteary/webhook:linux-amd64-runner-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-arm64-runner-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv7-runner-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv6-runner-{{ .Tag }}"
+    skip_push: "false"
+
+  - name_template: "ghcr.io/soulteary/webhook:extended-{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/soulteary/webhook:linux-amd64-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-arm64-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv7-extend-{{ .Tag }}"
+      - "ghcr.io/soulteary/webhook:linux-armv6-extend-{{ .Tag }}"
     skip_push: "false"
 
   - name_template: "ghcr.io/soulteary/webhook:extend-{{ .Tag }}"

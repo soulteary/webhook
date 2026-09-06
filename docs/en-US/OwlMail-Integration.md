@@ -14,7 +14,7 @@ OwlMail also maintains the sender-side example in
 
 ## Requirements
 
-- WebHook 7.1.0 or later.
+- WebHook 7.2.0 or later.
 - OwlMail v0.9.0 (the version pinned by this example) or later.
 - A random shared secret of at least 32 bytes.
 - Network reachability from OwlMail to the WebHook endpoint.
