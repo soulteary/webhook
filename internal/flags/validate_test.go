@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/soulteary/cli-kit/validator"
@@ -1195,6 +1196,30 @@ func TestValidateRejectsInvalidPassFilePattern(t *testing.T) {
 	result := Validate(appFlags)
 	require.True(t, result.HasErrors())
 	assert.Contains(t, fmt.Sprint(result.Errors), "must not contain path separators")
+}
+
+func TestValidateRejectsOverlongPassFilePattern(t *testing.T) {
+	workingDirectory := t.TempDir()
+	nameLimit, err := platform.FileNameLimit(workingDirectory)
+	require.NoError(t, err)
+	pattern := strings.Repeat("a", nameLimit-createTempRandomSuffixMaxLength+1)
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	content := fmt.Sprintf(`
+- id: invalid-file-pattern
+  execute-command: /bin/echo
+  command-working-directory: %q
+  pass-file-to-command:
+    - source: raw-request-body
+      envname: %q
+`, workingDirectory, pattern)
+	require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.True(t, result.HasErrors())
+	assert.Contains(t, fmt.Sprint(result.Errors), "exceeding filesystem limit")
 }
 
 func TestValidateRejectsInvalidEnvironmentName(t *testing.T) {

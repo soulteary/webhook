@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -355,7 +356,7 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 			validateRuleContent(result, prefix+".trigger-rule", h.TriggerRule)
 			validateEnvironmentArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
 			validateArguments(result, prefix+".pass-arguments-to-command", h.PassArgumentsToCommand)
-			validateFileArguments(result, prefix+".pass-file-to-command", h.PassFileToCommand)
+			validateFileArguments(result, prefix+".pass-file-to-command", h.PassFileToCommand, h.CommandWorkingDirectory)
 			validateJSONArguments(result, prefix+".parse-parameters-as-json", h.JSONStringParameters)
 		}
 
@@ -447,7 +448,13 @@ func validateEnvironmentArguments(result *ValidationResult, field string, argume
 	}
 }
 
-func validateFileArguments(result *ValidationResult, field string, arguments []hook.Argument) {
+const createTempRandomSuffixMaxLength = 10
+
+func validateFileArguments(result *ValidationResult, field string, arguments []hook.Argument, workingDirectory string) {
+	if workingDirectory == "" {
+		workingDirectory = os.TempDir()
+	}
+	nameLimit, nameLimitErr := platform.FileNameLimit(workingDirectory)
 	for i := range arguments {
 		argumentField := fmt.Sprintf("%s[%d]", field, i)
 		validateArgument(result, argumentField, arguments[i])
@@ -463,6 +470,19 @@ func validateFileArguments(result *ValidationResult, field string, arguments []h
 		validateEnvironmentName(result, argumentField+".envname", pattern)
 		if strings.ContainsAny(pattern, `/\\`) {
 			result.AddError(argumentField+".envname", "effective temporary-file pattern must not contain path separators")
+			continue
+		}
+		if nameLimitErr != nil {
+			result.AddError(argumentField+".envname", fmt.Sprintf("cannot determine temporary-file name limit for %s: %v", workingDirectory, nameLimitErr))
+			continue
+		}
+		generatedLength := len(pattern) + createTempRandomSuffixMaxLength
+		if strings.Contains(pattern, "*") {
+			generatedLength--
+		}
+		if generatedLength > nameLimit {
+			result.AddError(argumentField+".envname",
+				fmt.Sprintf("effective temporary-file pattern can generate a %d-byte name, exceeding filesystem limit %d", generatedLength, nameLimit))
 		}
 	}
 }
