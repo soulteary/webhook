@@ -39,7 +39,12 @@
             "required": ["name"],
             "properties": { "name": { "type": "string", "pattern": "^(?:[Mm][Ee][Tt][Hh][Oo][Dd]|[Rr][Ee][Mm][Oo][Tt][Ee]-[Aa][Dd][Dd][Rr])$" } }
           }
-        },
+        }
+      ]
+    },
+    "commandArgument": {
+      "allOf": [
+        { "$ref": "#/$defs/argument" },
         {
           "if": {
             "properties": { "source": { "const": "string" } },
@@ -78,6 +83,20 @@
           },
           "then": {
             "properties": { "name": { "type": "string", "pattern": "^[^=\\u0000]*$" } }
+          }
+        }
+      ]
+    },
+    "environmentValueArgument": {
+      "allOf": [
+        { "$ref": "#/$defs/environmentArgument" },
+        {
+          "if": {
+            "properties": { "source": { "const": "string" } },
+            "required": ["source"]
+          },
+          "then": {
+            "properties": { "name": { "type": "string", "pattern": "^[^\\x00]*$" } }
           }
         }
       ]
@@ -218,15 +237,15 @@
       "required": ["id", "execute-command"],
       "properties": {
         "id": { "type": "string", "minLength": 1, "pattern": "^\\S(?:[^\\r\\n\\t]*\\S)?$" },
-        "execute-command": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "execute-command": { "type": "string", "minLength": 1, "pattern": "^[^\\x00]*[^\\s\\x00][^\\x00]*$" },
         "command-working-directory": { "type": "string" },
         "response-message": { "type": "string" },
         "response-headers": { "type": "array", "items": { "$ref": "#/$defs/header" } },
         "include-command-output-in-response": { "type": "boolean" },
         "stream-command-output": { "type": "boolean" },
         "include-command-output-in-response-on-error": { "type": "boolean" },
-        "pass-environment-to-command": { "type": "array", "items": { "$ref": "#/$defs/environmentArgument" } },
-        "pass-arguments-to-command": { "type": "array", "items": { "$ref": "#/$defs/argument" } },
+        "pass-environment-to-command": { "type": "array", "items": { "$ref": "#/$defs/environmentValueArgument" } },
+        "pass-arguments-to-command": { "type": "array", "items": { "$ref": "#/$defs/commandArgument" } },
         "pass-file-to-command": { "type": "array", "items": { "$ref": "#/$defs/fileArgument" } },
         "parse-parameters-as-json": { "type": "array", "items": { "$ref": "#/$defs/jsonArgument" } },
         "trigger-rule": { "$ref": "#/$defs/rule" },

@@ -113,15 +113,59 @@ func TestSchemaMatchesRuntimeArgumentNameRules(t *testing.T) {
 		}
 	}
 
-	literalPattern, err := regexp.Compile(patterns[SourceString])
+}
+
+func TestSchemaRejectsNULInStaticProcessValues(t *testing.T) {
+	data, err := os.ReadFile("../../schema/hooks.schema.json")
 	if err != nil {
-		t.Fatalf("invalid literal-argument pattern: %v", err)
+		t.Fatal(err)
 	}
-	if !literalPattern.MatchString("valid argument") {
-		t.Error("schema rejected a valid literal argument")
+	var schema struct {
+		Defs map[string]struct {
+			Properties map[string]struct {
+				Pattern string `json:"pattern"`
+			} `json:"properties"`
+			AllOf []struct {
+				If struct {
+					Properties map[string]struct {
+						Const any `json:"const"`
+					} `json:"properties"`
+				} `json:"if"`
+				Then struct {
+					Properties map[string]struct {
+						Pattern string `json:"pattern"`
+					} `json:"properties"`
+				} `json:"then"`
+			} `json:"allOf"`
+		} `json:"$defs"`
 	}
-	if literalPattern.MatchString("bad\x00argument") {
-		t.Error("schema accepted a literal argument containing NUL")
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+
+	patterns := []string{schema.Defs["hook"].Properties["execute-command"].Pattern}
+	for _, definition := range []string{"commandArgument", "environmentValueArgument"} {
+		for _, condition := range schema.Defs[definition].AllOf {
+			if condition.If.Properties["source"].Const == SourceString {
+				patterns = append(patterns, condition.Then.Properties["name"].Pattern)
+				break
+			}
+		}
+	}
+	if len(patterns) != 3 {
+		t.Fatalf("schema should constrain executable, argument, and environment values; found %d constraints", len(patterns))
+	}
+	for _, pattern := range patterns {
+		compiled, err := regexp.Compile(pattern)
+		if err != nil {
+			t.Fatalf("invalid static process-value pattern: %v", err)
+		}
+		if !compiled.MatchString("valid value") {
+			t.Error("schema rejected a valid static process value")
+		}
+		if compiled.MatchString("bad\x00value") {
+			t.Error("schema accepted a static process value containing NUL")
+		}
 	}
 }
 

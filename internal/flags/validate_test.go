@@ -1519,7 +1519,7 @@ func TestValidateAllowsStaticallySafeStrictArguments(t *testing.T) {
 	require.False(t, result.HasErrors(), "%+v", result.Errors)
 }
 
-func TestValidateRejectsNULInStaticCommandInputs(t *testing.T) {
+func TestValidateRejectsNULInStaticProcessInputs(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		content string
@@ -1534,6 +1534,11 @@ func TestValidateRejectsNULInStaticCommandInputs(t *testing.T) {
 			name:    "literal argument",
 			content: `[{"id":"nul-argument","execute-command":"/bin/echo","pass-arguments-to-command":[{"source":"string","name":"bad\u0000argument"}]}]`,
 			field:   "pass-arguments-to-command[0].name",
+		},
+		{
+			name:    "environment value",
+			content: `[{"id":"nul-environment","execute-command":"/bin/echo","pass-environment-to-command":[{"source":"string","name":"bad\u0000value","envname":"VALID_NAME"}]}]`,
+			field:   "pass-environment-to-command[0].name",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

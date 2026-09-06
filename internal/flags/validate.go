@@ -503,6 +503,9 @@ func validateEnvironmentArguments(result *ValidationResult, field string, argume
 		argumentField := fmt.Sprintf("%s[%d]", field, i)
 		validateArgument(result, argumentField, arguments[i])
 		validateEnvironmentName(result, argumentField+".envname", effectiveEnvironmentName(arguments[i]))
+		if arguments[i].Source == hook.SourceString && strings.ContainsRune(arguments[i].Name, '\x00') {
+			result.AddError(argumentField+".name", "static environment value must not contain NUL")
+		}
 	}
 }
 
