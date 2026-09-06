@@ -113,7 +113,7 @@
       "additionalProperties": false,
       "required": ["name", "value"],
       "properties": {
-        "name": { "type": "string" },
+        "name": { "type": "string", "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$" },
         "value": { "type": "string" }
       }
     },

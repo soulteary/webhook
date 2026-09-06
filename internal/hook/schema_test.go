@@ -137,3 +137,35 @@ func TestSchemaConstrainsLiteralFileArgumentsToStandardBase64(t *testing.T) {
 		}
 	}
 }
+
+func TestSchemaConstrainsResponseHeaderNames(t *testing.T) {
+	data, err := os.ReadFile("../../schema/hooks.schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Defs map[string]struct {
+			Properties map[string]struct {
+				Pattern string `json:"pattern"`
+			} `json:"properties"`
+		} `json:"$defs"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+	pattern := schema.Defs["header"].Properties["name"].Pattern
+	compiled, err := regexp.Compile(pattern)
+	if err != nil {
+		t.Fatalf("invalid response-header name pattern: %v", err)
+	}
+	for _, name := range []string{"Content-Type", "X_Custom", "!#$%&'*+.^_`|~"} {
+		if !compiled.MatchString(name) {
+			t.Errorf("schema rejected valid response-header name %q", name)
+		}
+	}
+	for _, name := range []string{"", "Bad Header", "Bad:Header", "Bad\r\nHeader"} {
+		if compiled.MatchString(name) {
+			t.Errorf("schema accepted invalid response-header name %q", name)
+		}
+	}
+}

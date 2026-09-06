@@ -1198,6 +1198,29 @@ func TestValidateRejectsInvalidPassFilePattern(t *testing.T) {
 	assert.Contains(t, fmt.Sprint(result.Errors), "must not contain path separators")
 }
 
+func TestValidateRejectsInvalidResponseHeaderNames(t *testing.T) {
+	for _, name := range []string{"", "Bad Header", "Bad:Header", "Bad\r\nHeader"} {
+		t.Run(fmt.Sprintf("%q", name), func(t *testing.T) {
+			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+			content := fmt.Sprintf(`
+- id: invalid-response-header
+  execute-command: /bin/echo
+  response-headers:
+    - name: %q
+      value: value
+`, name)
+			require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+			appFlags := createValidFlags()
+			appFlags.ValidateStrict = true
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), "invalid HTTP header field name")
+		})
+	}
+}
+
 func TestValidateRejectsOverlongPassFilePattern(t *testing.T) {
 	workingDirectory := t.TempDir()
 	nameLimit, err := platform.FileNameLimit(workingDirectory)

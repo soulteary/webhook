@@ -79,6 +79,9 @@ func Validate(flags AppFlags) *ValidationResult {
 			}
 		}
 	}
+	if validateSemantics {
+		validateResponseHeaders(result, "response-headers", flags.ResponseHeaders)
+	}
 
 	// 验证端口范围 - 使用 cli-kit/validator
 	if err := validator.ValidatePort(flags.Port); err != nil {
@@ -353,6 +356,7 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 					fmt.Sprintf("command would have %d arguments including argv[0], exceeding max-args-count %d", 1+len(h.PassArgumentsToCommand), maxArgsCount))
 			}
 			validateStaticCommandArguments(result, prefix, h, maxArgLength, maxTotalArgsLength, strictMode)
+			validateResponseHeaders(result, prefix+".response-headers", h.ResponseHeaders)
 			validateRuleContent(result, prefix+".trigger-rule", h.TriggerRule)
 			validateEnvironmentArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
 			validateArguments(result, prefix+".pass-arguments-to-command", h.PassArgumentsToCommand)
@@ -363,6 +367,33 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 		// 验证命令路径（如果指定了允许的命令路径）
 		// 注意：这里只做基本验证，实际执行时的安全检查在 security 模块中
 	}
+}
+
+func validateResponseHeaders(result *ValidationResult, field string, headers hook.ResponseHeaders) {
+	for i, header := range headers {
+		if !isHTTPFieldName(header.Name) {
+			result.AddError(fmt.Sprintf("%s[%d].name", field, i), fmt.Sprintf("invalid HTTP header field name %q", header.Name))
+		}
+	}
+}
+
+func isHTTPFieldName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' {
+			continue
+		}
+		switch c {
+		case '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~':
+			continue
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func validateStaticCommandArguments(result *ValidationResult, prefix string, configuredHook hook.Hook, maxArgLength, maxTotalArgsLength int, strictMode bool) {
