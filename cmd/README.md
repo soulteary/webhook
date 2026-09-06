@@ -34,7 +34,7 @@ go build -o webhook .
 ./webhook -config-ui -port 9090
 ```
 
-发布产物中的 `webhook-config-ui` 与 `webhook` 为同一程序，用法一致。运行 `./webhook -config-ui` 或 `./webhook-config-ui -config-ui` 即可，默认监听 9000。
+发布产物只包含 `webhook`。运行 `./webhook -config-ui` 即可启用 Config UI，默认监听 9000；无需下载或维护第二份完全相同的二进制。
 
 ## 使用说明
 

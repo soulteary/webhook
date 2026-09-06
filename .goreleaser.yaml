@@ -24,24 +24,6 @@ builds:
       - "7"
       - "6"
 
-  # Config UI binary (same code as main binary; run with -config-ui to enable UI on webhook server)
-  - <<: *build_defaults
-    id: config-ui-macos
-    main: .
-    binary: webhook-config-ui
-    goos: [darwin]
-    goarch: [amd64, arm64]
-
-  - <<: *build_defaults
-    id: config-ui-linux
-    main: .
-    binary: webhook-config-ui
-    goos: [linux]
-    goarch: ["386", arm, amd64, arm64]
-    goarm:
-      - "7"
-      - "6"
-
 dockers:
   - image_templates:
       - "soulteary/webhook:linux-amd64-{{ .Tag }}"

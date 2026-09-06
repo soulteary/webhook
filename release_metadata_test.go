@@ -38,6 +38,25 @@ func TestGoReleaserInjectsCompleteVersionMetadata(t *testing.T) {
 	}
 }
 
+func TestGoReleaserDoesNotPublishDuplicateConfigUIBinary(t *testing.T) {
+	data, err := os.ReadFile(".goreleaser.yaml")
+	require.NoError(t, err)
+
+	var config struct {
+		Builds []struct {
+			ID     string `json:"id"`
+			Binary string `json:"binary"`
+		} `json:"builds"`
+	}
+	require.NoError(t, yaml.Unmarshal(data, &config))
+	require.NotEmpty(t, config.Builds)
+
+	for _, build := range config.Builds {
+		assert.NotEqual(t, "webhook-config-ui", build.Binary,
+			"build %q duplicates the main webhook binary; enable Config UI with -config-ui", build.ID)
+	}
+}
+
 func TestGoReleaserPublishesSupplyChainMetadata(t *testing.T) {
 	data, err := os.ReadFile(".goreleaser.yaml")
 	require.NoError(t, err)
