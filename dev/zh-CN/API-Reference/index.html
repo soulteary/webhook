@@ -1,0 +1,2046 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Hardened and observable webhook-to-command runner">
+      
+      
+      
+        <link rel="canonical" href="https://soulteary.github.io/webhook/latest/zh-CN/API-Reference/">
+      
+      
+        <link rel="prev" href="../Referencing-Request-Values/">
+      
+      
+        <link rel="next" href="../Security-Best-Practices/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../logo/logo-600x600.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>API 参考 - WebHook</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="WebHook" class="md-header__button md-logo" aria-label="WebHook" data-md-component="logo">
+      
+  <img src="../../logo/logo-600x600.jpg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WebHook
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API 参考
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/soulteary/webhook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    soulteary/webhook
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="WebHook" class="md-nav__button md-logo" aria-label="WebHook" data-md-component="logo">
+      
+  <img src="../../logo/logo-600x600.jpg" alt="logo">
+
+    </a>
+    WebHook
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/soulteary/webhook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    soulteary/webhook
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Configuration-Tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Hook-Definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook definition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Hook-Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Hook-Examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Webhook-Parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Referencing-Request-Values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Request values
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/API-Reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Security-Best-Practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Performance-Tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Testing-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/Migration-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en-US/OwlMail-Integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OwlMail integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Hook-Definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook 定义
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Hook-Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook 规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Hook-Examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook 示例
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Webhook-Parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动参数
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Referencing-Request-Values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    请求参数
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#url" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基础 URL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        端点
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="端点">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 根端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 健康检查端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 存活与就绪端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 版本端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 指标端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-openapi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. OpenAPI 规范端点（可选）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-config-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Config UI（可选）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Hook 执行端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        请求 ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        响应头
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="响应头">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自定义响应头
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook 特定的响应头
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        速率限制
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS 支持
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        超时
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        流式输出
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        状态码摘要
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        最佳实践
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Security-Best-Practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安全
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Performance-Tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    性能
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Testing-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    测试
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    故障排除
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Migration-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OwlMail-Integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OwlMail 集成
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#url" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        基础 URL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        端点
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="端点">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 根端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 健康检查端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 存活与就绪端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 版本端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 指标端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-openapi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. OpenAPI 规范端点（可选）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-config-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Config UI（可选）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Hook 执行端点
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        请求 ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        响应头
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="响应头">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        自定义响应头
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook 特定的响应头
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        速率限制
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS 支持
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        超时
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        流式输出
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        状态码摘要
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        最佳实践
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="api">API 参考文档</h1>
+<p>本文档描述了 Webhook 服务器提供的所有 HTTP 端点。</p>
+<h2 id="url">基础 URL</h2>
+<p>默认情况下，Webhook 服务器运行在端口 <code>9000</code>。基础 URL 格式为：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>http://your-server:9000
+</code></pre></div>
+<p>您可以使用 <code>-ip</code> 和 <code>-port</code> 命令行参数或环境变量来自定义 IP 地址和端口。</p>
+<p><strong>保留路径与路径冲突</strong>：请勿将 <code>-openapi-path</code> 或 <code>-config-ui-path</code> 设置为与保留端点冲突的路径。保留路径包括 <code>/</code>、<code>/health</code>、<code>/livez</code>、<code>/readyz</code>、<code>/version</code>、<code>/metrics</code> 以及 hook 前缀（如 <code>/hooks</code>）。若启动时检测到冲突，服务将跳过该路由注册并记录警告。</p>
+<h2 id="_1">端点</h2>
+<h3 id="1">1. 根端点</h3>
+<p><strong>端点:</strong> <code>GET /</code></p>
+<p><strong>描述:</strong> 简单的健康检查端点，返回 "OK"。</p>
+<p><strong>响应:</strong>
+- <strong>状态码:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>text/plain</code>
+- <strong>响应体:</strong> <code>OK</code></p>
+<p><strong>示例:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>http://localhost:9000/
+</code></pre></div></p>
+<hr />
+<h3 id="2">2. 健康检查端点</h3>
+<p><strong>端点:</strong> <code>GET /health</code></p>
+<p><strong>描述:</strong> 健康检查端点，以 JSON 格式返回服务器状态。</p>
+<p><strong>响应:</strong>
+- <strong>状态码:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>application/json</code>
+- <strong>响应体:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ok"</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>示例:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>curl<span class="w"> </span>http://localhost:9000/health
+</code></pre></div></p>
+<p><strong>说明</strong>：实际 JSON 结构由健康检查库定义（可能包含多项检查结果）。精确结构请在使用 <code>-openapi</code> 时查看 OpenAPI 规范。</p>
+<hr />
+<h3 id="3">3. 存活与就绪端点</h3>
+<p><strong>端点:</strong> <code>GET /livez</code>、<code>GET /readyz</code></p>
+<p><strong>描述:</strong> 类 Kubernetes 的存活与就绪探针。<code>/livez</code> 表示进程在运行；<code>/readyz</code> 表示服务是否就绪接收流量（如已加载 hooks）。</p>
+<p><strong>响应:</strong>
+- <strong>状态码:</strong> 健康/就绪时为 <code>200 OK</code>；否则为非 2xx。
+- <strong>Content-Type:</strong> <code>application/json</code>
+- <strong>响应体:</strong> 由实现定义的 JSON（启用 <code>-openapi</code> 时可查看 OpenAPI 规范中的 schema）。</p>
+<p><strong>示例:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>curl<span class="w"> </span>http://localhost:9000/livez
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>curl<span class="w"> </span>http://localhost:9000/readyz
+</code></pre></div></p>
+<hr />
+<h3 id="4">4. 版本端点</h3>
+<p><strong>端点:</strong> <code>GET /version</code></p>
+<p><strong>描述:</strong> 以 JSON 格式返回服务版本与构建信息，响应头中可能包含以 <code>X-</code> 为前缀的版本相关头。</p>
+<p><strong>响应:</strong>
+- <strong>状态码:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>application/json</code>
+- <strong>响应头:</strong> 始终包含 <code>X-Version</code>；存在对应构建元数据时，还会包含 <code>X-Commit</code>、<code>X-Build-Date</code> 和 <code>X-Branch</code>。
+- <strong>响应体:</strong> 包含 <code>version</code>、<code>commit</code>、<code>build_date</code>、<code>branch</code>、<code>go_version</code>、<code>platform</code> 和 <code>compiler</code> 的 JSON；值为空的可选字段可能省略。启用 <code>-openapi</code> 后可查看完整的对象 schema。
+- <strong>其他方法:</strong> 返回 <code>405 Method Not Allowed</code>，并携带 <code>Allow: GET, HEAD</code>。</p>
+<p><strong>示例:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>curl<span class="w"> </span>http://localhost:9000/version
+</code></pre></div></p>
+<p><code>0.0.0.0</code> 是服务端监听地址，不是客户端访问地址。调用此端点时应使用 <code>localhost</code>、<code>127.0.0.1</code>，或服务器实际可访问的 IP 地址/域名。</p>
+<hr />
+<h3 id="5">5. 指标端点</h3>
+<p><strong>端点:</strong> <code>GET /metrics</code></p>
+<p><strong>描述:</strong> Prometheus 指标端点，用于监控和可观测性。</p>
+<p><strong>响应:</strong>
+- <strong>状态码:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>text/plain; version=0.0.4; charset=utf-8</code>
+- <strong>响应体:</strong> Prometheus 格式的文本指标</p>
+<p><strong>示例:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>curl<span class="w"> </span>http://localhost:9000/metrics
+</code></pre></div></p>
+<p><strong>可用指标:</strong>
+- <code>webhook_http_requests_total</code>: HTTP 请求总数
+- <code>webhook_http_request_duration_seconds</code>: HTTP 请求持续时间直方图
+- <code>webhook_hook_executions_total</code>: Hook 执行总数
+- <code>webhook_hook_execution_duration_seconds</code>: Hook 执行持续时间直方图
+- <code>webhook_system_memory_bytes</code>: 系统内存使用量
+- <code>webhook_system_cpu_percent</code>: 系统 CPU 使用百分比</p>
+<hr />
+<h3 id="6-openapi">6. OpenAPI 规范端点（可选）</h3>
+<p><strong>端点:</strong> <code>GET /openapi</code>（或通过 <code>-openapi-path</code> 自定义路径）</p>
+<p><strong>可用性:</strong> 仅当使用 <code>-openapi</code> 参数（或 <code>OPENAPI_ENABLED=true</code>）启动服务时可用。默认不暴露，建议仅在调试或内网使用。</p>
+<p><strong>描述:</strong> 返回 Webhook HTTP API 的 OpenAPI 3.0.x 规范（JSON），可用于 Swagger UI、Swagger Editor 或客户端代码生成。</p>
+<p><strong>响应:</strong>
+- <strong>状态码:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>application/json; charset=utf-8</code>
+- <strong>响应体:</strong> 描述 <code>/</code>、<code>/health</code>、<code>/livez</code>、<code>/readyz</code>、<code>/version</code>、<code>/metrics</code> 及 <code>/hooks/{id}</code>（或自定义 hook 前缀）的 OpenAPI 3.0.3 文档。</p>
+<p><strong>示例:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># 启用 OpenAPI 后启动服务</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>./webhook<span class="w"> </span>-hooks<span class="w"> </span>hooks.json<span class="w"> </span>-openapi
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># 获取规范</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>curl<span class="w"> </span>http://localhost:9000/openapi
+</code></pre></div></p>
+<p>也可使用 <code>-openapi-print</code> 在启动时将规范打印到 stdout（例如 <code>./webhook -openapi -openapi-print &gt; openapi.json</code>）。</p>
+<hr />
+<h3 id="7-config-ui">7. Config UI（可选）</h3>
+<p><strong>端点:</strong> <code>GET /config-ui</code>、<code>GET /config-ui/</code>、<code>POST /config-ui/api/generate</code>（或通过 <code>-config-ui-path</code> 自定义路径）</p>
+<p><strong>可用性:</strong> 启用 <code>-config-ui</code> 后，Config UI 会挂载在 webhook 主服务上（路径由 <code>-config-ui-path</code> 指定，默认 <code>/config-ui</code>）。默认不暴露，建议仅在调试或内网使用。</p>
+<p><strong>描述:</strong> 用于生成 hook 配置（YAML/JSON）及调用示例的 Web 页面与 API。</p>
+<ul>
+<li><strong>GET</strong> <code>{config-ui-path}</code> 或 <code>{config-ui-path}/</code>：返回配置生成器 HTML 页面。</li>
+<li><strong>GET</strong> <code>{config-ui-path}/static/*</code>：静态资源（CSS、JS）。</li>
+<li><strong>POST</strong> <code>{config-ui-path}/api/generate</code>：请求体为 JSON（字段如 <code>id</code>、<code>execute-command</code>、<code>response-message</code>、<code>trigger-rule</code>）。成功返回 <code>{ "yaml", "json", "callUrl", "curlExample" }</code>，校验失败返回 4xx 及 <code>{ "error": "..." }</code>。</li>
+<li><strong>GET</strong> <code>{config-ui-path}/api/capabilities</code>：返回 <code>{ "saveToDir": true|false }</code>。为 <code>true</code> 时 UI 显示「保存到目录」选项（目录模式：默认 <code>./hooks</code> 或显式 <code>-hooks-dir</code>）。</li>
+<li><strong>POST</strong> <code>{config-ui-path}/api/save</code>：将生成的配置写入 hooks 目录。请求体：<code>{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }</code>。成功返回 <code>{ "ok": "&lt;绝对路径&gt;" }</code>，未启用或非法请求（如路径穿越、格式不匹配、配置内容非法）返回 4xx 及 <code>{ "error": "..." }</code>。文件名须为 <code>.json</code>、<code>.yaml</code> 或 <code>.yml</code> 后缀。</li>
+</ul>
+<p><strong>示例:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 在 webhook 主服务上启用 Config UI（默认端口 9000）</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>./webhook<span class="w"> </span>-config-ui
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># 浏览器打开 http://localhost:9000/config-ui</span>
+</code></pre></div></p>
+<hr />
+<h3 id="8-hook">8. Hook 执行端点</h3>
+<p><strong>端点:</strong> 默认支持 <code>ANY /hooks/{hook-id}</code>；可通过 hook 配置或 <code>-http-methods</code> 限制</p>
+<p><strong>描述:</strong> 执行配置的 hook。hook 自身的 <code>http-methods</code> 优先于全局 <code>-http-methods</code>。两者均未配置时，为保持向后兼容，允许服务器支持的所有标准 HTTP 方法。</p>
+<p><strong>URL 参数:</strong>
+- <code>hook-id</code> (必需): 要执行的 hook 的 ID，在您的 hooks 配置文件中定义。</p>
+<p><strong>请求头:</strong>
+- <code>Content-Type</code>: 可选。可以是 <code>application/json</code>、<code>application/x-www-form-urlencoded</code>、<code>multipart/form-data</code> 或 <code>text/plain</code>。
+- <code>X-Request-Id</code>: 可选。如果提供且启用了 <code>-x-request-id</code>，将用作日志记录的请求 ID。</p>
+<p><strong>请求体:</strong>
+请求体可以包含：
+- JSON 数据
+- 表单数据（URL 编码或 multipart）
+- 纯文本
+- 查询参数（用于 GET 请求）</p>
+<p><strong>响应:</strong>
+- <strong>状态码:</strong> 
+  - <code>200 OK</code>: Hook 执行成功
+  - <code>400 Bad Request</code>: 无效请求（例如，格式错误的 JSON、缺少必需参数）
+  - <code>404 Not Found</code>: 未找到 Hook ID
+  - <code>405 Method Not Allowed</code>: 此 hook 不允许的 HTTP 方法
+  - <code>408 Request Timeout</code>: 请求超时
+  - <code>429 Too Many Requests</code>: 超过速率限制（如果启用了速率限制）
+  - <code>500 Internal Server Error</code>: Hook 执行期间的服务器错误
+  - <code>503 Service Unavailable</code>: 服务器正在关闭
+  - 自定义状态码: 在 <code>success-http-response-code</code> 或 <code>trigger-rule-mismatch-http-response-code</code> 中配置</p>
+<ul>
+<li><strong>Content-Type:</strong> </li>
+<li>默认成功和错误响应均为 <code>text/plain; charset=utf-8</code></li>
+<li>
+<p>在 <code>response-headers</code> 中配置</p>
+</li>
+<li>
+<p><strong>405 响应头:</strong> <code>Allow</code> 列出匹配 hook 配置允许的方法。</p>
+</li>
+<li>
+<p><strong>响应体:</strong></p>
+</li>
+<li>成功: 来自 <code>response-message</code> 的自定义消息、命令输出（如果启用了 <code>include-command-output-in-response</code>）或默认消息</li>
+<li>错误: 为兼容既有客户端返回纯文本消息；请求 ID 和 hook ID 仍可在日志及链路追踪中查询</li>
+</ul>
+<p>使用 JSON Content-Type 发送格式错误的非空 JSON 时，服务返回 <code>400 Bad Request</code> 和 <code>Invalid JSON payload.</code>，且不会继续计算触发规则或执行命令。为兼容对空 Payload 执行 HMAC 认证的 Hook，空请求体仍被接受。</p>
+<p><strong>示例 - 成功执行:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># 带 JSON 体的 POST 请求</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:9000/hooks/redeploy-webhook<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"branch": "main", "commit": "abc123"}'</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># 带查询参数的 GET 请求</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>curl<span class="w"> </span><span class="s2">"http://localhost:9000/hooks/redeploy-webhook?branch=main&amp;commit=abc123"</span>
+</code></pre></div></p>
+<p><strong>示例 - Hook 未找到:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:9000/hooks/non-existent-hook
+</code></pre></div></p>
+<p><strong>响应:</strong> <code>Hook not found.</code></p>
+<p><strong>示例 - 方法不允许:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># 如果 hook 只允许 POST，但我们发送 GET</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>http://localhost:9000/hooks/post-only-hook
+</code></pre></div></p>
+<p><strong>响应:</strong> <code>HTTP GET method not allowed for hook "post-only-hook"</code></p>
+<p><strong>响应头:</strong> <code>Allow: POST</code></p>
+<hr />
+<h2 id="id">请求 ID</h2>
+<p>Webhook 自动为每个请求生成唯一的请求 ID。此 ID 用于：
+- 日志记录和追踪
+- 错误响应
+- 请求关联</p>
+<p>您可以自定义请求 ID 行为：
+- 使用 <code>-x-request-id</code> 在存在时使用 <code>X-Request-Id</code> 请求头
+- 使用 <code>-x-request-id-limit</code> 限制 <code>X-Request-Id</code> 请求头的长度</p>
+<p>请求 ID 出现在：
+- 服务器日志
+- 错误响应
+- 调试输出</p>
+<hr />
+<h2 id="_2">响应头</h2>
+<h3 id="_3">自定义响应头</h3>
+<p>您可以使用 <code>-header</code> 标志设置自定义响应头：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>webhook<span class="w"> </span>-header<span class="w"> </span><span class="s2">"X-Custom-Header=value"</span><span class="w"> </span>-header<span class="w"> </span><span class="s2">"X-Another-Header=another-value"</span>
+</code></pre></div>
+<p>这些响应头将包含在所有响应中。</p>
+<h3 id="hook">Hook 特定的响应头</h3>
+<p>您还可以在 hooks 配置中为每个 hook 配置响应头：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-hook"</span><span class="p">,</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">"execute-command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/path/to/script.sh"</span><span class="p">,</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nt">"response-headers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"X-Custom-Header"</span><span class="p">,</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"custom-value"</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="_4">速率限制</h2>
+<p>如果启用了速率限制（通过 <code>-rate-limit-enabled</code>、<code>-rate-limit-rps</code> 和 <code>-rate-limit-burst</code>），当超过速率限制时，服务器将返回 <code>429 Too Many Requests</code>。</p>
+<p><strong>响应头:</strong>
+- <code>X-RateLimit-Limit</code>: 允许的最大请求数
+- <code>X-RateLimit-Remaining</code>: 当前窗口中剩余的请求数
+- <code>X-RateLimit-Reset</code>: 速率限制重置的时间</p>
+<hr />
+<h2 id="cors">CORS 支持</h2>
+<p>要启用 CORS，使用 <code>-header</code> 标志设置 CORS 响应头：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>webhook<span class="w"> </span>-header<span class="w"> </span><span class="s2">"Access-Control-Allow-Origin=*"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">        </span>-header<span class="w"> </span><span class="s2">"Access-Control-Allow-Methods=GET,POST,OPTIONS"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">        </span>-header<span class="w"> </span><span class="s2">"Access-Control-Allow-Headers=Content-Type"</span>
+</code></pre></div>
+<hr />
+<h2 id="_5">超时</h2>
+<p>服务器具有可配置的超时：
+- <code>-read-header-timeout-seconds</code>: 读取请求头的时间（默认：5 秒）
+- <code>-read-timeout-seconds</code>: 读取请求体的时间（默认：10 秒）
+- <code>-write-timeout-seconds</code>: 写入响应的时间（默认：30 秒）
+- <code>-idle-timeout-seconds</code>: 保持空闲连接的时间（默认：90 秒）
+- <code>-hook-timeout-seconds</code>: Hook 执行时间（默认：30 秒）</p>
+<p>如果发生超时，服务器将返回适当的错误响应。</p>
+<hr />
+<h2 id="_6">流式输出</h2>
+<p>如果 hook 启用了 <code>stream-command-output</code>，命令的 stdout 和 stderr 会实时流式传输到 HTTP 响应。这对于长时间运行的命令很有用。</p>
+<p><strong>示例:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:9000/hooks/long-running-hook
+</code></pre></div></p>
+<p>响应将流式传输命令输出。</p>
+<hr />
+<h2 id="_7">状态码摘要</h2>
+<table>
+<thead>
+<tr>
+<th>状态码</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>成功</td>
+</tr>
+<tr>
+<td>400</td>
+<td>错误请求 - 无效的请求格式或参数</td>
+</tr>
+<tr>
+<td>404</td>
+<td>未找到 - 未找到 Hook ID</td>
+</tr>
+<tr>
+<td>405</td>
+<td>方法不允许 - 此 hook 不允许的 HTTP 方法</td>
+</tr>
+<tr>
+<td>408</td>
+<td>请求超时</td>
+</tr>
+<tr>
+<td>429</td>
+<td>请求过多 - 超过速率限制</td>
+</tr>
+<tr>
+<td>500</td>
+<td>内部服务器错误 - 执行期间的服务器错误</td>
+</tr>
+<tr>
+<td>503</td>
+<td>服务不可用 - 服务器正在关闭</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_8">最佳实践</h2>
+<ol>
+<li>
+<p><strong>使用 HTTPS</strong>: 在生产环境中始终使用反向代理（nginx、Traefik 等）提供 HTTPS。</p>
+</li>
+<li>
+<p><strong>设置请求超时</strong>: 根据您的用例配置适当的超时。</p>
+</li>
+<li>
+<p><strong>启用速率限制</strong>: 使用速率限制防止滥用。</p>
+</li>
+<li>
+<p><strong>使用请求 ID</strong>: 包含 <code>X-Request-Id</code> 请求头以获得更好的可追踪性。</p>
+</li>
+<li>
+<p><strong>监控指标</strong>: 使用 <code>/metrics</code> 端点进行监控和告警。</p>
+</li>
+<li>
+<p><strong>优雅处理错误</strong>: 检查状态码并适当解析错误响应。</p>
+</li>
+<li>
+<p><strong>使用健康检查</strong>: 监控 <code>/health</code> 端点以了解服务可用性。</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
