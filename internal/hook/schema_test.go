@@ -213,6 +213,11 @@ func TestSchemaConstrainsTemporaryFilePatterns(t *testing.T) {
 				Properties map[string]struct {
 					Pattern string `json:"pattern"`
 				} `json:"properties"`
+				Then struct {
+					Properties map[string]struct {
+						Pattern string `json:"pattern"`
+					} `json:"properties"`
+				} `json:"then"`
 			} `json:"allOf"`
 		} `json:"$defs"`
 	}
@@ -220,28 +225,32 @@ func TestSchemaConstrainsTemporaryFilePatterns(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pattern := ""
+	patterns := make([]string, 0, 2)
 	for _, condition := range schema.Defs["fileArgument"].AllOf {
 		if condition.Properties["envname"].Pattern != "" {
-			pattern = condition.Properties["envname"].Pattern
-			break
+			patterns = append(patterns, condition.Properties["envname"].Pattern)
+		}
+		if condition.Then.Properties["name"].Pattern != "" {
+			patterns = append(patterns, condition.Then.Properties["name"].Pattern)
 		}
 	}
-	if pattern == "" {
-		t.Fatal("schema is missing the temporary-file pattern constraint")
+	if len(patterns) != 2 {
+		t.Fatalf("schema should constrain explicit and derived temporary-file patterns; found %d constraints", len(patterns))
 	}
-	compiled, err := regexp.Compile(pattern)
-	if err != nil {
-		t.Fatalf("invalid temporary-file pattern: %v", err)
-	}
-	for _, value := range []string{"", "WEBHOOK_FILE", "payload-*.json"} {
-		if !compiled.MatchString(value) {
-			t.Errorf("schema rejected valid temporary-file pattern %q", value)
+	for _, pattern := range patterns {
+		compiled, err := regexp.Compile(pattern)
+		if err != nil {
+			t.Fatalf("invalid temporary-file pattern: %v", err)
 		}
-	}
-	for _, value := range []string{`bad?name`, `bad:name`, `bad\"name`, `bad<name`, `bad>name`, `bad|name`, "bad\x00name", "bad\x1fname", "two**stars"} {
-		if compiled.MatchString(value) {
-			t.Errorf("schema accepted invalid temporary-file pattern %q", value)
+		for _, value := range []string{"", "WEBHOOK_FILE", "payload-*.json"} {
+			if !compiled.MatchString(value) {
+				t.Errorf("schema rejected valid temporary-file pattern %q", value)
+			}
+		}
+		for _, value := range []string{`bad?name`, `bad:name`, `bad\"name`, `bad<name`, `bad>name`, `bad|name`, "bad\x00name", "bad\x1fname", "two**stars"} {
+			if compiled.MatchString(value) {
+				t.Errorf("schema accepted invalid temporary-file pattern %q", value)
+			}
 		}
 	}
 }

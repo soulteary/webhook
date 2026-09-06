@@ -89,7 +89,7 @@
             ]
           },
           "then": {
-            "properties": { "name": { "type": "string", "pattern": "^[^/\\\\]*$" } }
+            "properties": { "name": { "type": "string", "pattern": "^[^<>:\"/\\\\|?*\\u0000-\\u001F]*(?:\\*[^<>:\"/\\\\|?*\\u0000-\\u001F]*)?$" } }
           }
         },
         {
