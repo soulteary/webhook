@@ -1374,6 +1374,99 @@ func TestValidateRejectsStaticallyOversizedCommandArguments(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsStaticallyUnsafeStrictArguments(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		command  string
+		argument string
+		field    string
+	}{
+		{
+			name:    "unsafe executable",
+			command: "/bin/echo;date",
+			field:   "execute-command",
+		},
+		{
+			name:     "unsafe literal argument",
+			command:  "/bin/echo",
+			argument: "hello;date",
+			field:    "pass-arguments-to-command[0].name",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+			content := fmt.Sprintf("- id: strict-static\n  execute-command: %q\n", tt.command)
+			if tt.argument != "" {
+				content += fmt.Sprintf("  pass-arguments-to-command:\n    - source: string\n      name: %q\n", tt.argument)
+			}
+			require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+			appFlags := createValidFlags()
+			appFlags.ValidateStrict = true
+			appFlags.StrictMode = true
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), tt.field)
+			assert.Contains(t, fmt.Sprint(result.Errors), "potentially dangerous characters")
+		})
+	}
+}
+
+func TestValidateAllowsStaticallySafeStrictArguments(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: strict-static
+  execute-command: /bin/echo
+  pass-arguments-to-command:
+    - source: string
+      name: hello-world_123
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateStrict = true
+	appFlags.StrictMode = true
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.False(t, result.HasErrors(), "%+v", result.Errors)
+}
+
+func TestValidateLiteralBase64FileArguments(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		value      string
+		shouldFail bool
+	}{
+		{name: "valid", value: "aGVsbG8="},
+		{name: "invalid", value: "not_base64", shouldFail: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+			content := fmt.Sprintf(`
+- id: base64-file
+  execute-command: /bin/echo
+  pass-file-to-command:
+    - source: string
+      name: %q
+      envname: WEBHOOK_FILE
+      base64decode: true
+`, tt.value)
+			require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+			appFlags := createValidFlags()
+			appFlags.ValidateStrict = true
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			if tt.shouldFail {
+				require.True(t, result.HasErrors())
+				assert.Contains(t, fmt.Sprint(result.Errors), "must be valid standard Base64")
+				return
+			}
+			require.False(t, result.HasErrors(), "%+v", result.Errors)
+		})
+	}
+}
+
 func TestValidateAllowsDynamicArgumentAtStaticTotalBoundary(t *testing.T) {
 	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
 	require.NoError(t, os.WriteFile(hookFile, []byte(`

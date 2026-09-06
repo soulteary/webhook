@@ -14,6 +14,7 @@ import (
 	"github.com/soulteary/webhook/internal/i18n"
 	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/rules"
+	commandsecurity "github.com/soulteary/webhook/internal/security"
 )
 
 // ValidationError 表示配置验证错误
@@ -280,7 +281,7 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 		// 验证 Hook 内容
 		validateHookContent(result, hookFile, hooks, hookOrigins,
 			flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor,
-			flags.MaxArgsCount, flags.MaxArgLength, flags.MaxTotalArgsLength)
+			flags.StrictMode, flags.MaxArgsCount, flags.MaxArgLength, flags.MaxTotalArgsLength)
 	}
 	if flags.HooksDir == "" && loadedFiles > 0 && loadedHooks == 0 {
 		result.AddError("hooks", "explicitly configured hook files must contain at least one hook")
@@ -288,7 +289,7 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 }
 
 // validateHookContent 验证 Hook 内容
-func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string, validateSemantics bool, maxArgsCount, maxArgLength, maxTotalArgsLength int) {
+func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string, validateSemantics, strictMode bool, maxArgsCount, maxArgLength, maxTotalArgsLength int) {
 	for i, h := range hooks {
 		idField := fmt.Sprintf("hook-file[%s].hooks[%d].id", hookFile, i)
 		// 验证 Hook ID
@@ -332,7 +333,7 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 				result.AddError(prefix+".pass-arguments-to-command",
 					fmt.Sprintf("command would have %d arguments including argv[0], exceeding max-args-count %d", 1+len(h.PassArgumentsToCommand), maxArgsCount))
 			}
-			validateStaticCommandArguments(result, prefix, h, maxArgLength, maxTotalArgsLength)
+			validateStaticCommandArguments(result, prefix, h, maxArgLength, maxTotalArgsLength, strictMode)
 			validateRuleContent(result, prefix+".trigger-rule", h.TriggerRule)
 			validateEnvironmentArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
 			validateArguments(result, prefix+".pass-arguments-to-command", h.PassArgumentsToCommand)
@@ -345,11 +346,14 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 	}
 }
 
-func validateStaticCommandArguments(result *ValidationResult, prefix string, configuredHook hook.Hook, maxArgLength, maxTotalArgsLength int) {
+func validateStaticCommandArguments(result *ValidationResult, prefix string, configuredHook hook.Hook, maxArgLength, maxTotalArgsLength int, strictMode bool) {
 	knownTotalLength := len(configuredHook.ExecuteCommand)
 	if maxArgLength > 0 && knownTotalLength > maxArgLength {
 		result.AddError(prefix+".execute-command",
 			fmt.Sprintf("length %d exceeds max-arg-length %d", knownTotalLength, maxArgLength))
+	}
+	if strictMode {
+		validateStrictStaticArgument(result, prefix+".execute-command", configuredHook.ExecuteCommand)
 	}
 	for i, argument := range configuredHook.PassArgumentsToCommand {
 		if argument.Source != hook.SourceString {
@@ -361,10 +365,27 @@ func validateStaticCommandArguments(result *ValidationResult, prefix string, con
 			result.AddError(fmt.Sprintf("%s.pass-arguments-to-command[%d].name", prefix, i),
 				fmt.Sprintf("literal argument length %d exceeds max-arg-length %d", argumentLength, maxArgLength))
 		}
+		if strictMode {
+			validateStrictStaticArgument(result,
+				fmt.Sprintf("%s.pass-arguments-to-command[%d].name", prefix, i), argument.Name)
+		}
 	}
 	if maxTotalArgsLength > 0 && knownTotalLength > maxTotalArgsLength {
 		result.AddError(prefix+".pass-arguments-to-command",
 			fmt.Sprintf("known command argument length %d exceeds max-total-args-length %d", knownTotalLength, maxTotalArgsLength))
+	}
+}
+
+func validateStrictStaticArgument(result *ValidationResult, field, value string) {
+	validator := commandsecurity.NewCommandValidator()
+	validator.StrictMode = true
+	// Length and count limits are validated separately with field-specific
+	// messages. Size these limits to isolate the runtime strict-mode checks.
+	validator.MaxArgLength = len(value)
+	validator.MaxTotalArgsLength = len(value)
+	validator.MaxArgsCount = 1
+	if err := validator.ValidateArgs([]string{value}); err != nil {
+		result.AddError(field, err.Error())
 	}
 }
 
@@ -412,6 +433,11 @@ func validateFileArguments(result *ValidationResult, field string, arguments []h
 	for i := range arguments {
 		argumentField := fmt.Sprintf("%s[%d]", field, i)
 		validateArgument(result, argumentField, arguments[i])
+		if arguments[i].Source == hook.SourceString && arguments[i].Base64Decode {
+			if _, err := base64.StdEncoding.DecodeString(arguments[i].Name); err != nil {
+				result.AddError(argumentField+".name", "must be valid standard Base64 when base64decode is true")
+			}
+		}
 		pattern := arguments[i].EnvName
 		if pattern == "" {
 			pattern = hook.EnvNamespace + strings.ToUpper(arguments[i].Name)
