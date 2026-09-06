@@ -23,6 +23,8 @@ type Check struct {
 	Detail  string
 }
 
+const currentIdentityID = -1
+
 // Run validates the effective configuration and verifies every configured
 // command and working directory without starting the HTTP server.
 func Run(appFlags flags.AppFlags) []Check {
@@ -47,9 +49,10 @@ func Run(appFlags flags.AppFlags) []Check {
 	}
 	accessUID, accessGID := appFlags.SetUID, appFlags.SetGID
 	if accessUID == 0 && accessGID == 0 {
-		if uid, gid, ok := platform.EffectiveIdentity(); ok {
-			accessUID, accessGID = uid, gid
-		}
+		// Keep current-identity checks distinct from prospective privilege-drop
+		// checks. The platform implementation can then ask the kernel, including
+		// ACL evaluation, instead of approximating access from Unix mode bits.
+		accessUID, accessGID = currentIdentityID, currentIdentityID
 	}
 	destinations := []struct {
 		subject string
@@ -309,13 +312,7 @@ func nearestExistingParent(path string) (string, error) {
 
 func checkTargetPathAccess(path string, uid, gid int, required uint32) error {
 	if uid == 0 && gid == 0 {
-		// UID/GID 0 means root on Unix, but EffectiveIdentity deliberately
-		// reports ok=false on platforms without POSIX identities (Windows).
-		// In that case, verify access with the current process token instead of
-		// treating the zero values as an unconditional success.
-		if _, _, ok := platform.EffectiveIdentity(); ok {
-			return nil
-		}
+		return nil
 	}
 	path, err := filepath.Abs(filepath.Clean(path))
 	if err != nil {
@@ -361,7 +358,7 @@ func checkPathAndParentsAccess(path string, uid, gid int, required uint32) error
 }
 
 func checkPathAccess(path string, info os.FileInfo, uid, gid int, required uint32) error {
-	if uid == 0 && gid == 0 {
+	if uid == currentIdentityID && gid == currentIdentityID {
 		return platform.CheckCurrentPathAccess(path, required)
 	}
 	return platform.CheckFileModeAccess(info, uid, gid, required)

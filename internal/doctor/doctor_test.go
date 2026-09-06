@@ -37,6 +37,12 @@ func TestTargetIdentityAccessUsesFileMode(t *testing.T) {
 	require.Error(t, checkTargetPathAccess(path, 12345, 12345, 4))
 }
 
+func TestCurrentIdentityAccessUsesKernelCheck(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "current-readable")
+	require.NoError(t, os.WriteFile(path, []byte("readable"), 0o600))
+	require.NoError(t, checkTargetPathAccess(path, currentIdentityID, currentIdentityID, 4))
+}
+
 func TestTargetIdentityRequiresWritablePassFileDirectory(t *testing.T) {
 	parent := t.TempDir()
 	require.NoError(t, os.Chmod(parent, 0o755))

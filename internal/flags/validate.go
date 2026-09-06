@@ -67,7 +67,9 @@ func Validate(flags AppFlags) *ValidationResult {
 	if flags.Profile == "secure" && !hasAllowedCommandPath(flags.AllowedCommandPaths) {
 		result.AddError("allowed-command-paths", "is required when profile is secure")
 	}
-	if (flags.SetUID != 0) != (flags.SetGID != 0) {
+	if flags.SetUID < 0 || flags.SetGID < 0 {
+		result.AddError("setuid/setgid", "must be positive integers when configured")
+	} else if (flags.SetUID != 0) != (flags.SetGID != 0) {
 		result.AddError("setuid/setgid", "must be used together")
 	} else if flags.SetUID != 0 && !platform.SupportsPrivilegeDrop() {
 		result.AddError("setuid/setgid", "is not supported on this platform")

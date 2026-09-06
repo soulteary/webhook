@@ -79,6 +79,9 @@ func TestValidatePrivilegePair(t *testing.T) {
 		{name: "both configured", uid: 1000, gid: 1000, invalid: !platform.SupportsPrivilegeDrop()},
 		{name: "only uid", uid: 1000, invalid: true},
 		{name: "only gid", gid: 1000, invalid: true},
+		{name: "negative uid and gid", uid: -1, gid: -1, invalid: true},
+		{name: "negative uid", uid: -1, gid: 1000, invalid: true},
+		{name: "negative gid", uid: 1000, gid: -1, invalid: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			appFlags := createValidFlags()
