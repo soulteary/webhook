@@ -199,6 +199,8 @@ type AppFlags struct {
 
 	ShowVersion     bool
 	ValidateConfig  bool
+	ValidateStrict  bool
+	Doctor          bool
 	HooksFiles      hook.HooksFiles
 	ResponseHeaders hook.ResponseHeaders
 

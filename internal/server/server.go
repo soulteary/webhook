@@ -873,27 +873,28 @@ func createCommandValidator(appFlags flags.AppFlags) *security.CommandValidator 
 // pathFallbackBasenames 为绝对路径「未找到」时允许按 basename 在 PATH 中查找的命令名（跨平台兼容，如 /bin/true → true）。
 var pathFallbackBasenames = map[string]bool{"true": true, "false": true}
 
-func resolveCommandLookPath(h *hook.Hook) []string {
+func resolveCommandLookPath(h *hook.Hook) ([]string, error) {
 	if h == nil {
-		return nil
+		return nil, nil
 	}
 	cmd := strings.TrimSpace(h.ExecuteCommand)
 	if cmd == "" {
-		return nil
+		return nil, nil
 	}
 
 	if filepath.IsAbs(cmd) {
 		base := filepath.Base(cmd)
 		if pathFallbackBasenames[base] {
-			return []string{cmd, base}
+			return []string{cmd, base}, nil
 		}
-		return []string{cmd}
+		return []string{cmd}, nil
 	}
 
-	if h.CommandWorkingDirectory != "" {
-		return []string{filepath.Join(h.CommandWorkingDirectory, cmd)}
+	candidate, err := security.ResolveCommandCandidate(cmd, h.CommandWorkingDirectory)
+	if err != nil {
+		return nil, err
 	}
-	return []string{cmd}
+	return []string{candidate}, nil
 }
 
 func makeSureCallable(ctx context.Context, h *hook.Hook, r *hook.Request, appFlags flags.AppFlags, validator *security.CommandValidator) (string, error) {
@@ -905,13 +906,15 @@ func makeSureCallable(ctx context.Context, h *hook.Hook, r *hook.Request, appFla
 	}
 
 	// check the command exists
-	lookpaths := resolveCommandLookPath(h)
+	lookpaths, err := resolveCommandLookPath(h)
+	if err != nil {
+		return "", err
+	}
 	if len(lookpaths) == 0 {
 		return "", fmt.Errorf("empty execute-command for hook %s", h.ID)
 	}
 	var (
 		cmdPath       string
-		err           error
 		lastLookPath  string
 		lookPathError error
 	)
@@ -1171,11 +1174,11 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 }
 
 func writeHttpResponseCode(w http.ResponseWriter, rid, hookId string, responseCode int) {
-	// Check if the given return code is supported by the http package
-	// by testing if there is a StatusText for this code.
-	if len(http.StatusText(responseCode)) > 0 {
+	// A configured final response must not be informational (1xx), because
+	// net/http treats those as interim responses and waits for a final status.
+	if responseCode >= 200 && responseCode <= 599 {
 		w.WriteHeader(responseCode)
 	} else {
-		logger.Warnf("[%s] %s got matched, but the configured return code %d is unknown - defaulting to 200", rid, hookId, responseCode)
+		logger.Warnf("[%s] %s got matched, but the configured return code %d is invalid - defaulting to 200", rid, hookId, responseCode)
 	}
 }

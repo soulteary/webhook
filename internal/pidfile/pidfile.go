@@ -20,12 +20,18 @@ func checkPIDFileAlreadyExists(path string) error {
 	if pidByte, err := os.ReadFile(filepath.Clean(path)); err == nil {
 		pidString := strings.TrimSpace(string(pidByte))
 		if pid, err := strconv.Atoi(pidString); err == nil {
-			if processExists(pid) {
+			if pid > 0 && processExists(pid) {
 				return fmt.Errorf("pid file found, ensure webhook is not running or delete %s", path)
 			}
 		}
 	}
 	return nil
+}
+
+// CheckExisting reports whether path names a PID file for a running process.
+// Invalid, stale, and missing PID files do not prevent startup.
+func CheckExisting(path string) error {
+	return checkPIDFileAlreadyExists(path)
 }
 
 // New creates a PIDfile using the specified path.

@@ -9,7 +9,14 @@ import (
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestHookLoadOptionsPreservesMethodsOnlyForSemanticValidation(t *testing.T) {
+	require.False(t, HookLoadOptions(flags.AppFlags{Profile: "compat"}).ValidateHTTPMethods)
+	require.True(t, HookLoadOptions(flags.AppFlags{Profile: "secure"}).ValidateHTTPMethods)
+	require.True(t, HookLoadOptions(flags.AppFlags{Profile: "compat", ValidateConfig: true}).ValidateHTTPMethods)
+}
 
 func TestApplyWatcher(t *testing.T) {
 	// Create a temporary file for testing

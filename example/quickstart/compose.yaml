@@ -1,0 +1,29 @@
+services:
+  webhook:
+    image: soulteary/webhook:extend-7.1.0
+    container_name: webhook-quickstart
+    command:
+      - -profile
+      - secure
+      - -allowed-command-paths=/bin/echo
+      - -template
+      - -hooks
+      - /var/lib/webhook/hooks/hooks.yaml
+      - -audit-file-path=/var/lib/webhook/runtime/audit.log
+      - -verbose
+    environment:
+      DEMO_SECRET: ${DEMO_SECRET:-local-only-demo-secret}
+    ports:
+      - 127.0.0.1:9000:9000
+    volumes:
+      - ./hooks:/var/lib/webhook/hooks:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /var/lib/webhook/runtime:size=16m,uid=65532,gid=65532,mode=0700
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:9000/readyz]
+      interval: 2s
+      timeout: 1s
+      retries: 15
+    restart: unless-stopped

@@ -52,13 +52,22 @@ WebHook 遵循简单、专注的方法：
 
 ## 安装
 
-### 方式一：预编译二进制文件
+### 方式一：Homebrew 或 Go install
+
+```bash
+brew install soulteary/tap/webhook
+
+# 或通过 Go 工具链直接安装
+go install github.com/soulteary/webhook@latest
+```
+
+### 方式二：预编译二进制文件
 
 [![](.github/release.png)](https://github.com/soulteary/webhook/releases)
 
 从 [发布页面](https://github.com/soulteary/webhook/releases) 下载适用于 Linux 和 macOS 的预编译二进制文件。
 
-### 方式二：Docker
+### 方式三：Docker
 
 ![](.github/dockerhub.png)
 
@@ -75,7 +84,9 @@ docker pull soulteary/webhook:extend-7.1.0
 
 两种 Release 镜像都以非 root 用户从 `/var/lib/webhook` 运行。默认镜像是基于 `scratch` 的 Core 镜像，适合挂载静态可执行文件且不依赖 Shell 的配置；`extend-*` 镜像包含 Alpine、Bash、curl、wget、jq 和 yq，适合执行 Shell 脚本。请确保挂载的 Hook、命令和审计目录可由 UID/GID `65532` 读取或写入。
 
-### 方式三：从源码构建
+需要立即发送签名请求时，可使用 [60 秒 Docker Compose 快速体验](example/quickstart/)。
+
+### 方式四：从源码构建
 
 ```bash
 git clone https://github.com/soulteary/webhook.git
@@ -85,7 +96,17 @@ go build
 
 ## 配置
 
-**📚 完整文档请查看 [中文文档](./docs/zh-CN/) 或 [英文文档](./docs/en-US/)**
+**📚 完整文档请查看[版本化文档站](https://soulteary.github.io/webhook/)、[中文文档](./docs/zh-CN/)或[英文文档](./docs/en-US/)。**
+
+启动服务前可以生成、严格校验并诊断配置：
+
+```bash
+webhook init
+WEBHOOK_SECRET='替换为随机密钥' webhook validate --strict -template -hooks hooks/hooks.yaml
+WEBHOOK_SECRET='替换为随机密钥' webhook doctor --strict -template -hooks hooks/hooks.yaml
+```
+
+[Hook JSON Schema](schema/hooks.schema.json) 可用于编辑器自动补全和未知字段检测；命令与 VS Code 配置详见[配置工具](docs/en-US/Configuration-Tools.md)。
 
 ### 基础示例
 
@@ -176,6 +197,7 @@ http://yourserver:9000/hooks/redeploy-webhook
 - **模板支持**：使用 `-template` 标志在配置文件中使用 Go 模板 - 查看 [配置模版](docs/zh-CN/Templates.md)
 - **Config UI**：同一二进制，按参数切换。使用 `-config-ui` 启用配置生成 Web UI（建议仅在调试或内网使用）；与主服务共用端口（默认 `9000`），可用 `-config-ui-path` 修改路径（尾斜杠会归一化）。目录模式（默认 `./hooks` 或显式 `-hooks-dir`）下，UI 可将生成的配置直接保存到目录，保存后可立即调用生成的 URL 验证；显式 `-hooks` 单文件模式下，仍可生成/下载但不会提供目录保存。`-urlprefix` 会影响 UI 中展示的调用 URL。详见 [配置参数](docs/zh-CN/Webhook-Parameters.md) 与 [Config UI 说明](cmd/README.md)。
 - **OwlMail 联动**：接收 [OwlMail](https://github.com/soulteary/owlmail) 的签名邮件事件，使用 HMAC-SHA256 验证请求体、映射投递元数据用于链路关联，并执行受控命令。参见[联动指南](docs/zh-CN/OwlMail-Integration.md)和[可运行示例](example/owlmail/)。
+- **Provider 配方**：提供由 CI 端到端验证的 GitHub、GitLab、Gitea、Harbor 和 Alertmanager 配置，见 [example/providers](example/providers/)。
 - **HTTPS**：使用反向代理（nginx、Traefik、Caddy）提供 HTTPS 支持
 - **CORS**：使用 `-header name=value` 设置自定义响应头，包括 CORS 响应头
 - **热重载**：使用 `-hotreload` 或 `kill -USR1` 无需重启即可更新配置

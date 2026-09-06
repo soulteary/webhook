@@ -4,14 +4,12 @@
 package pidfile
 
 import (
-	"os"
-	"path/filepath"
-	"strconv"
+	"errors"
+
+	"golang.org/x/sys/unix"
 )
 
 func processExists(pid int) bool {
-	if _, err := os.Stat(filepath.Join("/proc", strconv.Itoa(pid))); err == nil {
-		return true
-	}
-	return false
+	err := unix.Kill(pid, 0)
+	return err == nil || errors.Is(err, unix.EPERM)
 }

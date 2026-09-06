@@ -40,6 +40,8 @@ func TestWriteHttpResponseCode(t *testing.T) {
 		{"Valid 200", 200, true},
 		{"Valid 404", 404, true},
 		{"Valid 500", 500, true},
+		{"Valid unassigned 599", 599, true},
+		{"Invalid informational code", 199, false},
 		{"Invalid code", 999, false},
 	}
 
@@ -142,6 +144,28 @@ func TestMakeSureCallable_RelativePath(t *testing.T) {
 	cmdPath, err := makeSureCallable(context.Background(), h, r, appFlags, nil)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cmdPath)
+}
+
+func TestMakeSureCallable_RelativeWorkingDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	tempDir := t.TempDir()
+	scriptsDir := filepath.Join(tempDir, "scripts")
+	require.NoError(t, os.Mkdir(scriptsDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(scriptsDir, "run.sh"), []byte("#!/bin/sh\n"), 0o700))
+
+	oldWorkingDirectory, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tempDir))
+	t.Cleanup(func() { require.NoError(t, os.Chdir(oldWorkingDirectory)) })
+
+	h := &hook.Hook{ExecuteCommand: "run.sh", CommandWorkingDirectory: "scripts"}
+	r := &hook.Request{ID: "test-request"}
+	cmdPath, err := makeSureCallable(context.Background(), h, r, flags.AppFlags{}, nil)
+	require.NoError(t, err)
+	require.True(t, filepath.IsAbs(cmdPath), cmdPath)
 }
 
 func TestMakeSureCallable_WithSpace(t *testing.T) {

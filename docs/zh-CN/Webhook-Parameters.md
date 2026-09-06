@@ -87,10 +87,10 @@
   在指定路径创建 PID 文件
 
 - `-setuid int`
-  在打开监听端口后设置用户 ID；必须与 `setgid` 一起使用
+  在打开监听端口后设置用户 ID；必须与 `setgid` 一起使用；Linux 和 Windows 不支持
 
 - `-setgid int`
-  在打开监听端口后设置组 ID；必须与 `setuid` 一起使用
+  在打开监听端口后设置组 ID；必须与 `setuid` 一起使用；Linux 和 Windows 不支持
 
 ### 国际化
 
@@ -276,7 +276,7 @@
 
 ### Config UI（配置生成 Web UI）
 
-Config UI 是**配置生成器**：用于在浏览器中生成单条 hook 的 YAML/JSON 片段、调用 URL 与 curl 示例，并可在目录模式（默认 `./hooks` 或显式 `-hooks-dir`）下保存到该目录。不提供配置版本管理、回滚或多用户权限控制；适合本地或内网快速生成/调整配置，详见 [Config UI 说明](../../cmd/README.md)。
+Config UI 是**配置生成器**：用于在浏览器中生成单条 hook 的 YAML/JSON 片段、调用 URL 与 curl 示例，并可在目录模式（默认 `./hooks` 或显式 `-hooks-dir`）下保存到该目录。不提供配置版本管理、回滚或多用户权限控制；适合本地或内网快速生成/调整配置，详见 [Config UI 说明](https://github.com/soulteary/webhook/blob/main/cmd/README.md)。
 
 以下参数用于启用配置生成 Web UI。运行模式由是否启用 `-config-ui` 以及当前是否已加载 hooks 共同决定：
 

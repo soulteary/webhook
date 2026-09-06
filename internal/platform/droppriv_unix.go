@@ -27,3 +27,8 @@ func dropPrivileges(uid, gid int) error {
 func DropPrivileges(uid, gid int) error {
 	return dropPrivileges(uid, gid)
 }
+
+// SupportsPrivilegeDrop reports whether this build can apply setuid/setgid.
+func SupportsPrivilegeDrop() bool {
+	return true
+}

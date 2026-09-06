@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/soulteary/webhook/internal/audit"
+	"github.com/soulteary/webhook/internal/cli"
+	"github.com/soulteary/webhook/internal/doctor"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/i18n"
 	"github.com/soulteary/webhook/internal/logger"
@@ -58,6 +60,26 @@ func NeedValidateConfig(appFlags flags.AppFlags) {
 	}
 }
 
+func NeedDoctor(appFlags flags.AppFlags) {
+	if !appFlags.Doctor {
+		return
+	}
+	checks := doctor.Run(appFlags)
+	for _, check := range checks {
+		status := "ok"
+		writer := os.Stdout
+		if !check.OK {
+			status = "error"
+			writer = os.Stderr
+		}
+		fmt.Fprintf(writer, "[%s] %s: %s\n", status, check.Subject, check.Detail)
+	}
+	if doctor.HasFailures(checks) {
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
 func CheckPrivilegesParamsCorrect(appFlags flags.AppFlags) {
 	if (appFlags.SetUID != 0 || appFlags.SetGID != 0) && (appFlags.SetUID == 0 || appFlags.SetGID == 0) {
 		i18n.Println(i18n.MSG_SETUID_OR_SETGID_ERROR)
@@ -95,6 +117,13 @@ func SetupLogger(appFlags flags.AppFlags, logQueue *[]string) error {
 }
 
 func main() {
+	rawArgs := os.Args[1:]
+	if cli.IsInit(rawArgs) {
+		os.Exit(cli.RunInit(rawArgs[1:], os.Stdout, os.Stderr))
+	}
+	normalizedArgs := cli.Normalize(rawArgs)
+	os.Args = append([]string{os.Args[0]}, normalizedArgs...)
+
 	appFlags := flags.Parse()
 
 	if err := i18n.InitLocaleByFiles(appFlags.I18nDir, WebhookLocales); err != nil {
@@ -108,6 +137,8 @@ func main() {
 
 	// check if we need to validate config and quit app
 	NeedValidateConfig(appFlags)
+	// run startup diagnostics and quit app
+	NeedDoctor(appFlags)
 	// check if the privileges params are correct, or exit(1)
 	CheckPrivilegesParamsCorrect(appFlags)
 
@@ -192,8 +223,12 @@ func main() {
 		}
 	}
 
-	// load and parse hooks
-	rules.ParseAndLoadHooks(appFlags.AsTemplate)
+	// Load initial hooks with the same strict and semantic policy used by
+	// watchers and signal-triggered reloads.
+	hookLoadOptions := monitor.HookLoadOptions(appFlags)
+	if err := rules.ParseAndLoadHooksWithOptions(appFlags.AsTemplate, hookLoadOptions); err != nil {
+		logger.Fatalf("couldn't load initial hooks: %v", err)
+	}
 
 	// 使用 -hooks-dir 时允许暂时无 hook（空目录或待监控）
 	if !appFlags.Verbose && !appFlags.NoPanic && rules.LenLoadedHooks() == 0 && appFlags.HooksDir == "" {
@@ -249,12 +284,12 @@ func main() {
 		}
 	}
 
-	// set os signal watcher with shutdown callback
-	if appFlags.AsTemplate {
-		signals = platform.SetupSignalsWithShutdown(signals, rules.ReloadAllHooksAsTemplate, shutdownFn, pidFile, nil)
-	} else {
-		signals = platform.SetupSignalsWithShutdown(signals, rules.ReloadAllHooksNotAsTemplate, shutdownFn, pidFile, nil)
+	// Set the OS signal watcher with the same validation policy used by file
+	// watchers, so SIGHUP/SIGUSR1 cannot bypass strict reload validation.
+	reloadFn := func() {
+		rules.ReloadAllHooksWithOptions(appFlags.AsTemplate, hookLoadOptions)
 	}
+	signals = platform.SetupSignalsWithShutdown(signals, reloadFn, shutdownFn, pidFile, nil)
 
 	// 等待服务器关闭
 	select {}

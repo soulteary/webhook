@@ -1,0 +1,60 @@
+site_name: WebHook
+site_description: Hardened and observable webhook-to-command runner
+site_url: https://soulteary.github.io/webhook/
+repo_url: https://github.com/soulteary/webhook
+repo_name: soulteary/webhook
+docs_dir: docs
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+  logo: logo/logo-600x600.jpg
+  favicon: logo/logo-600x600.jpg
+plugins:
+  - search
+  - mike:
+      canonical_version: latest
+      version_selector: true
+      alias_type: redirect
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+nav:
+  - Home: index.md
+  - English:
+      - Configuration tools: en-US/Configuration-Tools.md
+      - Hook definition: en-US/Hook-Definition.md
+      - Hook rules: en-US/Hook-Rules.md
+      - Hook examples: en-US/Hook-Examples.md
+      - Parameters: en-US/Webhook-Parameters.md
+      - Templates: en-US/Templates.md
+      - Request values: en-US/Referencing-Request-Values.md
+      - API reference: en-US/API-Reference.md
+      - Security: en-US/Security-Best-Practices.md
+      - Performance: en-US/Performance-Tuning.md
+      - Testing: en-US/Testing-Guide.md
+      - Troubleshooting: en-US/Troubleshooting.md
+      - Migration: en-US/Migration-Guide.md
+      - OwlMail integration: en-US/OwlMail-Integration.md
+  - 中文:
+      - Hook 定义: zh-CN/Hook-Definition.md
+      - Hook 规则: zh-CN/Hook-Rules.md
+      - Hook 示例: zh-CN/Hook-Examples.md
+      - 启动参数: zh-CN/Webhook-Parameters.md
+      - 模板: zh-CN/Templates.md
+      - 请求参数: zh-CN/Referencing-Request-Values.md
+      - API 参考: zh-CN/API-Reference.md
+      - 安全: zh-CN/Security-Best-Practices.md
+      - 性能: zh-CN/Performance-Tuning.md
+      - 测试: zh-CN/Testing-Guide.md
+      - 故障排除: zh-CN/Troubleshooting.md
+      - 迁移: zh-CN/Migration-Guide.md
+      - OwlMail 集成: zh-CN/OwlMail-Integration.md

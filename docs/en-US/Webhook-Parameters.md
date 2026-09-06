@@ -55,8 +55,8 @@ This document describes all available command-line parameters and environment va
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-pidfile string` | Create PID file at the given path | - |
-| `-setuid int` | Set user ID after opening listening port; must be used with setgid | `0` |
-| `-setgid int` | Set group ID after opening listening port; must be used with setuid | `0` |
+| `-setuid int` | Set user ID after opening listening port; must be used with setgid; unsupported on Linux and Windows | `0` |
+| `-setgid int` | Set group ID after opening listening port; must be used with setuid; unsupported on Linux and Windows | `0` |
 
 ### Internationalization
 

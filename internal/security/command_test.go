@@ -33,6 +33,24 @@ func TestNewCommandValidator(t *testing.T) {
 	}
 }
 
+func TestResolveCommandCandidate(t *testing.T) {
+	withoutWorkingDirectory, err := ResolveCommandCandidate("command", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withoutWorkingDirectory != "command" {
+		t.Fatalf("ResolveCommandCandidate without working directory = %q, want command", withoutWorkingDirectory)
+	}
+
+	withWorkingDirectory, err := ResolveCommandCandidate("run.sh", "scripts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !filepath.IsAbs(withWorkingDirectory) {
+		t.Fatalf("ResolveCommandCandidate with working directory = %q, want absolute path", withWorkingDirectory)
+	}
+}
+
 func TestValidateCommandPath(t *testing.T) {
 	cv := NewCommandValidator()
 

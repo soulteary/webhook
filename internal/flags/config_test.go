@@ -2,6 +2,7 @@ package flags
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -86,6 +87,40 @@ func TestParseConfig_HooksFromEnv(t *testing.T) {
 	assert.GreaterOrEqual(t, len(result.HooksFiles), 2)
 	assert.Contains(t, result.HooksFiles, "env_hooks1.json")
 	assert.Contains(t, result.HooksFiles, "env_hooks2.json")
+}
+
+func TestParseConfig_WhitespaceHooksEnvRemainsExplicit(t *testing.T) {
+	oldArgs := os.Args
+	oldHooks, oldHooksSet := os.LookupEnv(ENV_KEY_HOOKS)
+	oldHooksDir, oldHooksDirSet := os.LookupEnv(ENV_KEY_HOOKS_DIR)
+	defer func() {
+		os.Args = oldArgs
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+		if oldHooksSet {
+			_ = os.Setenv(ENV_KEY_HOOKS, oldHooks)
+		} else {
+			_ = os.Unsetenv(ENV_KEY_HOOKS)
+		}
+		if oldHooksDirSet {
+			_ = os.Setenv(ENV_KEY_HOOKS_DIR, oldHooksDir)
+		} else {
+			_ = os.Unsetenv(ENV_KEY_HOOKS_DIR)
+		}
+		rules.LockHooksFiles()
+		rules.HooksFiles = nil
+		rules.UnlockHooksFiles()
+	}()
+
+	_ = os.Setenv(ENV_KEY_HOOKS, " \t ")
+	_ = os.Unsetenv(ENV_KEY_HOOKS_DIR)
+	os.Args = []string{"webhook", "-validate-config", "-validate-strict"}
+
+	result := ParseConfig()
+	assert.Empty(t, result.HooksDir)
+	assert.Empty(t, result.HooksFiles)
+	validation := Validate(result)
+	assert.True(t, validation.HasErrors())
+	assert.Contains(t, fmt.Sprint(validation.Errors), "at least one non-empty path")
 }
 
 func TestParseConfig_ResponseHeaders(t *testing.T) {
@@ -274,7 +309,7 @@ func TestParseConfig_ExplicitHooksPreferSingleFile(t *testing.T) {
 	os.Args = []string{"webhook", "-hooks", "single.json"}
 
 	result := ParseConfig()
-	assert.Equal(t, filepath.Clean(DEFAULT_HOOKS_DIR), result.HooksDir)
+	assert.Empty(t, result.HooksDir)
 	assert.Contains(t, result.HooksFiles, "single.json")
 }
 

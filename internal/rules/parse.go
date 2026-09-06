@@ -1,11 +1,21 @@
 package rules
 
 import (
-	"github.com/soulteary/webhook/internal/hook"
+	"errors"
+	"fmt"
+
 	"github.com/soulteary/webhook/internal/logger"
 )
 
 func ParseAndLoadHooks(isAsTemplate bool) {
+	_ = ParseAndLoadHooksWithOptions(isAsTemplate, LoadOptions{})
+}
+
+// ParseAndLoadHooksWithOptions applies the same parsing and semantic policy
+// used by reloads to the hooks that become active during initial startup.
+func ParseAndLoadHooksWithOptions(isAsTemplate bool, options LoadOptions) error {
+	var loadErrors []error
+
 	// 加读锁读取 HooksFiles
 	hooksMutex.RLock()
 	hooksFilesCopy := make([]string, len(HooksFiles))
@@ -25,11 +35,10 @@ func ParseAndLoadHooks(isAsTemplate bool) {
 	for _, hooksFilePath := range hooksFilesCopy {
 		logger.Infof("attempting to load hooks from %s", hooksFilePath)
 
-		newHooks := hook.Hooks{}
-
-		err := newHooks.LoadFromFile(hooksFilePath, isAsTemplate)
+		newHooks, err := loadHooksFile(hooksFilePath, isAsTemplate, options)
 		if err != nil {
-			logger.Errorf("couldn't load hooks from file! %+v", err)
+			logger.Errorf("couldn't load or validate hooks from file! %+v", err)
+			loadErrors = append(loadErrors, fmt.Errorf("load hooks from %s: %w", hooksFilePath, err))
 		} else {
 			logger.Infof("found %d hook(s) in file", len(newHooks))
 
@@ -42,7 +51,6 @@ func ParseAndLoadHooks(isAsTemplate bool) {
 
 			// 加写锁更新 LoadedHooksFromFiles
 			hooksMutex.Lock()
-			LoadedHooksFromFiles[hooksFilePath] = newHooks
 			// 更新索引
 			updateIndexForFileLocked(hooksFilePath, newHooks)
 			hooksMutex.Unlock()
@@ -58,50 +66,65 @@ func ParseAndLoadHooks(isAsTemplate bool) {
 		}
 	}
 	HooksFiles = newHooksFiles
+	if options.RequireNonEmpty && lenLoadedHooksLocked() == 0 {
+		loadErrors = append(loadErrors, errors.New("explicit hook configuration must contain at least one hook"))
+	}
 	hooksMutex.Unlock()
+
+	return errors.Join(loadErrors...)
 }
 
 // AddAndLoadHooksFile adds a hook config file path to HooksFiles and loads it.
 // If the path is already in HooksFiles, ReloadHooks is not called by this function (caller may call ReloadHooks separately).
 // Used when watching -hooks-dir and a new file appears.
 func AddAndLoadHooksFile(hooksFilePath string, isAsTemplate bool) {
+	AddAndLoadHooksFileWithOptions(hooksFilePath, isAsTemplate, LoadOptions{})
+}
+
+// AddAndLoadHooksFileWithOptions validates a new file before adding it to the
+// watched ruleset. Existing files use the same protected reload path.
+func AddAndLoadHooksFileWithOptions(hooksFilePath string, isAsTemplate bool, options LoadOptions) {
 	hooksMutex.Lock()
 	for _, p := range HooksFiles {
 		if p == hooksFilePath {
 			hooksMutex.Unlock()
-			ReloadHooks(hooksFilePath, isAsTemplate)
+			ReloadHooksWithOptions(hooksFilePath, isAsTemplate, options)
 			return
 		}
 	}
-	HooksFiles = append(HooksFiles, hooksFilePath)
 	hooksMutex.Unlock()
 
 	logger.Infof("attempting to load hooks from %s", hooksFilePath)
-	newHooks := hook.Hooks{}
-	err := newHooks.LoadFromFile(hooksFilePath, isAsTemplate)
+	newHooks, err := loadHooksFile(hooksFilePath, isAsTemplate, options)
 	if err != nil {
-		logger.Errorf("couldn't load hooks from file! %+v", err)
+		logger.Errorf("couldn't load or validate hooks from file; skipping file: %+v", err)
 		return
 	}
 	logger.Infof("found %d hook(s) in file", len(newHooks))
-	for _, h := range newHooks {
-		if MatchLoadedHook(h.ID) != nil {
-			logger.Errorf("error: hook with the id %s has already been loaded! skipping file %s", h.ID, hooksFilePath)
-			hooksMutex.Lock()
-			newList := HooksFiles[:0]
-			for _, p := range HooksFiles {
-				if p != hooksFilePath {
-					newList = append(newList, p)
-				}
-			}
-			HooksFiles = newList
+	hooksMutex.Lock()
+	for _, p := range HooksFiles {
+		if p == hooksFilePath {
 			hooksMutex.Unlock()
+			ReloadHooksWithOptions(hooksFilePath, isAsTemplate, options)
 			return
 		}
+	}
+	if options.RequireNonEmpty && prospectiveHookCountLocked(hooksFilePath, newHooks) == 0 {
+		hooksMutex.Unlock()
+		logger.Errorf("couldn't add hooks file %s: explicit hook configuration must contain at least one hook", hooksFilePath)
+		return
+	}
+	seenIDs := make(map[string]bool, len(newHooks))
+	for _, h := range newHooks {
+		if seenIDs[h.ID] || hooksIndex[h.ID] != nil {
+			hooksMutex.Unlock()
+			logger.Errorf("error: hook with the id %s has already been loaded! skipping file %s", h.ID, hooksFilePath)
+			return
+		}
+		seenIDs[h.ID] = true
 		logger.Debugf("\tloaded: %s", h.ID)
 	}
-	hooksMutex.Lock()
-	LoadedHooksFromFiles[hooksFilePath] = newHooks
+	HooksFiles = append(HooksFiles, hooksFilePath)
 	updateIndexForFileLocked(hooksFilePath, newHooks)
 	hooksMutex.Unlock()
 }

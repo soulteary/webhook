@@ -21,6 +21,27 @@ var (
 func RemoveHooks(hooksFilePath string, verbose bool, noPanic bool, allowZeroHooks bool) {
 	hooksMutex.Lock()
 	defer hooksMutex.Unlock()
+	removeHooksLocked(hooksFilePath, verbose, noPanic, allowZeroHooks)
+}
+
+// RemoveHooksWithOptions applies the same aggregate nonempty policy used by
+// startup and reloads. If removing the file would empty an explicit ruleset,
+// the last active hooks are retained even in verbose or nopanic mode.
+func RemoveHooksWithOptions(hooksFilePath string, verbose bool, noPanic bool, options LoadOptions) bool {
+	hooksMutex.Lock()
+	defer hooksMutex.Unlock()
+
+	remainingHooks := lenLoadedHooksLocked() - len(LoadedHooksFromFiles[hooksFilePath])
+	if options.RequireNonEmpty && remainingHooks == 0 {
+		logger.Errorf("couldn't remove hooks from file %s: explicit hook configuration must contain at least one hook", hooksFilePath)
+		return false
+	}
+
+	removeHooksLocked(hooksFilePath, verbose, noPanic, !options.RequireNonEmpty)
+	return true
+}
+
+func removeHooksLocked(hooksFilePath string, verbose bool, noPanic bool, allowZeroHooks bool) {
 
 	for _, hook := range LoadedHooksFromFiles[hooksFilePath] {
 		logger.Debugf("\tremoving: %s", hook.ID)
@@ -81,7 +102,7 @@ func BuildIndex() {
 	buildIndexLocked()
 }
 
-// updateIndexForFileLocked 在已持有写锁的情况下更新指定文件的索引（内部使用）
+// updateIndexForFileLocked atomically replaces a file's hooks and index entries.
 func updateIndexForFileLocked(hooksFilePath string, hooks hook.Hooks) {
 	// 先删除该文件原有的 hooks 索引
 	if oldHooks, exists := LoadedHooksFromFiles[hooksFilePath]; exists {
@@ -89,6 +110,7 @@ func updateIndexForFileLocked(hooksFilePath string, hooks hook.Hooks) {
 			delete(hooksIndex, oldHooks[i].ID)
 		}
 	}
+	LoadedHooksFromFiles[hooksFilePath] = hooks
 	// 添加新的 hooks 索引
 	for i := range hooks {
 		hooksIndex[hooks[i].ID] = &hooks[i]
@@ -138,92 +160,73 @@ func MatchLoadedHook(id string) *hook.Hook {
 }
 
 func ReloadHooks(hooksFilePath string, asTemplate bool) {
-	hooksInFile := hook.Hooks{}
-
-	// parse and swap
-	logger.Infof("attempting to reload hooks from %s", hooksFilePath)
-
-	err := hooksInFile.LoadFromFile(hooksFilePath, asTemplate)
-
-	if err != nil {
-		logger.Errorf("couldn't load hooks from file! %+v", err)
-	} else {
-		seenHooksIds := make(map[string]bool)
-
-		logger.Infof("found %d hook(s) in file", len(hooksInFile))
-
-		// 在加锁前检查重复的 hook ID（需要读取当前加载的 hooks）
-		hooksMutex.RLock()
-		// 构建当前文件中的旧 hook ID 集合（用于重载场景，允许在当前文件中重复）
-		oldHookIDsInFile := make(map[string]bool)
-		if oldHooks, exists := LoadedHooksFromFiles[hooksFilePath]; exists {
-			for i := range oldHooks {
-				oldHookIDsInFile[oldHooks[i].ID] = true
-			}
-		}
-
-		for _, hook := range hooksInFile {
-			// 检查是否在当前文件中已存在（允许，因为是重载）
-			wasHookIDAlreadyLoaded := oldHookIDsInFile[hook.ID]
-
-			// 使用索引检查是否在其他文件中已加载（更高效）
-			hookExistsInOtherFile := false
-			if !wasHookIDAlreadyLoaded {
-				// 如果索引中存在该 ID，说明它来自其他文件（因为当前文件的旧 hooks 已经在索引中，但我们已经排除了）
-				if _, exists := hooksIndex[hook.ID]; exists {
-					hookExistsInOtherFile = true
-				}
-			}
-
-			// 检查是否在当前文件中有重复的 ID
-			if seenHooksIds[hook.ID] {
-				hooksMutex.RUnlock()
-				logger.Errorf("error: hook with the id %s has already been loaded from file %s! please check your hooks file for duplicate hooks ids!", hook.ID, hooksFilePath)
-				logger.Warnf("reverting hooks back to the previous configuration (file: %s)", hooksFilePath)
-				return
-			}
-
-			// 检查是否在其他文件中已存在
-			if hookExistsInOtherFile {
-				hooksMutex.RUnlock()
-				logger.Errorf("error: hook with the id %s has already been loaded from file %s! please check your hooks file for duplicate hooks ids!", hook.ID, hooksFilePath)
-				logger.Warnf("reverting hooks back to the previous configuration (file: %s)", hooksFilePath)
-				return
-			}
-
-			seenHooksIds[hook.ID] = true
-		}
-		hooksMutex.RUnlock()
-
-		// 加写锁进行更新
-		hooksMutex.Lock()
-		for _, hook := range hooksInFile {
-			logger.Debugf("\tloaded: %s", hook.ID)
-		}
-		LoadedHooksFromFiles[hooksFilePath] = hooksInFile
-		// 更新索引
-		updateIndexForFileLocked(hooksFilePath, hooksInFile)
-		hooksMutex.Unlock()
-	}
+	ReloadHooksWithOptions(hooksFilePath, asTemplate, LoadOptions{})
 }
 
-func reloadAllHooks(asTemplate bool) {
+// ReloadHooksWithOptions parses and validates a candidate before replacing
+// the currently active hooks. A rejected candidate leaves the old ruleset in
+// place.
+func ReloadHooksWithOptions(hooksFilePath string, asTemplate bool, options LoadOptions) {
+	logger.Infof("attempting to reload hooks from %s", hooksFilePath)
+
+	hooksInFile, err := loadHooksFile(hooksFilePath, asTemplate, options)
+	if err != nil {
+		logger.Errorf("couldn't load or validate hooks from file; keeping previous configuration: %+v", err)
+		return
+	}
+	logger.Infof("found %d hook(s) in file", len(hooksInFile))
+
+	// Check the prospective aggregate and duplicate namespace under the same
+	// write lock used for the swap, so concurrent reloads cannot invalidate the
+	// decision before it is committed.
+	hooksMutex.Lock()
+	defer hooksMutex.Unlock()
+	if options.RequireNonEmpty && prospectiveHookCountLocked(hooksFilePath, hooksInFile) == 0 {
+		logger.Errorf("couldn't reload hooks from file %s: explicit hook configuration must contain at least one hook; keeping previous configuration", hooksFilePath)
+		return
+	}
+
+	oldHookIDsInFile := make(map[string]bool)
+	if oldHooks, exists := LoadedHooksFromFiles[hooksFilePath]; exists {
+		for i := range oldHooks {
+			oldHookIDsInFile[oldHooks[i].ID] = true
+		}
+	}
+	seenHookIDs := make(map[string]bool)
+	for _, configuredHook := range hooksInFile {
+		if seenHookIDs[configuredHook.ID] || (!oldHookIDsInFile[configuredHook.ID] && hooksIndex[configuredHook.ID] != nil) {
+			logger.Errorf("error: hook with the id %s has already been loaded from file %s! please check your hooks file for duplicate hooks ids!", configuredHook.ID, hooksFilePath)
+			logger.Warnf("reverting hooks back to the previous configuration (file: %s)", hooksFilePath)
+			return
+		}
+		seenHookIDs[configuredHook.ID] = true
+		logger.Debugf("\tloaded: %s", configuredHook.ID)
+	}
+	updateIndexForFileLocked(hooksFilePath, hooksInFile)
+}
+
+func reloadAllHooks(asTemplate bool, options LoadOptions) {
 	hooksMutex.RLock()
 	hooksFilesCopy := make([]string, len(HooksFiles))
 	copy(hooksFilesCopy, HooksFiles)
 	hooksMutex.RUnlock()
 
 	for _, hooksFilePath := range hooksFilesCopy {
-		ReloadHooks(hooksFilePath, asTemplate)
+		ReloadHooksWithOptions(hooksFilePath, asTemplate, options)
 	}
 }
 
 func ReloadAllHooksAsTemplate() {
-	reloadAllHooks(true)
+	reloadAllHooks(true, LoadOptions{})
 }
 
 func ReloadAllHooksNotAsTemplate() {
-	reloadAllHooks(false)
+	reloadAllHooks(false, LoadOptions{})
+}
+
+// ReloadAllHooksWithOptions applies the active startup policy to every file.
+func ReloadAllHooksWithOptions(asTemplate bool, options LoadOptions) {
+	reloadAllHooks(asTemplate, options)
 }
 
 // RLockHooksFiles 获取 HooksFiles 的读锁（用于外部包访问）

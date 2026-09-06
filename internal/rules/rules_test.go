@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRemoveHooks(t *testing.T) {
@@ -103,6 +105,208 @@ func TestReloadHooks(t *testing.T) {
 
 	// Verify hook is still loaded
 	assert.Equal(t, 1, rules.LenLoadedHooks())
+}
+
+func TestReloadHooksWithOptionsRejectsUnknownFieldsAndKeepsActiveHooks(t *testing.T) {
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{
+			"id": "protected-hook",
+			"execute-command": "/bin/false",
+			"trigger-rules": {"match": {"type": "value", "value": "x"}}
+		}
+	]`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadHooksWithOptions(hooksFile, false, rules.LoadOptions{Strict: true})
+
+	active := rules.MatchLoadedHook("protected-hook")
+	require.NotNil(t, active)
+	assert.Equal(t, "/bin/echo", active.ExecuteCommand)
+}
+
+func TestReloadHooksReplacesRemovedHookIDsInIndex(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{"id": "new-hook", "execute-command": "/bin/echo"}
+	]`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "old-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadHooks(hooksFile, false)
+
+	assert.Nil(t, rules.MatchLoadedHook("old-hook"))
+	assert.NotNil(t, rules.MatchLoadedHook("new-hook"))
+}
+
+func TestReloadHooksWithOptionsRejectsEmptyExplicitAggregate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte("[]\n"), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadHooksWithOptions(hooksFile, false, rules.LoadOptions{RequireNonEmpty: true})
+
+	assert.Equal(t, 1, rules.LenLoadedHooks())
+	assert.NotNil(t, rules.MatchLoadedHook("protected-hook"))
+}
+
+func TestReloadHooksWithOptionsAllowsEmptyDirectoryAggregate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte("[]\n"), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "removable-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadHooksWithOptions(hooksFile, false, rules.LoadOptions{})
+
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.Nil(t, rules.MatchLoadedHook("removable-hook"))
+}
+
+func TestReloadHooksWithOptionsRejectsSemanticErrorsAndKeepsActiveHooks(t *testing.T) {
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`
+- id: protected-hook
+  execute-command: /bin/echo
+  pass-arguments-to-command:
+    - source: string
+      name: unsafe;argument
+`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+	appFlags := flags.AppFlags{ValidateStrict: true, StrictMode: true}
+	options := rules.LoadOptions{
+		Validate: func(path string, hooks hook.Hooks) error {
+			return flags.ValidateLoadedHooks(appFlags, path, hooks)
+		},
+	}
+
+	rules.ReloadHooksWithOptions(hooksFile, false, options)
+
+	active := rules.MatchLoadedHook("protected-hook")
+	require.NotNil(t, active)
+	assert.Empty(t, active.PassArgumentsToCommand)
+}
+
+func TestReloadHooksWithOptionsPreservesInvalidMethodsForValidation(t *testing.T) {
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`
+- id: protected-hook
+  execute-command: /bin/echo
+  http-methods: [POTS]
+`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo", HTTPMethods: []string{"GET"}}},
+	}
+	rules.BuildIndex()
+	appFlags := flags.AppFlags{Profile: "secure"}
+	options := rules.LoadOptions{
+		ValidateHTTPMethods: true,
+		Validate: func(path string, hooks hook.Hooks) error {
+			return flags.ValidateLoadedHooks(appFlags, path, hooks)
+		},
+	}
+
+	rules.ReloadHooksWithOptions(hooksFile, false, options)
+
+	active := rules.MatchLoadedHook("protected-hook")
+	require.NotNil(t, active)
+	assert.Equal(t, []string{"GET"}, active.HTTPMethods)
+}
+
+func TestReloadHooksWithOptionsKeepsCompatMethodSanitization(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`
+- id: compat-hook
+  execute-command: /bin/echo
+  http-methods: [POTS]
+`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "compat-hook", ExecuteCommand: "/bin/false", HTTPMethods: []string{"GET"}}},
+	}
+	rules.BuildIndex()
+	appFlags := flags.AppFlags{Profile: "compat"}
+	options := rules.LoadOptions{
+		Validate: func(path string, hooks hook.Hooks) error {
+			return flags.ValidateLoadedHooks(appFlags, path, hooks)
+		},
+	}
+
+	rules.ReloadHooksWithOptions(hooksFile, false, options)
+
+	active := rules.MatchLoadedHook("compat-hook")
+	require.NotNil(t, active)
+	assert.Equal(t, "/bin/echo", active.ExecuteCommand)
+	assert.Empty(t, active.HTTPMethods)
+}
+
+func TestAddAndLoadHooksFileWithOptionsRejectsInvalidCandidate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "invalid.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{
+			"id": "invalid-hook",
+			"execute-command": "/bin/echo",
+			"trigger-rules": {}
+		}
+	]`), 0o600))
+
+	rules.HooksFiles = nil
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+	rules.AddAndLoadHooksFileWithOptions(hooksFile, false, rules.LoadOptions{Strict: true})
+
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.NotContains(t, rules.HooksFiles, hooksFile)
+	assert.Nil(t, rules.MatchLoadedHook("invalid-hook"))
+}
+
+func TestAddAndLoadHooksFileWithOptionsLoadsCorrectedCandidate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "corrected.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{"id": "corrected-hook", "execute-command": "/bin/echo", "trigger-rules": {}}
+	]`), 0o600))
+
+	rules.HooksFiles = nil
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+	rules.AddAndLoadHooksFileWithOptions(hooksFile, false, rules.LoadOptions{Strict: true})
+	require.NotContains(t, rules.HooksFiles, hooksFile)
+
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{"id": "corrected-hook", "execute-command": "/bin/echo"}
+	]`), 0o600))
+	rules.AddAndLoadHooksFileWithOptions(hooksFile, false, rules.LoadOptions{Strict: true})
+
+	assert.Contains(t, rules.HooksFiles, hooksFile)
+	assert.NotNil(t, rules.MatchLoadedHook("corrected-hook"))
 }
 
 func TestReloadHooks_WithTemplate(t *testing.T) {
@@ -215,6 +419,29 @@ func TestReloadAllHooksNotAsTemplate(t *testing.T) {
 	assert.GreaterOrEqual(t, rules.LenLoadedHooks(), 0)
 }
 
+func TestReloadAllHooksWithOptionsRejectsInvalidFiles(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{
+			"id": "protected-hook",
+			"execute-command": "/bin/false",
+			"trigger-rules": {}
+		}
+	]`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadAllHooksWithOptions(false, rules.LoadOptions{Strict: true})
+
+	active := rules.MatchLoadedHook("protected-hook")
+	require.NotNil(t, active)
+	assert.Equal(t, "/bin/echo", active.ExecuteCommand)
+}
+
 func TestParseAndLoadHooks(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
@@ -264,6 +491,72 @@ func TestParseAndLoadHooks_InvalidFile(t *testing.T) {
 	assert.NotContains(t, rules.HooksFiles, invalidFile)
 }
 
+func TestParseAndLoadHooksWithOptionsRejectsUnknownFields(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{
+			"id": "protected-hook",
+			"execute-command": "/bin/echo",
+			"trigger-rules": {}
+		}
+	]`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+
+	err := rules.ParseAndLoadHooksWithOptions(false, rules.LoadOptions{Strict: true})
+
+	require.Error(t, err)
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.NotContains(t, rules.HooksFiles, hooksFile)
+	assert.Nil(t, rules.MatchLoadedHook("protected-hook"))
+}
+
+func TestParseAndLoadHooksWithOptionsRejectsSemanticErrors(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`
+- id: protected-hook
+  execute-command: /bin/echo
+  pass-arguments-to-command:
+    - source: string
+      name: unsafe;argument
+`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+	appFlags := flags.AppFlags{ValidateStrict: true, StrictMode: true}
+	options := rules.LoadOptions{
+		Strict: true,
+		Validate: func(path string, hooks hook.Hooks) error {
+			return flags.ValidateLoadedHooks(appFlags, path, hooks)
+		},
+	}
+
+	err := rules.ParseAndLoadHooksWithOptions(false, options)
+
+	require.Error(t, err)
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.NotContains(t, rules.HooksFiles, hooksFile)
+	assert.Nil(t, rules.MatchLoadedHook("protected-hook"))
+}
+
+func TestParseAndLoadHooksWithOptionsRejectsEmptyExplicitAggregate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte("[]\n"), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+
+	err := rules.ParseAndLoadHooksWithOptions(false, rules.LoadOptions{RequireNonEmpty: true})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at least one hook")
+	assert.Zero(t, rules.LenLoadedHooks())
+}
+
 func TestRemoveHooks_WithVerbose(t *testing.T) {
 	// Setup
 	rules.HooksFiles = []string{"test1.json"}
@@ -290,6 +583,34 @@ func TestRemoveHooks_WithNoPanic(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, 0, rules.LenLoadedHooks())
+}
+
+func TestRemoveHooksWithOptionsKeepsLastExplicitHooks(t *testing.T) {
+	rules.HooksFiles = []string{"hooks.json"}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"hooks.json": {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.RemoveHooksWithOptions("hooks.json", true, true, rules.LoadOptions{RequireNonEmpty: true})
+
+	assert.Equal(t, 1, rules.LenLoadedHooks())
+	assert.Contains(t, rules.HooksFiles, "hooks.json")
+	assert.NotNil(t, rules.MatchLoadedHook("protected-hook"))
+}
+
+func TestRemoveHooksWithOptionsAllowsEmptyDirectoryRuleset(t *testing.T) {
+	rules.HooksFiles = []string{"hooks.json"}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"hooks.json": {{ID: "removable-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.RemoveHooksWithOptions("hooks.json", false, false, rules.LoadOptions{})
+
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.NotContains(t, rules.HooksFiles, "hooks.json")
+	assert.Nil(t, rules.MatchLoadedHook("removable-hook"))
 }
 
 func TestRemoveHooks_EmptyHooksFiles(t *testing.T) {

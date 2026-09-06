@@ -1,15 +1,21 @@
 package flags
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/soulteary/cli-kit/validator"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/i18n"
+	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/rules"
+	commandsecurity "github.com/soulteary/webhook/internal/security"
 )
 
 // ValidationError 表示配置验证错误
@@ -37,9 +43,21 @@ func (r *ValidationResult) HasErrors() bool {
 	return len(r.Errors) > 0
 }
 
+// ValidateLoadedHooks applies the same hook-content policy used at startup to
+// an already parsed candidate. Watchers call this before atomically swapping a
+// reloaded file into the active ruleset.
+func ValidateLoadedHooks(flags AppFlags, hookFile string, hooks hook.Hooks) error {
+	result := &ValidationResult{}
+	validateHookContent(result, hookFile, hooks, make(map[string]string),
+		flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor,
+		flags.StrictMode, flags.MaxArgsCount, flags.MaxArgLength, flags.MaxTotalArgsLength)
+	return errors.Join(result.Errors...)
+}
+
 // Validate 验证配置的有效性
 func Validate(flags AppFlags) *ValidationResult {
 	result := &ValidationResult{}
+	validateSemantics := flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor
 
 	switch flags.Profile {
 	case "", "compat", "secure":
@@ -48,6 +66,23 @@ func Validate(flags AppFlags) *ValidationResult {
 	}
 	if flags.Profile == "secure" && !hasAllowedCommandPath(flags.AllowedCommandPaths) {
 		result.AddError("allowed-command-paths", "is required when profile is secure")
+	}
+	if flags.SetUID < 0 || flags.SetGID < 0 {
+		result.AddError("setuid/setgid", "must be positive integers when configured")
+	} else if (flags.SetUID != 0) != (flags.SetGID != 0) {
+		result.AddError("setuid/setgid", "must be used together")
+	} else if flags.SetUID != 0 && !platform.SupportsPrivilegeDrop() {
+		result.AddError("setuid/setgid", "is not supported on this platform")
+	}
+	if validateSemantics && flags.HttpMethods != "" {
+		for i, method := range strings.Split(flags.HttpMethods, ",") {
+			if !hook.IsValidHTTPMethod(method) {
+				result.AddError(fmt.Sprintf("http-methods[%d]", i), fmt.Sprintf("unsupported HTTP method %q", method))
+			}
+		}
+	}
+	if validateSemantics {
+		validateResponseHeaders(result, "response-headers", flags.ResponseHeaders)
 	}
 
 	// 验证端口范围 - 使用 cli-kit/validator
@@ -62,7 +97,7 @@ func Validate(flags AppFlags) *ValidationResult {
 
 	// 验证 PID 文件路径
 	if flags.PidPath != "" {
-		validateFilePath(result, "pid-path", flags.PidPath, true, false)
+		validatePIDFilePath(result, "pid-path", flags.PidPath)
 	}
 
 	// 验证 I18n 目录
@@ -175,6 +210,36 @@ func validateFilePath(result *ValidationResult, field, path string, checkWritabl
 	}
 }
 
+// validatePIDFilePath mirrors pidfile.New, which creates missing parent
+// directories before writing the PID file. The nearest existing ancestor must
+// therefore be writable instead of the immediate parent being required.
+func validatePIDFilePath(result *ValidationResult, field, path string) {
+	dir := filepath.Dir(filepath.Clean(path))
+	for {
+		info, err := os.Stat(dir)
+		if err == nil {
+			if !info.IsDir() {
+				result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_NOT_DIRECTORY, dir))
+				return
+			}
+			if err := validator.ValidateDirWritable(dir); err != nil {
+				result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_NOT_WRITABLE, dir))
+			}
+			return
+		}
+		if !os.IsNotExist(err) {
+			result.AddError(field, fmt.Sprintf("cannot inspect PID directory %s: %v", dir, err))
+			return
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_NOT_EXIST, dir))
+			return
+		}
+		dir = parent
+	}
+}
+
 // validateDirectory 验证目录路径
 func validateDirectory(result *ValidationResult, field, path string, mustExist bool) {
 	cleanPath := filepath.Clean(path)
@@ -196,11 +261,17 @@ func validateDirectory(result *ValidationResult, field, path string, mustExist b
 
 // validateHookFiles 验证 Hook 文件
 func validateHookFiles(result *ValidationResult, flags AppFlags) {
-	// 获取 Hook 文件列表
-	rules.RLockHooksFiles()
-	hooksFiles := make(hook.HooksFiles, len(rules.HooksFiles))
-	copy(hooksFiles, rules.HooksFiles)
-	rules.RUnlockHooksFiles()
+	validateSemantics := flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor
+	// Prefer the effective parsed flags. The global list mirrors this slice
+	// after parsing and must not be merged with it, or every path appears twice.
+	hooksFiles := make(hook.HooksFiles, len(flags.HooksFiles))
+	copy(hooksFiles, flags.HooksFiles)
+	if len(hooksFiles) == 0 {
+		rules.RLockHooksFiles()
+		hooksFiles = make(hook.HooksFiles, len(rules.HooksFiles))
+		copy(hooksFiles, rules.HooksFiles)
+		rules.RUnlockHooksFiles()
+	}
 
 	// -hooks-dir 且当前无文件时，不验证（空目录由监控后续发现新文件）
 	if flags.HooksDir != "" && len(hooksFiles) == 0 {
@@ -209,23 +280,33 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 
 	// 未提供 Hook 文件时跳过单文件校验（目录模式可在运行中发现新文件）。
 	if len(hooksFiles) == 0 {
+		if flags.HooksDir == "" {
+			result.AddError("hooks", "explicitly configured hook files must contain at least one non-empty path")
+		}
 		return
 	}
 
-	// 合并命令行和环境的 Hook 文件
-	if len(flags.HooksFiles) > 0 {
-		hooksFiles = append(hooksFiles, flags.HooksFiles...)
-	}
-
-	// 去重
+	// Reject duplicate paths because runtime would load their Hook IDs twice.
 	seen := make(map[string]bool)
 	uniqueFiles := make(hook.HooksFiles, 0, len(hooksFiles))
-	for _, file := range hooksFiles {
-		if !seen[file] {
-			seen[file] = true
-			uniqueFiles = append(uniqueFiles, file)
+	for i, file := range hooksFiles {
+		if strings.TrimSpace(file) == "" {
+			result.AddError(fmt.Sprintf("hooks[%d]", i), "hook file path must not be empty")
+			continue
 		}
+		cleanFile := filepath.Clean(file)
+		if seen[cleanFile] {
+			result.AddError("hooks", fmt.Sprintf("duplicate hook file %q", file))
+			continue
+		}
+		seen[cleanFile] = true
+		uniqueFiles = append(uniqueFiles, file)
 	}
+
+	// Hook IDs are global because the HTTP route namespace is shared across files.
+	hookOrigins := make(map[string]string)
+	loadedFiles := 0
+	loadedHooks := 0
 
 	// 验证每个 Hook 文件
 	for _, hookFile := range uniqueFiles {
@@ -238,39 +319,388 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 
 		// 尝试加载 Hook 文件以验证格式
 		var hooks hook.Hooks
-		err := hooks.LoadFromFile(hookFile, flags.AsTemplate)
+		var err error
+		if flags.ValidateStrict {
+			err = hooks.LoadFromFileStrict(hookFile, flags.AsTemplate)
+		} else if validateSemantics {
+			err = hooks.LoadFromFileForValidation(hookFile, flags.AsTemplate)
+		} else {
+			err = hooks.LoadFromFile(hookFile, flags.AsTemplate)
+		}
 		if err != nil {
 			result.AddError(fmt.Sprintf("hook-file[%s]", hookFile),
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_FILE_LOAD_ERROR, hookFile, err))
 			continue
 		}
+		loadedFiles++
+		loadedHooks += len(hooks)
 
 		// 验证 Hook 内容
-		validateHookContent(result, hookFile, hooks)
+		validateHookContent(result, hookFile, hooks, hookOrigins,
+			validateSemantics,
+			flags.StrictMode, flags.MaxArgsCount, flags.MaxArgLength, flags.MaxTotalArgsLength)
+	}
+	if flags.HooksDir == "" && loadedFiles > 0 && loadedHooks == 0 {
+		result.AddError("hooks", "explicitly configured hook files must contain at least one hook")
 	}
 }
 
 // validateHookContent 验证 Hook 内容
-func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks) {
-	hookIDs := make(map[string]bool)
-
+func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string, validateSemantics, strictMode bool, maxArgsCount, maxArgLength, maxTotalArgsLength int) {
 	for i, h := range hooks {
+		idField := fmt.Sprintf("hook-file[%s].hooks[%d].id", hookFile, i)
 		// 验证 Hook ID
-		if h.ID == "" {
-			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].id", hookFile, i),
+		if strings.TrimSpace(h.ID) == "" {
+			result.AddError(idField,
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_ID_EMPTY))
 			continue
 		}
+		if strings.TrimSpace(h.ID) != h.ID {
+			result.AddError(idField, "must not contain leading or trailing whitespace")
+		}
+		if strings.ContainsAny(h.ID, "\r\n\t") {
+			result.AddError(idField, "must not contain carriage returns, line feeds, or tabs")
+		}
+		if validateSemantics && strings.TrimSpace(h.ExecuteCommand) == "" {
+			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].execute-command", hookFile, i),
+				"must not be empty")
+		}
+		if validateSemantics {
+			for field, code := range map[string]int{
+				"success-http-response-code":               h.SuccessHttpResponseCode,
+				"trigger-rule-mismatch-http-response-code": h.TriggerRuleMismatchHttpResponseCode,
+			} {
+				if code != 0 && (code < 200 || code > 599) {
+					result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].%s", hookFile, i, field),
+						"must be between 200 and 599")
+				}
+			}
+		}
 
 		// 检查重复的 Hook ID
-		if hookIDs[h.ID] {
+		if _, exists := hookOrigins[h.ID]; exists {
 			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].id", hookFile, i),
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_ID_DUPLICATE, h.ID))
+		} else {
+			hookOrigins[h.ID] = hookFile
 		}
-		hookIDs[h.ID] = true
+		if validateSemantics {
+			prefix := fmt.Sprintf("hook-file[%s].hooks[%d]", hookFile, i)
+			if strings.ContainsRune(h.CommandWorkingDirectory, '\x00') {
+				result.AddError(prefix+".command-working-directory", "must not contain NUL")
+			}
+			if maxArgsCount > 0 && 1+len(h.PassArgumentsToCommand) > maxArgsCount {
+				result.AddError(prefix+".pass-arguments-to-command",
+					fmt.Sprintf("command would have %d arguments including argv[0], exceeding max-args-count %d", 1+len(h.PassArgumentsToCommand), maxArgsCount))
+			}
+			validateStaticCommandArguments(result, prefix, h, maxArgLength, maxTotalArgsLength, strictMode)
+			validateResponseHeaders(result, prefix+".response-headers", h.ResponseHeaders)
+			validateRuleContent(result, prefix+".trigger-rule", h.TriggerRule)
+			validateEnvironmentArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
+			validateArguments(result, prefix+".pass-arguments-to-command", h.PassArgumentsToCommand)
+			validateFileArguments(result, prefix+".pass-file-to-command", h.PassFileToCommand, h.CommandWorkingDirectory)
+			validateJSONArguments(result, prefix+".parse-parameters-as-json", h.JSONStringParameters)
+		}
 
 		// 验证命令路径（如果指定了允许的命令路径）
 		// 注意：这里只做基本验证，实际执行时的安全检查在 security 模块中
+	}
+}
+
+func validateResponseHeaders(result *ValidationResult, field string, headers hook.ResponseHeaders) {
+	for i, header := range headers {
+		if !isHTTPFieldName(header.Name) {
+			result.AddError(fmt.Sprintf("%s[%d].name", field, i), fmt.Sprintf("invalid HTTP header field name %q", header.Name))
+		}
+		if !isHTTPFieldValue(header.Value) {
+			result.AddError(fmt.Sprintf("%s[%d].value", field, i), "invalid HTTP header field value")
+		}
+	}
+}
+
+func isHTTPFieldName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' {
+			continue
+		}
+		switch c {
+		case '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~':
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func isHTTPFieldValue(value string) bool {
+	for i := 0; i < len(value); i++ {
+		c := value[i]
+		if c == '\t' {
+			continue
+		}
+		if c < 0x20 || c == 0x7f {
+			return false
+		}
+	}
+	return true
+}
+
+func validateStaticCommandArguments(result *ValidationResult, prefix string, configuredHook hook.Hook, maxArgLength, maxTotalArgsLength int, strictMode bool) {
+	knownTotalLength := len(configuredHook.ExecuteCommand)
+	if strings.ContainsRune(configuredHook.ExecuteCommand, '\x00') {
+		result.AddError(prefix+".execute-command", "must not contain NUL")
+	}
+	if maxArgLength > 0 && knownTotalLength > maxArgLength {
+		result.AddError(prefix+".execute-command",
+			fmt.Sprintf("length %d exceeds max-arg-length %d", knownTotalLength, maxArgLength))
+	}
+	if strictMode {
+		validateStrictStaticArgument(result, prefix+".execute-command", configuredHook.ExecuteCommand)
+	}
+	for i, argument := range configuredHook.PassArgumentsToCommand {
+		if argument.Source != hook.SourceString {
+			continue
+		}
+		argumentLength := len(argument.Name)
+		knownTotalLength += argumentLength
+		if strings.ContainsRune(argument.Name, '\x00') {
+			result.AddError(fmt.Sprintf("%s.pass-arguments-to-command[%d].name", prefix, i), "must not contain NUL")
+		}
+		if maxArgLength > 0 && argumentLength > maxArgLength {
+			result.AddError(fmt.Sprintf("%s.pass-arguments-to-command[%d].name", prefix, i),
+				fmt.Sprintf("literal argument length %d exceeds max-arg-length %d", argumentLength, maxArgLength))
+		}
+		if strictMode {
+			validateStrictStaticArgument(result,
+				fmt.Sprintf("%s.pass-arguments-to-command[%d].name", prefix, i), argument.Name)
+		}
+	}
+	if maxTotalArgsLength > 0 && knownTotalLength > maxTotalArgsLength {
+		result.AddError(prefix+".pass-arguments-to-command",
+			fmt.Sprintf("known command argument length %d exceeds max-total-args-length %d", knownTotalLength, maxTotalArgsLength))
+	}
+}
+
+func validateStrictStaticArgument(result *ValidationResult, field, value string) {
+	validator := commandsecurity.NewCommandValidator()
+	validator.StrictMode = true
+	// Length and count limits are validated separately with field-specific
+	// messages. Size these limits to isolate the runtime strict-mode checks.
+	validator.MaxArgLength = len(value)
+	validator.MaxTotalArgsLength = len(value)
+	validator.MaxArgsCount = 1
+	if err := validator.ValidateArgs([]string{value}); err != nil {
+		result.AddError(field, err.Error())
+	}
+}
+
+func validateArguments(result *ValidationResult, field string, arguments []hook.Argument) {
+	for i := range arguments {
+		validateArgument(result, fmt.Sprintf("%s[%d]", field, i), arguments[i])
+	}
+}
+
+func validateJSONArguments(result *ValidationResult, field string, arguments []hook.Argument) {
+	for i := range arguments {
+		argumentField := fmt.Sprintf("%s[%d]", field, i)
+		validateArgument(result, argumentField, arguments[i])
+		switch arguments[i].Source {
+		case hook.SourceHeader, hook.SourceQuery, hook.SourceQueryAlias, hook.SourcePayload:
+		case "":
+		default:
+			result.AddError(argumentField+".source", "must be one of: header, url, query, payload")
+		}
+	}
+}
+
+func effectiveEnvironmentName(argument hook.Argument) string {
+	if argument.EnvName != "" {
+		return argument.EnvName
+	}
+	return hook.EnvNamespace + argument.Name
+}
+
+func validateEnvironmentName(result *ValidationResult, field, name string) {
+	if strings.ContainsAny(name, "=\x00") {
+		result.AddError(field, "effective environment variable name must not contain '=' or NUL")
+	}
+}
+
+func validateEnvironmentArguments(result *ValidationResult, field string, arguments []hook.Argument) {
+	for i := range arguments {
+		argumentField := fmt.Sprintf("%s[%d]", field, i)
+		validateArgument(result, argumentField, arguments[i])
+		validateEnvironmentName(result, argumentField+".envname", effectiveEnvironmentName(arguments[i]))
+		if arguments[i].Source == hook.SourceString && strings.ContainsRune(arguments[i].Name, '\x00') {
+			result.AddError(argumentField+".name", "static environment value must not contain NUL")
+		}
+	}
+}
+
+const createTempRandomSuffixMaxLength = 10
+
+func validateFileArguments(result *ValidationResult, field string, arguments []hook.Argument, workingDirectory string) {
+	if workingDirectory == "" {
+		workingDirectory = os.TempDir()
+	}
+	nameLimit, nameLimitErr := platform.FileNameLimit(workingDirectory)
+	for i := range arguments {
+		argumentField := fmt.Sprintf("%s[%d]", field, i)
+		validateArgument(result, argumentField, arguments[i])
+		if arguments[i].Source == hook.SourceString && arguments[i].Base64Decode {
+			if _, err := base64.StdEncoding.DecodeString(arguments[i].Name); err != nil {
+				result.AddError(argumentField+".name", "must be valid standard Base64 when base64decode is true")
+			}
+		}
+		pattern := arguments[i].EnvName
+		if pattern == "" {
+			pattern = hook.EnvNamespace + strings.ToUpper(arguments[i].Name)
+		}
+		validateEnvironmentName(result, argumentField+".envname", pattern)
+		if strings.ContainsAny(pattern, `/\\`) {
+			result.AddError(argumentField+".envname", "effective temporary-file pattern must not contain path separators")
+			continue
+		}
+		if err := platform.ValidateTempFilePattern(pattern); err != nil {
+			result.AddError(argumentField+".envname", err.Error())
+			continue
+		}
+		if nameLimitErr != nil {
+			result.AddError(argumentField+".envname", fmt.Sprintf("cannot determine temporary-file name limit for %s: %v", workingDirectory, nameLimitErr))
+			continue
+		}
+		generatedLength := platform.TempFileGeneratedNameLength(pattern, createTempRandomSuffixMaxLength)
+		if generatedLength > nameLimit {
+			result.AddError(argumentField+".envname",
+				fmt.Sprintf("effective temporary-file pattern can generate a name of length %d, exceeding filesystem limit %d", generatedLength, nameLimit))
+		}
+	}
+}
+
+func validateArgument(result *ValidationResult, field string, argument hook.Argument) {
+	switch argument.Source {
+	case hook.SourceHeader:
+		if strings.TrimSpace(argument.Name) == "" {
+			result.AddError(field+".name", "must not be empty for a keyed source")
+		} else if !isHTTPFieldName(argument.Name) {
+			result.AddError(field+".name", fmt.Sprintf("invalid HTTP header field name %q", argument.Name))
+		}
+	case hook.SourceQuery, hook.SourceQueryAlias, hook.SourcePayload:
+		if strings.TrimSpace(argument.Name) == "" {
+			result.AddError(field+".name", "must not be empty for a keyed source")
+		}
+	case hook.SourceRawRequestBody, hook.SourceString,
+		hook.SourceEntirePayload, hook.SourceEntireQuery, hook.SourceEntireHeaders:
+	case hook.SourceRequest:
+		switch strings.ToLower(argument.Name) {
+		case "method", "remote-addr":
+			return
+		default:
+			result.AddError(field+".name", fmt.Sprintf("unsupported request key %q", argument.Name))
+		}
+	case "":
+		result.AddError(field+".source", "must not be empty")
+	default:
+		result.AddError(field+".source", fmt.Sprintf("unsupported source %q", argument.Source))
+	}
+}
+
+func validateIPRange(value string) error {
+	ranges := strings.Fields(value)
+	if len(ranges) == 0 {
+		return errors.New("must not be empty")
+	}
+	for _, value := range ranges {
+		if strings.Contains(value, "/") {
+			if _, _, err := net.ParseCIDR(value); err != nil {
+				return fmt.Errorf("invalid IP range %q: %w", value, err)
+			}
+		} else if net.ParseIP(value) == nil {
+			return fmt.Errorf("invalid IP address %q", value)
+		}
+	}
+	return nil
+}
+
+func validateRuleContent(result *ValidationResult, field string, rule *hook.Rules) {
+	if rule == nil {
+		return
+	}
+	operatorCount := 0
+	if rule.And != nil {
+		operatorCount++
+	}
+	if rule.Or != nil {
+		operatorCount++
+	}
+	if rule.Not != nil {
+		operatorCount++
+	}
+	if rule.Match != nil {
+		operatorCount++
+	}
+	if operatorCount != 1 {
+		result.AddError(field, "must contain exactly one of: and, or, not, match")
+	}
+	if rule.Match != nil {
+		switch rule.Match.Type {
+		case hook.MatchHMACSHA1, hook.MatchHMACSHA256, hook.MatchHMACSHA512,
+			hook.MatchHashSHA1, hook.MatchHashSHA256, hook.MatchHashSHA512:
+			if strings.TrimSpace(rule.Match.Secret) == "" {
+				result.AddError(field+".match.secret", "must not be empty for a signature rule")
+			}
+			validateArgument(result, field+".match.parameter", rule.Match.Parameter)
+		case hook.ScalrSignature:
+			if strings.TrimSpace(rule.Match.Secret) == "" {
+				result.AddError(field+".match.secret", "must not be empty for a signature rule")
+			}
+		case hook.MSTeamsSignature:
+			if strings.TrimSpace(rule.Match.Secret) == "" {
+				result.AddError(field+".match.secret", "must not be empty for a signature rule")
+			} else if _, err := base64.StdEncoding.DecodeString(rule.Match.Secret); err != nil {
+				result.AddError(field+".match.secret", "must be valid base64 for an msteams-signature rule")
+			}
+		case hook.MatchRegex:
+			if rule.Match.Regex == "" {
+				result.AddError(field+".match.regex", "must not be empty for a regex rule")
+			} else if _, err := regexp.Compile(rule.Match.Regex); err != nil {
+				result.AddError(field+".match.regex", fmt.Sprintf("invalid regular expression: %v", err))
+			}
+			validateArgument(result, field+".match.parameter", rule.Match.Parameter)
+		case hook.MatchValue:
+			validateArgument(result, field+".match.parameter", rule.Match.Parameter)
+		case hook.IPWhitelist:
+			if err := validateIPRange(rule.Match.IPRange); err != nil {
+				result.AddError(field+".match.ip-range", err.Error())
+			}
+		default:
+			result.AddError(field+".match.type", fmt.Sprintf("unsupported match type %q", rule.Match.Type))
+		}
+	}
+	if rule.And != nil {
+		if len(*rule.And) == 0 {
+			result.AddError(field+".and", "must contain at least one rule")
+		}
+		for i := range *rule.And {
+			validateRuleContent(result, fmt.Sprintf("%s.and[%d]", field, i), &(*rule.And)[i])
+		}
+	}
+	if rule.Or != nil {
+		if len(*rule.Or) == 0 {
+			result.AddError(field+".or", "must contain at least one rule")
+		}
+		for i := range *rule.Or {
+			validateRuleContent(result, fmt.Sprintf("%s.or[%d]", field, i), &(*rule.Or)[i])
+		}
+	}
+	if rule.Not != nil {
+		notRule := hook.Rules(*rule.Not)
+		validateRuleContent(result, field+".not", &notRule)
 	}
 }
 

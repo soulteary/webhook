@@ -104,6 +104,8 @@ func ParseConfig() AppFlags {
 
 	showVersion := fs.Bool("version", false, "display webhook version and quit")
 	validateConfig := fs.Bool("validate-config", false, "validate configuration and exit")
+	validateStrict := fs.Bool("validate-strict", false, "reject unknown fields while validating hook files")
+	doctor := fs.Bool("doctor", false, "check configuration, hook commands, and working directories, then exit")
 
 	// Multi-value flags
 	rules.RLockHooksFiles()
@@ -224,6 +226,8 @@ func ParseConfig() AppFlags {
 	// Special flags
 	flags.ShowVersion = *showVersion
 	flags.ValidateConfig = *validateConfig
+	flags.ValidateStrict = *validateStrict
+	flags.Doctor = *doctor
 
 	// Resolve HooksFiles:
 	// 1) explicit -hooks-dir / HOOKS_DIR (non-empty) => directory mode
@@ -231,8 +235,9 @@ func ParseConfig() AppFlags {
 	// 3) otherwise => default directory mode
 	hooksDirEnvRaw, hooksDirEnvSet := os.LookupEnv(ENV_KEY_HOOKS_DIR)
 	hooksDirExplicit := visited["hooks-dir"] || (hooksDirEnvSet && strings.TrimSpace(hooksDirEnvRaw) != "")
+	_, hooksEnvSet := os.LookupEnv(ENV_KEY_HOOKS)
 	hooksEnv := env.GetTrimmed(ENV_KEY_HOOKS, "")
-	hooksExplicit := visited["hooks"] || hooksEnv != ""
+	hooksExplicit := visited["hooks"] || hooksEnvSet
 
 	useHooksDir := false
 	if hooksDirExplicit && flags.HooksDir != "" {
@@ -253,11 +258,14 @@ func ParseConfig() AppFlags {
 		} else {
 			flags.HooksFiles = scanned
 		}
-	} else if len(hooksFiles) > 0 {
-		flags.HooksFiles = hooksFiles
 	} else {
-		// Try environment variable
-		if hooksEnv != "" {
+		// Explicit file mode must not retain the default directory, otherwise
+		// validation and startup incorrectly treat an empty file set as watchable.
+		flags.HooksDir = ""
+		if len(hooksFiles) > 0 {
+			flags.HooksFiles = hooksFiles
+		} else if hooksEnv != "" {
+			// Try environment variable.
 			hooks := strings.Split(hooksEnv, ",")
 			for _, hookPath := range hooks {
 				hookPath = strings.TrimSpace(hookPath)

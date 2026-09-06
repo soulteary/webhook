@@ -141,4 +141,13 @@ func TestCheckPIDFileAlreadyExists(t *testing.T) {
 	if err != nil {
 		t.Errorf("checkPIDFileAlreadyExists() with non-existent PID should return nil, got: %v", err)
 	}
+
+	for _, invalidPID := range []string{"0", "-1"} {
+		if err := os.WriteFile(path, []byte(invalidPID), 0o600); err != nil {
+			t.Fatal("Could not write invalid PID", err)
+		}
+		if err := checkPIDFileAlreadyExists(path); err != nil {
+			t.Errorf("checkPIDFileAlreadyExists() with PID %s should return nil, got: %v", invalidPID, err)
+		}
+	}
 }

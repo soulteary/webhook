@@ -494,14 +494,13 @@ export WEBHOOK_SECRET="my-secret-key-12345"
    - 建议的修复方案（如果您有）
 4. 在公开披露之前留出时间解决问题
 
-有关更多信息，请参阅[安全策略](../../SECURITY.md)。
+有关更多信息，请参阅[安全策略](https://github.com/soulteary/webhook/blob/main/SECURITY.md)。
 
 ---
 
 ## 其他资源
 
-- [安全策略](../../SECURITY.md)
+- [安全策略](https://github.com/soulteary/webhook/blob/main/SECURITY.md)
 - [Hook 规则](Hook-Rules.md) - 身份验证和授权规则
 - [配置参数](Webhook-Parameters.md) - 安全相关参数
 - [API 参考](API-Reference.md) - API 安全注意事项
-
