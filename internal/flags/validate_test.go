@@ -866,6 +866,28 @@ func TestValidateFilePath(t *testing.T) {
 	assert.False(t, result.HasErrors())
 }
 
+func TestValidateAllowsCreatablePIDParentDirectories(t *testing.T) {
+	rules.LockHooksFiles()
+	oldHooksFiles := rules.HooksFiles
+	rules.HooksFiles = nil
+	rules.UnlockHooksFiles()
+	t.Cleanup(func() {
+		rules.LockHooksFiles()
+		rules.HooksFiles = oldHooksFiles
+		rules.UnlockHooksFiles()
+	})
+
+	root := t.TempDir()
+	pidParent := filepath.Join(root, "run", "webhook")
+	appFlags := createValidFlags()
+	appFlags.PidPath = filepath.Join(pidParent, "webhook.pid")
+
+	result := Validate(appFlags)
+	require.False(t, result.HasErrors(), "%+v", result.Errors)
+	_, err := os.Stat(pidParent)
+	require.ErrorIs(t, err, os.ErrNotExist, "validation must not create PID directories")
+}
+
 func TestValidateDirectory(t *testing.T) {
 	tempDir := t.TempDir()
 	result := &ValidationResult{}

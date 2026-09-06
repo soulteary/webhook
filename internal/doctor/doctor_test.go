@@ -134,6 +134,28 @@ func TestRunRejectsPIDFileForLiveProcess(t *testing.T) {
 	}, "%+v", checks)
 }
 
+func TestRunAcceptsCreatablePIDParentDirectories(t *testing.T) {
+	root := t.TempDir()
+	pidParent := filepath.Join(root, "run", "webhook")
+	pidPath := filepath.Join(pidParent, "webhook.pid")
+	appFlags := validFlags("")
+	appFlags.HooksDir = filepath.Join(root, "hooks")
+	appFlags.PidPath = pidPath
+
+	checks := Run(appFlags)
+	require.False(t, HasFailures(checks), "%+v", checks)
+	_, err := os.Stat(pidParent)
+	require.ErrorIs(t, err, os.ErrNotExist, "doctor must not create PID directories")
+}
+
+func TestCheckWritablePIDPathRejectsUnwritableAncestorForTargetIdentity(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.Chmod(root, 0o755))
+	pidPath := filepath.Join(root, "run", "webhook", "webhook.pid")
+
+	require.Error(t, checkWritablePIDPath(pidPath, 12345, 12345))
+}
+
 func TestUsesFileAudit(t *testing.T) {
 	require.True(t, usesFileAudit(flags.AppFlags{AuditEnabled: true, AuditStorageType: "file"}))
 	require.True(t, usesFileAudit(flags.AppFlags{AuditEnabled: true, AuditStorageType: "redis", RedisEnabled: true}))

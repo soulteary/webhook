@@ -80,7 +80,13 @@ func Run(appFlags flags.AppFlags) []Check {
 		if path == "" {
 			continue
 		}
-		if err := checkWritableFilePath(path, accessUID, accessGID); err != nil {
+		var err error
+		if destination.pid {
+			err = checkWritablePIDPath(path, accessUID, accessGID)
+		} else {
+			err = checkWritableFilePath(path, accessUID, accessGID)
+		}
+		if err != nil {
 			checks = append(checks, Check{Subject: subject, Detail: err.Error()})
 		} else if destination.pid {
 			if err := pidfile.CheckExisting(path); err != nil {
@@ -390,6 +396,14 @@ func checkPathAccess(path string, info os.FileInfo, uid, gid int, required uint3
 }
 
 func checkWritableFilePath(path string, uid, gid int) error {
+	return checkWritableFilePathWithParentCreation(path, uid, gid, false)
+}
+
+func checkWritablePIDPath(path string, uid, gid int) error {
+	return checkWritableFilePathWithParentCreation(path, uid, gid, true)
+}
+
+func checkWritableFilePathWithParentCreation(path string, uid, gid int, createParents bool) error {
 	path, err := filepath.Abs(filepath.Clean(path))
 	if err != nil {
 		return err
@@ -436,6 +450,13 @@ func checkWritableFilePath(path string, uid, gid int) error {
 	parent := filepath.Dir(path)
 	parentInfo, err := os.Stat(parent)
 	if err != nil {
+		if createParents && os.IsNotExist(err) {
+			ancestor, ancestorErr := nearestExistingParent(path)
+			if ancestorErr != nil {
+				return ancestorErr
+			}
+			return checkTargetPathAccess(ancestor, uid, gid, 3)
+		}
 		return fmt.Errorf("cannot access immediate parent directory %s: %w", parent, err)
 	}
 	if !parentInfo.IsDir() {

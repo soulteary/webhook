@@ -97,7 +97,7 @@ func Validate(flags AppFlags) *ValidationResult {
 
 	// 验证 PID 文件路径
 	if flags.PidPath != "" {
-		validateFilePath(result, "pid-path", flags.PidPath, true, false)
+		validatePIDFilePath(result, "pid-path", flags.PidPath)
 	}
 
 	// 验证 I18n 目录
@@ -207,6 +207,36 @@ func validateFilePath(result *ValidationResult, field, path string, checkWritabl
 		if err := validator.ValidateFileReadable(cleanPath); err != nil {
 			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_FILE_NOT_EXIST, cleanPath))
 		}
+	}
+}
+
+// validatePIDFilePath mirrors pidfile.New, which creates missing parent
+// directories before writing the PID file. The nearest existing ancestor must
+// therefore be writable instead of the immediate parent being required.
+func validatePIDFilePath(result *ValidationResult, field, path string) {
+	dir := filepath.Dir(filepath.Clean(path))
+	for {
+		info, err := os.Stat(dir)
+		if err == nil {
+			if !info.IsDir() {
+				result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_NOT_DIRECTORY, dir))
+				return
+			}
+			if err := validator.ValidateDirWritable(dir); err != nil {
+				result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_NOT_WRITABLE, dir))
+			}
+			return
+		}
+		if !os.IsNotExist(err) {
+			result.AddError(field, fmt.Sprintf("cannot inspect PID directory %s: %v", dir, err))
+			return
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			result.AddError(field, i18n.Sprintf(i18n.ERR_VALIDATE_DIR_NOT_EXIST, dir))
+			return
+		}
+		dir = parent
 	}
 }
 
