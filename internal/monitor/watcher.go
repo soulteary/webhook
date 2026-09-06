@@ -57,13 +57,13 @@ func ApplyWatcher(appFlags flags.AppFlags) {
 		}
 	}
 
-	removeHooksFn := func(path string, verbose bool, noPanic bool) {
-		rules.RemoveHooksWithOptions(path, verbose, noPanic, loadOptions)
+	removeHooksFn := func(path string, verbose bool, noPanic bool) bool {
+		return rules.RemoveHooksWithOptions(path, verbose, noPanic, loadOptions)
 	}
 	reloadHooksFn := func(path string, asTemplate bool) {
 		rules.ReloadHooksWithOptions(path, asTemplate, loadOptions)
 	}
-	go WatchForFileChange(watcher, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, reloadHooksFn, removeHooksFn)
+	go WatchForFileChangeWithRemoveResult(watcher, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, reloadHooksFn, removeHooksFn)
 }
 
 // closeWatcherForTest 关闭全局 watcher，仅用于测试以停止 goroutine、避免与后续测试产生竞态或泄漏。

@@ -10,6 +10,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWatchForFileChange(t *testing.T) {
@@ -316,64 +317,75 @@ func TestWatchForFileChange_Rename_Removed(t *testing.T) {
 	}
 }
 
-func TestWatchForFileChange_Remove_FileStillExists(t *testing.T) {
-	// Create a temporary file for testing
+func TestHandleEventRestoresRetainedHookFileWatcher(t *testing.T) {
 	tmpDir := t.TempDir()
-	testFile := filepath.Join(tmpDir, "test-hooks.json")
+	testFile := filepath.Join(tmpDir, "retained-hooks.json")
+	require.NoError(t, os.WriteFile(testFile, []byte(`[]`), 0o600))
 
-	// Create the file
-	err := os.WriteFile(testFile, []byte(`[]`), 0644)
-	assert.NoError(t, err)
-
-	// Create a watcher
 	watcher, err := fsnotify.NewWatcher()
-	assert.NoError(t, err)
-	defer func() {
-		_ = watcher.Close()
-		time.Sleep(100 * time.Millisecond)
-	}()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = watcher.Close() })
+	require.NoError(t, watcher.Add(testFile))
+	require.NoError(t, os.Remove(testFile))
 
-	// Add the file to the watcher
-	err = watcher.Add(testFile)
-	assert.NoError(t, err)
+	processors := make(map[string]*fileProcessor)
+	var processorsMu sync.RWMutex
+	reloadCount := 0
+	reloadHooks := func(path string, asTemplate bool) {
+		assert.Equal(t, testFile, path)
+		reloadCount++
+	}
+	retainHooks := func(path string, verbose bool, noPanic bool) bool {
+		assert.Equal(t, testFile, path)
+		return false
+	}
 
-	// Track function calls
+	handleEvent(fsnotify.Event{Name: testFile, Op: fsnotify.Remove}, watcher, false, true, true, reloadHooks, retainHooks, &processors, &processorsMu)
+	processorsMu.RLock()
+	processor := processors[testFile]
+	processorsMu.RUnlock()
+	require.NotNil(t, processor)
+	processor.mu.Lock()
+	assert.True(t, processor.awaitingCreate)
+	processor.mu.Unlock()
+
+	require.NoError(t, os.WriteFile(testFile, []byte(`[]`), 0o600))
+	handleEvent(fsnotify.Event{Name: testFile, Op: fsnotify.Create}, watcher, false, true, true, reloadHooks, retainHooks, &processors, &processorsMu)
+
+	assert.Equal(t, maxRetries, reloadCount)
+	processor.mu.Lock()
+	assert.False(t, processor.awaitingCreate)
+	processor.mu.Unlock()
+}
+
+func TestWatchForFileChange_Remove_FileStillExists(t *testing.T) {
+	testFile := filepath.Join(t.TempDir(), "test-hooks.json")
+	require.NoError(t, os.WriteFile(testFile, []byte(`[]`), 0o600))
+
+	watcher, err := fsnotify.NewWatcher()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = watcher.Close() })
+	require.NoError(t, watcher.Add(testFile))
+
 	removeCalled := false
-
+	reloadCount := 0
 	reloadHooks := func(hooksFilePath string, asTemplate bool) {
-		// Not used in this test
+		assert.Equal(t, testFile, hooksFilePath)
+		reloadCount++
 	}
-
-	removeHooks := func(hooksFilePath string, verbose bool, noPanic bool) {
+	removeHooks := func(hooksFilePath string, verbose bool, noPanic bool) bool {
 		removeCalled = true
+		return true
 	}
+	processors := make(map[string]*fileProcessor)
+	var processorsMu sync.RWMutex
 
-	// Start watching in a goroutine
-	done := make(chan bool)
-	go func() {
-		WatchForFileChange(watcher, false, false, false, reloadHooks, removeHooks)
-		done <- true
-	}()
-	time.Sleep(100 * time.Millisecond)
+	// A replacement can leave the path present by the time a stale Remove event
+	// is processed. Restore the file watch and reload the replacement.
+	handleEvent(fsnotify.Event{Name: testFile, Op: fsnotify.Remove}, watcher, false, false, false, reloadHooks, removeHooks, &processors, &processorsMu)
 
-	// The file still exists, so a Remove event should not trigger removeHooks
-	// This tests the case where os.Stat returns no error (file exists)
-	// In this case, removeHooks should not be called
-	// We can't easily simulate a Remove event where the file still exists,
-	// but we can test that the file exists check works correctly
-	_, err = os.Stat(testFile)
-	assert.NoError(t, err)
 	assert.False(t, removeCalled, "removeHooks should not be called if file still exists")
-
-	// Close watcher to stop the goroutine
-	_ = watcher.Close()
-
-	// Wait for goroutine to exit (with timeout)
-	select {
-	case <-done:
-	case <-time.After(1 * time.Second):
-		t.Log("WatchForFileChange goroutine did not exit in time")
-	}
+	assert.Equal(t, maxRetries, reloadCount)
 }
 
 func TestWatchForFileChange_RemoveError(t *testing.T) {

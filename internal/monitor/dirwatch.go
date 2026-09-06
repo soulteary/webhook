@@ -121,18 +121,6 @@ func WatchDir(hooksDir string, asTemplate bool, verbose bool, noPanic bool, load
 			if !isHookFile(base) {
 				continue
 			}
-			rules.RLockHooksFiles()
-			fileInList := false
-			for _, f := range rules.HooksFiles {
-				if f == pathAbs {
-					fileInList = true
-					break
-				}
-			}
-			rules.RUnlockHooksFiles()
-			if !fileInList {
-				continue
-			}
 			processorsMu.Lock()
 			p, exists := processors[pathAbs]
 			if !exists {
@@ -151,11 +139,11 @@ func WatchDir(hooksDir string, asTemplate bool, verbose bool, noPanic bool, load
 					return
 				}
 				p.processing = true
-				logger.Infof("hooks file %s modified", pathAbs)
-				reloadHooksFn := func(path string, asTemplate bool) {
-					rules.ReloadHooksWithOptions(path, asTemplate, loadOptions)
+				logger.Infof("hook config file %s modified", pathAbs)
+				loadOrReloadHooksFn := func(path string, asTemplate bool) {
+					rules.AddAndLoadHooksFileWithOptions(path, asTemplate, loadOptions)
 				}
-				retryReloadHooks(pathAbs, asTemplate, reloadHooksFn)
+				retryReloadHooks(pathAbs, asTemplate, loadOrReloadHooksFn)
 				p.processing = false
 				p.debounceTimer = nil
 			})

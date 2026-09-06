@@ -231,6 +231,27 @@ func TestAddAndLoadHooksFileWithOptionsRejectsInvalidCandidate(t *testing.T) {
 	assert.Nil(t, rules.MatchLoadedHook("invalid-hook"))
 }
 
+func TestAddAndLoadHooksFileWithOptionsLoadsCorrectedCandidate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "corrected.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{"id": "corrected-hook", "execute-command": "/bin/echo", "trigger-rules": {}}
+	]`), 0o600))
+
+	rules.HooksFiles = nil
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+	rules.AddAndLoadHooksFileWithOptions(hooksFile, false, rules.LoadOptions{Strict: true})
+	require.NotContains(t, rules.HooksFiles, hooksFile)
+
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{"id": "corrected-hook", "execute-command": "/bin/echo"}
+	]`), 0o600))
+	rules.AddAndLoadHooksFileWithOptions(hooksFile, false, rules.LoadOptions{Strict: true})
+
+	assert.Contains(t, rules.HooksFiles, hooksFile)
+	assert.NotNil(t, rules.MatchLoadedHook("corrected-hook"))
+}
+
 func TestReloadHooks_WithTemplate(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
