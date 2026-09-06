@@ -95,6 +95,11 @@ func AddAndLoadHooksFileWithOptions(hooksFilePath string, isAsTemplate bool, opt
 			return
 		}
 	}
+	if options.RequireNonEmpty && prospectiveHookCountLocked(hooksFilePath, newHooks) == 0 {
+		hooksMutex.Unlock()
+		logger.Errorf("couldn't add hooks file %s: explicit hook configuration must contain at least one hook", hooksFilePath)
+		return
+	}
 	seenIDs := make(map[string]bool, len(newHooks))
 	for _, h := range newHooks {
 		if seenIDs[h.ID] || hooksIndex[h.ID] != nil {

@@ -16,7 +16,8 @@ var watcher *fsnotify.Watcher
 // directory, and signal-triggered reloads.
 func HookLoadOptions(appFlags flags.AppFlags) rules.LoadOptions {
 	return rules.LoadOptions{
-		Strict: appFlags.ValidateStrict,
+		Strict:          appFlags.ValidateStrict,
+		RequireNonEmpty: appFlags.HooksDir == "",
 		Validate: func(hooksFilePath string, hooks hook.Hooks) error {
 			return flags.ValidateLoadedHooks(appFlags, hooksFilePath, hooks)
 		},

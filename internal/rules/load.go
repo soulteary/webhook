@@ -4,8 +4,9 @@ import "github.com/soulteary/webhook/internal/hook"
 
 // LoadOptions keeps reload parsing and validation aligned with startup.
 type LoadOptions struct {
-	Strict   bool
-	Validate func(hooksFilePath string, hooks hook.Hooks) error
+	Strict          bool
+	RequireNonEmpty bool
+	Validate        func(hooksFilePath string, hooks hook.Hooks) error
 }
 
 func loadHooksFile(hooksFilePath string, asTemplate bool, options LoadOptions) (hook.Hooks, error) {
@@ -25,4 +26,14 @@ func loadHooksFile(hooksFilePath string, asTemplate bool, options LoadOptions) (
 		}
 	}
 	return hooks, nil
+}
+
+func prospectiveHookCountLocked(hooksFilePath string, candidate hook.Hooks) int {
+	count := len(candidate)
+	for path, hooks := range LoadedHooksFromFiles {
+		if path != hooksFilePath {
+			count += len(hooks)
+		}
+	}
+	return count
 }

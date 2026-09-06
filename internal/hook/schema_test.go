@@ -45,7 +45,7 @@ func TestSchemaConstrainsMSTeamsSecretsToStandardBase64(t *testing.T) {
 			AllOf []struct {
 				If struct {
 					Properties map[string]struct {
-						Const string `json:"const"`
+						Const any `json:"const"`
 					} `json:"properties"`
 				} `json:"if"`
 				Then struct {
@@ -73,6 +73,58 @@ func TestSchemaConstrainsMSTeamsSecretsToStandardBase64(t *testing.T) {
 	compiled, err := regexp.Compile(pattern)
 	if err != nil {
 		t.Fatalf("invalid msteams-signature secret pattern: %v", err)
+	}
+	for _, value := range []string{"aGVsbG8=", "YWJjZA==", "YWJj"} {
+		if !compiled.MatchString(value) {
+			t.Errorf("schema rejected valid standard Base64 %q", value)
+		}
+	}
+	for _, value := range []string{"not_base64", "abc", "===="} {
+		if compiled.MatchString(value) {
+			t.Errorf("schema accepted invalid standard Base64 %q", value)
+		}
+	}
+}
+
+func TestSchemaConstrainsLiteralFileArgumentsToStandardBase64(t *testing.T) {
+	data, err := os.ReadFile("../../schema/hooks.schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Defs map[string]struct {
+			AllOf []struct {
+				If struct {
+					Properties map[string]struct {
+						Const any `json:"const"`
+					} `json:"properties"`
+				} `json:"if"`
+				Then struct {
+					Properties map[string]struct {
+						Pattern string `json:"pattern"`
+					} `json:"properties"`
+				} `json:"then"`
+			} `json:"allOf"`
+		} `json:"$defs"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+
+	pattern := ""
+	for _, condition := range schema.Defs["fileArgument"].AllOf {
+		properties := condition.If.Properties
+		if properties["source"].Const == SourceString && properties["base64decode"].Const == true {
+			pattern = condition.Then.Properties["name"].Pattern
+			break
+		}
+	}
+	if pattern == "" {
+		t.Fatal("schema is missing the literal base64 file-argument constraint")
+	}
+	compiled, err := regexp.Compile(pattern)
+	if err != nil {
+		t.Fatalf("invalid literal file-argument Base64 pattern: %v", err)
 	}
 	for _, value := range []string{"aGVsbG8=", "YWJjZA==", "YWJj"} {
 		if !compiled.MatchString(value) {

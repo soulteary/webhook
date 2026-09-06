@@ -149,6 +149,38 @@ func TestReloadHooksReplacesRemovedHookIDsInIndex(t *testing.T) {
 	assert.NotNil(t, rules.MatchLoadedHook("new-hook"))
 }
 
+func TestReloadHooksWithOptionsRejectsEmptyExplicitAggregate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte("[]\n"), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadHooksWithOptions(hooksFile, false, rules.LoadOptions{RequireNonEmpty: true})
+
+	assert.Equal(t, 1, rules.LenLoadedHooks())
+	assert.NotNil(t, rules.MatchLoadedHook("protected-hook"))
+}
+
+func TestReloadHooksWithOptionsAllowsEmptyDirectoryAggregate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte("[]\n"), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "removable-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadHooksWithOptions(hooksFile, false, rules.LoadOptions{})
+
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.Nil(t, rules.MatchLoadedHook("removable-hook"))
+}
+
 func TestReloadHooksWithOptionsRejectsSemanticErrorsAndKeepsActiveHooks(t *testing.T) {
 	tempDir := t.TempDir()
 	hooksFile := filepath.Join(tempDir, "hooks.yaml")
