@@ -14,8 +14,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "*.*.*"
     paths:
       - "docs/**"
       - "example/**"
@@ -53,7 +51,7 @@ jobs:
         run: mkdocs build --strict
 
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref_type == 'branch'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -80,7 +78,3 @@ jobs:
       - name: Deploy development documentation
         if: github.ref_type == 'branch'
         run: mike deploy --push --update-aliases dev
-
-      - name: Deploy release documentation
-        if: github.ref_type == 'tag'
-        run: mike deploy --push --update-aliases "${{ github.ref_name }}" latest && mike set-default --push latest

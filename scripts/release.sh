@@ -19,7 +19,7 @@ cd "$REPOSITORY_ROOT"
 RELEASE_COMMIT="$(git rev-parse HEAD)"
 echo
 echo "Ready to release $RELEASE_VERSION from $RELEASE_COMMIT"
-echo "Release CI will run preflight -> publish -> attest -> verify"
+echo "Release CI will run preflight -> publish -> attest -> verify -> documentation"
 printf "Type %s to create and push the release tag: " "$RELEASE_VERSION"
 read -r confirmation
 [[ "$confirmation" == "$RELEASE_VERSION" ]] || fail "confirmation did not match; nothing was published"
@@ -35,5 +35,4 @@ fi
 
 echo
 echo "Tag $RELEASE_VERSION was pushed successfully."
-echo "Release: https://github.com/soulteary/webhook/actions/workflows/build.yml"
-echo "Documentation: https://github.com/soulteary/webhook/actions/workflows/docs.yml"
+echo "Workflow: https://github.com/soulteary/webhook/actions/workflows/build.yml"

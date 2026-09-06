@@ -13,8 +13,8 @@
 - 通过 `getSecret` 和 `trimSpace` 增加受约束的 Docker Secret 模板支持，
   不开放任意文件系统读取；
 - 将示例、容器标签、完整性校验命令和迁移下载版本更新到 7.3.0；
-- 将 Release CI 限制为只接受 Tag，并把预检、发布、证明和验证拆为可安全重试的
-  Job。
+- 将 Release CI 限制为只接受 Tag，并把预检、发布、证明、验证和文档发布拆为
+  可安全重试的 Job。
 
 ## 发布不变量
 
@@ -23,7 +23,7 @@
 - 每个版本只打一次 Tag；绝不移动、删除或复用已经发布的 Tag。
 - GitHub Release 和两个镜像仓库的镜像均由 Release 工作流创建。
 - `preflight` 在使用发布凭据或产生发布副作用前执行全部构建检查。`publish` 只能
-  执行一次；`attest`、`verify` 或 Documentation 可以独立重试，不会再次运行
+  执行一次；`attest`、`verify` 或 `documentation` 可以独立重试，不会再次运行
   GoReleaser。
 
 ## 发布前提
@@ -63,22 +63,19 @@ Tag 推送后会按以下顺序执行：
 | 2 | Release / `publish` | 构建 GitHub Release、压缩包、SBOM 和已签名多架构镜像 | 只执行一次 |
 | 3 | Release / `attest` | 下载已发布资产并生成 GitHub Provenance | 只重试该 Job |
 | 4 | Release / `verify` | 验证资产、Sigstore Bundle、Provenance、镜像 UID 和镜像签名 | 只重试该 Job |
-| 并行 | Documentation | 构建 `7.3.0`、更新 `latest` 并设置文档默认版本 | 独立重试 |
+| 5 | Release / `documentation` | 构建 `7.3.0`、更新 `latest` 并设置文档默认版本 | 只重试该 Job |
 
-必须等待两个工作流完成；看到 GitHub Release 已出现不代表发布已经完成。
+必须等待 Release 工作流完成；看到 GitHub Release 已出现不代表发布已经完成。
 
 ```bash
 RELEASE_VERSION=7.3.0
 RELEASE_RUN_ID="$(gh run list --workflow build.yml --branch "$RELEASE_VERSION" --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh run watch "$RELEASE_RUN_ID" --exit-status
-
-DOCS_RUN_ID="$(gh run list --workflow docs.yml --branch "$RELEASE_VERSION" --limit 1 --json databaseId --jq '.[0].databaseId')"
-gh run watch "$DOCS_RUN_ID" --exit-status
 ```
 
 ## 发布后验证
 
-两个工作流均通过后执行：
+Release 工作流通过后执行：
 
 ```bash
 gh release view "$RELEASE_VERSION" --repo soulteary/webhook \
@@ -115,7 +112,7 @@ Attestation、镜像签名及三类运行时镜像。
 | `publish`，且 **Run GoReleaser** 已经开始 | 不要重试；先检查 GitHub Release 和两个镜像仓库是否存在部分不可变产物 |
 | `attest` | 重试失败 Job；已经完成的 `publish` 不会重跑 |
 | `verify` | 重试失败 Job，或只重试 `verify` |
-| Documentation | 只重试 Documentation 工作流 |
+| `documentation` | 只重试失败的 `documentation` Job |
 
 如果 GoReleaser 已经开始，并且任意带版本号的 Release 资产或镜像已经存在，
 不要删除 Tag 后复用版本。保留现场，在 `main` 修复原因后发布下一个 Patch 版本

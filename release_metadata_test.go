@@ -68,13 +68,26 @@ func TestReleaseWorkflowIsTagOnlyAndRetrySafe(t *testing.T) {
 	assert.Contains(t, workflow, "cancel-in-progress: false")
 	assert.Contains(t, workflow, "github.event_name == 'push' && github.ref_type == 'tag'")
 	assert.Contains(t, workflow, "  preflight:")
-	assert.Contains(t, workflow, `gh release view "${GITHUB_REF_NAME}"`)
+	assert.Contains(t, workflow, `"/repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}"`)
+	assert.Contains(t, workflow, `grep -Eq '^HTTP/[0-9.]+ 404 '`)
 	assert.Contains(t, workflow, "  publish:")
 	assert.Contains(t, workflow, "    needs: preflight")
 	assert.Contains(t, workflow, "  attest:\n")
 	assert.Contains(t, workflow, "    needs: publish")
 	assert.Contains(t, workflow, "  verify:\n")
 	assert.Contains(t, workflow, "    needs: attest")
+	assert.Contains(t, workflow, "  documentation:\n")
+	assert.Contains(t, workflow, "    needs: verify")
+}
+
+func TestReleaseDocumentationIsGatedByVerification(t *testing.T) {
+	data, err := os.ReadFile(".github/workflows/docs.yml")
+	require.NoError(t, err)
+	workflow := string(data)
+
+	assert.NotContains(t, workflow, "\n    tags:\n",
+		"the standalone documentation workflow must not run for release tags")
+	assert.NotContains(t, workflow, "Deploy release documentation")
 }
 
 func TestReleasePreflightHasNoBuildToolDependencies(t *testing.T) {
@@ -99,6 +112,7 @@ func TestReleaseCommandPushesOnlyOneConfirmedTag(t *testing.T) {
 	assert.Contains(t, script, `[[ "$confirmation" == "$RELEASE_VERSION" ]]`)
 	assert.Contains(t, script, `git tag -a "$RELEASE_VERSION"`)
 	assert.Contains(t, script, `git push origin "refs/tags/$RELEASE_VERSION"`)
+	assert.Contains(t, script, "preflight -> publish -> attest -> verify -> documentation")
 	assert.NotContains(t, script, "git push --tags")
 }
 

@@ -15,8 +15,8 @@ The 7.3.0 release includes the following changes after 7.2.0:
   `trimSpace`, without exposing arbitrary filesystem reads;
 - update examples, container tags, integrity commands, and migration downloads
   to 7.3.0;
-- make Release CI tag-only and split validation, publishing, attestation, and
-  verification into retry-safe jobs.
+- make Release CI tag-only and split validation, publishing, attestation,
+  verification, and release documentation into retry-safe jobs.
 
 ## Release invariants
 
@@ -25,7 +25,7 @@ The 7.3.0 release includes the following changes after 7.2.0:
 - A version is tagged once. Never move, delete, or reuse a published tag.
 - The Release workflow creates the GitHub Release and both registries' images.
 - `preflight` performs all build checks before credentials or publishing are
-  used. `publish` runs once. `attest`, `verify`, or Documentation may be
+  used. `publish` runs once. `attest`, `verify`, or `documentation` may be
   retried independently without running GoReleaser again.
 
 ## Prerequisites
@@ -67,22 +67,20 @@ The tag push starts these paths:
 | 2 | Release / `publish` | Builds the GitHub Release, archives, SBOMs, and signed container manifests | Run once only |
 | 3 | Release / `attest` | Downloads published assets and creates GitHub provenance | Retry this job only |
 | 4 | Release / `verify` | Verifies assets, Sigstore bundle, provenance, image UID, and image signatures | Retry this job only |
-| Parallel | Documentation | Builds `7.3.0`, updates `latest`, and sets the documentation default | Retry independently |
+| 5 | Release / `documentation` | Builds `7.3.0`, updates `latest`, and sets the documentation default | Retry this job only |
 
-Wait for both workflows; a visible GitHub Release is not completion by itself.
+Wait for the Release workflow; a visible GitHub Release is not completion by
+itself.
 
 ```bash
 RELEASE_VERSION=7.3.0
 RELEASE_RUN_ID="$(gh run list --workflow build.yml --branch "$RELEASE_VERSION" --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh run watch "$RELEASE_RUN_ID" --exit-status
-
-DOCS_RUN_ID="$(gh run list --workflow docs.yml --branch "$RELEASE_VERSION" --limit 1 --json databaseId --jq '.[0].databaseId')"
-gh run watch "$DOCS_RUN_ID" --exit-status
 ```
 
 ## Post-release verification
 
-After both workflows pass:
+After the Release workflow passes:
 
 ```bash
 gh release view "$RELEASE_VERSION" --repo soulteary/webhook \
@@ -120,7 +118,7 @@ Do not immediately press **Re-run all jobs**.
 | `publish`, after **Run GoReleaser** starts | Do not rerun; inspect the GitHub Release and both registries for partial immutable artifacts |
 | `attest` | Re-run failed jobs; `publish` remains completed |
 | `verify` | Re-run failed jobs or the `verify` job only |
-| Documentation | Re-run only the Documentation workflow |
+| `documentation` | Re-run the failed `documentation` job only |
 
 If GoReleaser started and any versioned release asset or image exists, do not
 delete the tag and reuse the version. Preserve the evidence, fix the cause on
