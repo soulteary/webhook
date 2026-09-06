@@ -3,6 +3,7 @@ package platform
 import (
 	"fmt"
 	"strings"
+	"unicode/utf16"
 )
 
 func validateWindowsTempFilePattern(pattern string) error {
@@ -30,6 +31,13 @@ func validateWindowsTempFilePattern(pattern string) error {
 		return fmt.Errorf("effective temporary-file pattern can generate a reserved Windows filename")
 	}
 	return nil
+}
+
+func windowsTempFileGeneratedNameLength(pattern string, randomSuffixLength int) int {
+	if star := strings.LastIndex(pattern, "*"); star >= 0 {
+		pattern = pattern[:star] + pattern[star+1:]
+	}
+	return len(utf16.Encode([]rune(pattern))) + randomSuffixLength
 }
 
 func isWindowsReservedBaseName(name string) bool {

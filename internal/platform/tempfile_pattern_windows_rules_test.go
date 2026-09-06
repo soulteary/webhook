@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,4 +21,9 @@ func TestValidateWindowsTempFilePattern(t *testing.T) {
 			require.Error(t, validateWindowsTempFilePattern(pattern))
 		})
 	}
+}
+
+func TestWindowsTempFileGeneratedNameLengthUsesUTF16CodeUnits(t *testing.T) {
+	require.Equal(t, 110, windowsTempFileGeneratedNameLength(strings.Repeat("界", 100)+"*", 10))
+	require.Equal(t, 210, windowsTempFileGeneratedNameLength(strings.Repeat("😀", 100)+"*", 10))
 }

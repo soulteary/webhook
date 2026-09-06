@@ -544,13 +544,10 @@ func validateFileArguments(result *ValidationResult, field string, arguments []h
 			result.AddError(argumentField+".envname", fmt.Sprintf("cannot determine temporary-file name limit for %s: %v", workingDirectory, nameLimitErr))
 			continue
 		}
-		generatedLength := len(pattern) + createTempRandomSuffixMaxLength
-		if strings.Contains(pattern, "*") {
-			generatedLength--
-		}
+		generatedLength := platform.TempFileGeneratedNameLength(pattern, createTempRandomSuffixMaxLength)
 		if generatedLength > nameLimit {
 			result.AddError(argumentField+".envname",
-				fmt.Sprintf("effective temporary-file pattern can generate a %d-byte name, exceeding filesystem limit %d", generatedLength, nameLimit))
+				fmt.Sprintf("effective temporary-file pattern can generate a name of length %d, exceeding filesystem limit %d", generatedLength, nameLimit))
 		}
 	}
 }
