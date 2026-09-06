@@ -796,6 +796,16 @@ func (h *Hooks) LoadFromFileStrict(path string, asTemplate bool) error {
 // LoadFromFileWithOptions loads hooks from JSON or YAML. When strict is true,
 // unknown object fields are rejected at every nesting level.
 func (h *Hooks) LoadFromFileWithOptions(path string, asTemplate, strict bool) error {
+	return h.loadFromFileWithOptions(path, asTemplate, strict, strict)
+}
+
+// LoadFromFileForValidation loads hooks compatibly while rejecting invalid
+// HTTP method values before normalization. Unknown fields remain accepted.
+func (h *Hooks) LoadFromFileForValidation(path string, asTemplate bool) error {
+	return h.loadFromFileWithOptions(path, asTemplate, false, true)
+}
+
+func (h *Hooks) loadFromFileWithOptions(path string, asTemplate, strict, validateMethods bool) error {
 	if path == "" {
 		return nil
 	}
@@ -851,7 +861,7 @@ func (h *Hooks) LoadFromFileWithOptions(path string, asTemplate, strict bool) er
 		return err
 	}
 
-	if strict {
+	if validateMethods {
 		for i := range *h {
 			for _, method := range (*h)[i].HTTPMethods {
 				if _, valid := normalizeHTTPMethod(method); !valid {

@@ -35,6 +35,38 @@ func TestSchemaCoversHookFields(t *testing.T) {
 	}
 }
 
+func TestSchemaRejectsUnreachableHookIDs(t *testing.T) {
+	data, err := os.ReadFile("../../schema/hooks.schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Defs map[string]struct {
+			Properties map[string]struct {
+				Pattern string `json:"pattern"`
+			} `json:"properties"`
+		} `json:"$defs"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+	pattern := schema.Defs["hook"].Properties["id"].Pattern
+	compiled, err := regexp.Compile(pattern)
+	if err != nil {
+		t.Fatalf("invalid hook ID pattern: %v", err)
+	}
+	for _, id := range []string{"hook", "hook with spaces", "hook-编号"} {
+		if !compiled.MatchString(id) {
+			t.Errorf("schema rejected reachable hook ID %q", id)
+		}
+	}
+	for _, id := range []string{"", " hook", "hook ", "foo\rbar", "foo\nbar", "foo\tbar"} {
+		if compiled.MatchString(id) {
+			t.Errorf("schema accepted unreachable hook ID %q", id)
+		}
+	}
+}
+
 func TestSchemaConstrainsMSTeamsSecretsToStandardBase64(t *testing.T) {
 	data, err := os.ReadFile("../../schema/hooks.schema.json")
 	if err != nil {

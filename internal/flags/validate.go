@@ -231,6 +231,7 @@ func validateDirectory(result *ValidationResult, field, path string, mustExist b
 
 // validateHookFiles 验证 Hook 文件
 func validateHookFiles(result *ValidationResult, flags AppFlags) {
+	validateSemantics := flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor
 	// Prefer the effective parsed flags. The global list mirrors this slice
 	// after parsing and must not be merged with it, or every path appears twice.
 	hooksFiles := make(hook.HooksFiles, len(flags.HooksFiles))
@@ -291,6 +292,8 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 		var err error
 		if flags.ValidateStrict {
 			err = hooks.LoadFromFileStrict(hookFile, flags.AsTemplate)
+		} else if validateSemantics {
+			err = hooks.LoadFromFileForValidation(hookFile, flags.AsTemplate)
 		} else {
 			err = hooks.LoadFromFile(hookFile, flags.AsTemplate)
 		}
@@ -304,7 +307,7 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 
 		// 验证 Hook 内容
 		validateHookContent(result, hookFile, hooks, hookOrigins,
-			flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor,
+			validateSemantics,
 			flags.StrictMode, flags.MaxArgsCount, flags.MaxArgLength, flags.MaxTotalArgsLength)
 	}
 	if flags.HooksDir == "" && loadedFiles > 0 && loadedHooks == 0 {
@@ -325,8 +328,8 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 		if strings.TrimSpace(h.ID) != h.ID {
 			result.AddError(idField, "must not contain leading or trailing whitespace")
 		}
-		if strings.ContainsAny(h.ID, "\r\n") {
-			result.AddError(idField, "must not contain carriage returns or line feeds")
+		if strings.ContainsAny(h.ID, "\r\n\t") {
+			result.AddError(idField, "must not contain carriage returns, line feeds, or tabs")
 		}
 		if validateSemantics && strings.TrimSpace(h.ExecuteCommand) == "" {
 			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].execute-command", hookFile, i),

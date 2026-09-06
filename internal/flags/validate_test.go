@@ -1019,7 +1019,7 @@ func TestValidateRejectsDuplicateHookFiles(t *testing.T) {
 	assert.Contains(t, result.Errors[0].Error(), "duplicate hook file")
 }
 
-func TestValidateStrictRejectsInvalidHookHTTPMethod(t *testing.T) {
+func TestValidateRejectsInvalidHookHTTPMethod(t *testing.T) {
 	tempDir := t.TempDir()
 	hookFile := filepath.Join(tempDir, "hooks.yaml")
 	require.NoError(t, os.WriteFile(hookFile, []byte(`
@@ -1029,7 +1029,7 @@ func TestValidateStrictRejectsInvalidHookHTTPMethod(t *testing.T) {
 `), 0o600))
 
 	appFlags := createValidFlags()
-	appFlags.ValidateStrict = true
+	appFlags.ValidateConfig = true
 	appFlags.HooksFiles = []string{hookFile}
 	result := Validate(appFlags)
 	require.True(t, result.HasErrors())
@@ -1326,8 +1326,8 @@ func TestValidateRejectsUnreachableHookIDs(t *testing.T) {
 	}
 }
 
-func TestValidateRejectsHookIDsWithLineBreaks(t *testing.T) {
-	for _, id := range []string{"foo\nbar", "foo\rbar"} {
+func TestValidateRejectsHookIDsWithControlWhitespace(t *testing.T) {
+	for _, id := range []string{"foo\nbar", "foo\rbar", "foo\tbar"} {
 		hookFile := filepath.Join(t.TempDir(), "hooks.json")
 		content := fmt.Sprintf(`[{"id":%q,"execute-command":"/bin/echo"}]`, id)
 		require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
@@ -1337,7 +1337,7 @@ func TestValidateRejectsHookIDsWithLineBreaks(t *testing.T) {
 		appFlags.HooksFiles = []string{hookFile}
 		result := Validate(appFlags)
 		require.True(t, result.HasErrors())
-		assert.Contains(t, fmt.Sprint(result.Errors), "carriage returns or line feeds")
+		assert.Contains(t, fmt.Sprint(result.Errors), "carriage returns, line feeds, or tabs")
 	}
 }
 
