@@ -2,7 +2,6 @@
 
 set -Eeuo pipefail
 
-REPOSITORY="soulteary/webhook"
 REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RELEASE_VERSION="${1:-}"
 
@@ -11,10 +10,7 @@ fail() {
   exit 1
 }
 
-for command_name in git go goreleaser gh; do
-  command -v "$command_name" >/dev/null 2>&1 || fail "missing required command: $command_name"
-done
-gh auth status >/dev/null 2>&1 || fail "GitHub CLI is not authenticated"
+command -v git >/dev/null 2>&1 || fail "missing required command: git"
 
 [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || \
   fail "usage: $0 MAJOR.MINOR.PATCH (without a v prefix)"
@@ -42,10 +38,6 @@ case "$remote_tag_status" in
   *) fail "could not confirm that remote tag $RELEASE_VERSION is unused" ;;
 esac
 
-if gh release view "$RELEASE_VERSION" --repo "$REPOSITORY" >/dev/null 2>&1; then
-  fail "GitHub Release $RELEASE_VERSION already exists"
-fi
-
 for versioned_file in \
   README.md \
   docs/en-US/Container-Images.md \
@@ -57,39 +49,5 @@ for versioned_file in \
     fail "$versioned_file does not reference $RELEASE_VERSION"
 done
 
-go mod tidy
-git diff --exit-code -- go.mod go.sum
-go test -race ./...
-goreleaser check
-
-documentation_output="$(mktemp -d)"
-documentation_environment=""
-cleanup() {
-  if [[ -n "$documentation_environment" && -d "$documentation_environment" ]]; then
-    rm -rf -- "$documentation_environment"
-  fi
-  if [[ -d "$documentation_output" ]]; then
-    rm -rf -- "$documentation_output"
-  fi
-}
-trap cleanup EXIT
-
-if command -v mkdocs >/dev/null 2>&1; then
-  mkdocs build --strict --site-dir "$documentation_output"
-else
-  command -v python3 >/dev/null 2>&1 || \
-    fail "missing mkdocs and python3; install one of them to build documentation"
-  documentation_environment="$(mktemp -d)"
-  python3 -m venv "$documentation_environment"
-  "$documentation_environment/bin/python" -m pip install \
-    --disable-pip-version-check \
-    -r requirements-docs.txt
-  "$documentation_environment/bin/mkdocs" build \
-    --strict \
-    --site-dir "$documentation_output"
-fi
-
-[[ -z "$(git status --porcelain)" ]] || fail "preflight changed the working tree"
-
 echo "release preflight passed for $RELEASE_VERSION at $(git rev-parse HEAD)"
-echo "next: create one annotated tag and push only refs/tags/$RELEASE_VERSION"
+echo "build, test, documentation, and GoReleaser checks will run in Release CI before publishing"

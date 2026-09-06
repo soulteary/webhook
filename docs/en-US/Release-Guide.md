@@ -15,8 +15,8 @@ The 7.3.0 release includes the following changes after 7.2.0:
   `trimSpace`, without exposing arbitrary filesystem reads;
 - update examples, container tags, integrity commands, and migration downloads
   to 7.3.0;
-- make Release CI tag-only and split publishing, attestation, and verification
-  into retry-safe jobs.
+- make Release CI tag-only and split validation, publishing, attestation, and
+  verification into retry-safe jobs.
 
 ## Release invariants
 
@@ -24,8 +24,9 @@ The 7.3.0 release includes the following changes after 7.2.0:
 - The tagged commit is already on `main`, and all required checks passed on it.
 - A version is tagged once. Never move, delete, or reuse a published tag.
 - The Release workflow creates the GitHub Release and both registries' images.
-- `publish` runs once. `attest`, `verify`, or Documentation may be retried
-  independently without running GoReleaser again.
+- `preflight` performs all build checks before credentials or publishing are
+  used. `publish` runs once. `attest`, `verify`, or Documentation may be
+  retried independently without running GoReleaser again.
 
 ## Prerequisites
 
@@ -36,50 +37,42 @@ Before preparing a tag:
    and Benchmarks on the resulting `main` commit.
 3. Confirm the Docker Hub credentials and GitHub repository/package permissions
    are available to Actions.
-4. Install Go according to `go.mod`, GitHub CLI, and GoReleaser v2.18.0
-   locally. For documentation, use either MkDocs or Python 3 with `venv`; when
-   `mkdocs` is not on `PATH`, the preflight script installs the pinned
-   `requirements-docs.txt` dependencies in a temporary virtual environment;
-   this fallback needs network access on its first run.
+4. Install Git. Go, Python, MkDocs, GoReleaser, Syft, Cosign, and GitHub CLI are
+   provided by GitHub Actions and are not local release dependencies.
 
 For 7.3.0, PR #177 and PR #178 must both be present in the selected `main`
 commit.
 
 ## Exact publishing sequence
 
-Run these commands from a clean clone. `release-preflight.sh` refuses to run
-from a branch other than `main`, from a dirty or stale checkout, or when the tag
-already exists.
+From an up-to-date, clean `main` checkout, run one command:
 
 ```bash
-git fetch origin main --tags
-git switch main
-git pull --ff-only origin main
-
-RELEASE_VERSION=7.3.0
-./scripts/release-preflight.sh "$RELEASE_VERSION"
-
-RELEASE_COMMIT="$(git rev-parse HEAD)"
-git tag -a "$RELEASE_VERSION" "$RELEASE_COMMIT" -m "Release $RELEASE_VERSION"
-git push origin "refs/tags/$RELEASE_VERSION"
+./scripts/release.sh 7.3.0
 ```
 
-Push only the one tag shown above. Do not use `git push --tags`; it can publish
-an unrelated local tag. Do not create a draft or empty GitHub Release before
-the push, because GoReleaser owns that operation.
+The command runs a fast Git-only preflight, displays the exact commit, and asks
+you to type `7.3.0` before it creates and pushes one annotated tag. It refuses a
+dirty checkout, a non-`main` branch, a checkout that differs from `origin/main`,
+an invalid version, stale version references, or an existing local/remote tag.
+
+Do not create a draft or empty GitHub Release first; GoReleaser owns that
+operation. The script pushes only `refs/tags/7.3.0`, never all local tags.
 
 The tag push starts these paths:
 
 | Order | Workflow/job | Side effects | Retry rule |
 |---|---|---|---|
-| 1 | Release / `publish` | Tests, builds, GitHub Release, archives, SBOMs, signed container manifests | Run once only |
-| 2 | Release / `attest` | Downloads published assets and creates GitHub provenance | Retry this job only |
-| 3 | Release / `verify` | Verifies assets, Sigstore bundle, provenance, image UID, and image signatures | Retry this job only |
+| 1 | Release / `preflight` | Validates the tag and `main` ancestry, runs race tests, builds strict documentation, and checks GoReleaser configuration | No publishing side effects; safe to retry |
+| 2 | Release / `publish` | Builds the GitHub Release, archives, SBOMs, and signed container manifests | Run once only |
+| 3 | Release / `attest` | Downloads published assets and creates GitHub provenance | Retry this job only |
+| 4 | Release / `verify` | Verifies assets, Sigstore bundle, provenance, image UID, and image signatures | Retry this job only |
 | Parallel | Documentation | Builds `7.3.0`, updates `latest`, and sets the documentation default | Retry independently |
 
 Wait for both workflows; a visible GitHub Release is not completion by itself.
 
 ```bash
+RELEASE_VERSION=7.3.0
 RELEASE_RUN_ID="$(gh run list --workflow build.yml --branch "$RELEASE_VERSION" --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh run watch "$RELEASE_RUN_ID" --exit-status
 
@@ -121,7 +114,8 @@ Do not immediately press **Re-run all jobs**.
 
 | Failure point | Safe action |
 |---|---|
-| Preparation PR or local preflight | Fix the branch and rerun checks; no release exists yet |
+| Local preflight or confirmation | Fix/update the checkout and rerun the command; no release exists yet |
+| CI `preflight` | Fix `main`, prepare a new version, and push a new tag; publishing did not start |
 | `publish`, before **Run GoReleaser** starts | Re-run the failed `publish` job |
 | `publish`, after **Run GoReleaser** starts | Do not rerun; inspect the GitHub Release and both registries for partial immutable artifacts |
 | `attest` | Re-run failed jobs; `publish` remains completed |
@@ -132,3 +126,7 @@ If GoReleaser started and any versioned release asset or image exists, do not
 delete the tag and reuse the version. Preserve the evidence, fix the cause on
 `main`, and publish the next patch version (for example, 7.3.1). This avoids
 serving different bytes under the same immutable version.
+
+If the local tag was created but the push failed, inspect it with
+`git show 7.3.0`, then retry only `git push origin refs/tags/7.3.0`. Do not rerun
+`release.sh`, because its duplicate-tag guard will stop.
