@@ -1469,8 +1469,8 @@ Actions page.</p>
   <code>trimSpace</code>, without exposing arbitrary filesystem reads;</li>
 <li>update examples, container tags, integrity commands, and migration downloads
   to 7.3.0;</li>
-<li>make Release CI tag-only and split publishing, attestation, and verification
-  into retry-safe jobs.</li>
+<li>make Release CI tag-only and split validation, publishing, attestation,
+  verification, and release documentation into retry-safe jobs.</li>
 </ul>
 <h2 id="release-invariants">Release invariants</h2>
 <ul>
@@ -1478,8 +1478,9 @@ Actions page.</p>
 <li>The tagged commit is already on <code>main</code>, and all required checks passed on it.</li>
 <li>A version is tagged once. Never move, delete, or reuse a published tag.</li>
 <li>The Release workflow creates the GitHub Release and both registries' images.</li>
-<li><code>publish</code> runs once. <code>attest</code>, <code>verify</code>, or Documentation may be retried
-  independently without running GoReleaser again.</li>
+<li><code>preflight</code> performs all build checks before credentials or publishing are
+  used. <code>publish</code> runs once. <code>attest</code>, <code>verify</code>, or <code>documentation</code> may be
+  retried independently without running GoReleaser again.</li>
 </ul>
 <h2 id="prerequisites">Prerequisites</h2>
 <p>Before preparing a tag:</p>
@@ -1489,32 +1490,21 @@ Actions page.</p>
    and Benchmarks on the resulting <code>main</code> commit.</li>
 <li>Confirm the Docker Hub credentials and GitHub repository/package permissions
    are available to Actions.</li>
-<li>Install Go according to <code>go.mod</code>, GitHub CLI, and GoReleaser v2.18.0
-   locally. For documentation, use either MkDocs or Python 3 with <code>venv</code>; when
-   <code>mkdocs</code> is not on <code>PATH</code>, the preflight script installs the pinned
-   <code>requirements-docs.txt</code> dependencies in a temporary virtual environment;
-   this fallback needs network access on its first run.</li>
+<li>Install Git. Go, Python, MkDocs, GoReleaser, Syft, Cosign, and GitHub CLI are
+   provided by GitHub Actions and are not local release dependencies.</li>
 </ol>
 <p>For 7.3.0, PR #177 and PR #178 must both be present in the selected <code>main</code>
 commit.</p>
 <h2 id="exact-publishing-sequence">Exact publishing sequence</h2>
-<p>Run these commands from a clean clone. <code>release-preflight.sh</code> refuses to run
-from a branch other than <code>main</code>, from a dirty or stale checkout, or when the tag
-already exists.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>fetch<span class="w"> </span>origin<span class="w"> </span>main<span class="w"> </span>--tags
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>switch<span class="w"> </span>main
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>git<span class="w"> </span>pull<span class="w"> </span>--ff-only<span class="w"> </span>origin<span class="w"> </span>main
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">RELEASE_VERSION</span><span class="o">=</span><span class="m">7</span>.3.0
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>./scripts/release-preflight.sh<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nv">RELEASE_COMMIT</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span>HEAD<span class="k">)</span><span class="s2">"</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_COMMIT</span><span class="s2">"</span><span class="w"> </span>-m<span class="w"> </span><span class="s2">"Release </span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span><span class="s2">"refs/tags/</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
+<p>From an up-to-date, clean <code>main</code> checkout, run one command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>./scripts/release.sh<span class="w"> </span><span class="m">7</span>.3.0
 </code></pre></div>
-<p>Push only the one tag shown above. Do not use <code>git push --tags</code>; it can publish
-an unrelated local tag. Do not create a draft or empty GitHub Release before
-the push, because GoReleaser owns that operation.</p>
+<p>The command runs a fast Git-only preflight, displays the exact commit, and asks
+you to type <code>7.3.0</code> before it creates and pushes one annotated tag. It refuses a
+dirty checkout, a non-<code>main</code> branch, a checkout that differs from <code>origin/main</code>,
+an invalid version, stale version references, or an existing local/remote tag.</p>
+<p>Do not create a draft or empty GitHub Release first; GoReleaser owns that
+operation. The script pushes only <code>refs/tags/7.3.0</code>, never all local tags.</p>
 <p>The tag push starts these paths:</p>
 <table>
 <thead>
@@ -1528,39 +1518,44 @@ the push, because GoReleaser owns that operation.</p>
 <tbody>
 <tr>
 <td>1</td>
-<td>Release / <code>publish</code></td>
-<td>Tests, builds, GitHub Release, archives, SBOMs, signed container manifests</td>
-<td>Run once only</td>
+<td>Release / <code>preflight</code></td>
+<td>Validates the tag and <code>main</code> ancestry, runs race tests, builds strict documentation, and checks GoReleaser configuration</td>
+<td>No publishing side effects; safe to retry</td>
 </tr>
 <tr>
 <td>2</td>
+<td>Release / <code>publish</code></td>
+<td>Builds the GitHub Release, archives, SBOMs, and signed container manifests</td>
+<td>Run once only</td>
+</tr>
+<tr>
+<td>3</td>
 <td>Release / <code>attest</code></td>
 <td>Downloads published assets and creates GitHub provenance</td>
 <td>Retry this job only</td>
 </tr>
 <tr>
-<td>3</td>
+<td>4</td>
 <td>Release / <code>verify</code></td>
 <td>Verifies assets, Sigstore bundle, provenance, image UID, and image signatures</td>
 <td>Retry this job only</td>
 </tr>
 <tr>
-<td>Parallel</td>
-<td>Documentation</td>
+<td>5</td>
+<td>Release / <code>documentation</code></td>
 <td>Builds <code>7.3.0</code>, updates <code>latest</code>, and sets the documentation default</td>
-<td>Retry independently</td>
+<td>Retry this job only</td>
 </tr>
 </tbody>
 </table>
-<p>Wait for both workflows; a visible GitHub Release is not completion by itself.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">RELEASE_RUN_ID</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>gh<span class="w"> </span>run<span class="w"> </span>list<span class="w"> </span>--workflow<span class="w"> </span>build.yml<span class="w"> </span>--branch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--json<span class="w"> </span>databaseId<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.[0].databaseId'</span><span class="k">)</span><span class="s2">"</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>gh<span class="w"> </span>run<span class="w"> </span>watch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_RUN_ID</span><span class="s2">"</span><span class="w"> </span>--exit-status
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">DOCS_RUN_ID</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>gh<span class="w"> </span>run<span class="w"> </span>list<span class="w"> </span>--workflow<span class="w"> </span>docs.yml<span class="w"> </span>--branch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--json<span class="w"> </span>databaseId<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.[0].databaseId'</span><span class="k">)</span><span class="s2">"</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>gh<span class="w"> </span>run<span class="w"> </span>watch<span class="w"> </span><span class="s2">"</span><span class="nv">$DOCS_RUN_ID</span><span class="s2">"</span><span class="w"> </span>--exit-status
+<p>Wait for the Release workflow; a visible GitHub Release is not completion by
+itself.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">RELEASE_VERSION</span><span class="o">=</span><span class="m">7</span>.3.0
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">RELEASE_RUN_ID</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>gh<span class="w"> </span>run<span class="w"> </span>list<span class="w"> </span>--workflow<span class="w"> </span>build.yml<span class="w"> </span>--branch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--json<span class="w"> </span>databaseId<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.[0].databaseId'</span><span class="k">)</span><span class="s2">"</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>gh<span class="w"> </span>run<span class="w"> </span>watch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_RUN_ID</span><span class="s2">"</span><span class="w"> </span>--exit-status
 </code></pre></div>
 <h2 id="post-release-verification">Post-release verification</h2>
-<p>After both workflows pass:</p>
+<p>After the Release workflow passes:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>gh<span class="w"> </span>release<span class="w"> </span>view<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--repo<span class="w"> </span>soulteary/webhook<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--json<span class="w"> </span>tagName,isDraft,isPrerelease,url
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -1593,8 +1588,12 @@ bundle, GitHub attestation, image signatures, and all three runtime variants.</p
 </thead>
 <tbody>
 <tr>
-<td>Preparation PR or local preflight</td>
-<td>Fix the branch and rerun checks; no release exists yet</td>
+<td>Local preflight or confirmation</td>
+<td>Fix/update the checkout and rerun the command; no release exists yet</td>
+</tr>
+<tr>
+<td>CI <code>preflight</code></td>
+<td>Fix <code>main</code>, prepare a new version, and push a new tag; publishing did not start</td>
 </tr>
 <tr>
 <td><code>publish</code>, before <strong>Run GoReleaser</strong> starts</td>
@@ -1613,8 +1612,8 @@ bundle, GitHub attestation, image signatures, and all three runtime variants.</p
 <td>Re-run failed jobs or the <code>verify</code> job only</td>
 </tr>
 <tr>
-<td>Documentation</td>
-<td>Re-run only the Documentation workflow</td>
+<td><code>documentation</code></td>
+<td>Re-run the failed <code>documentation</code> job only</td>
 </tr>
 </tbody>
 </table>
@@ -1622,6 +1621,9 @@ bundle, GitHub attestation, image signatures, and all three runtime variants.</p
 delete the tag and reuse the version. Preserve the evidence, fix the cause on
 <code>main</code>, and publish the next patch version (for example, 7.3.1). This avoids
 serving different bytes under the same immutable version.</p>
+<p>If the local tag was created but the push failed, inspect it with
+<code>git show 7.3.0</code>, then retry only <code>git push origin refs/tags/7.3.0</code>. Do not rerun
+<code>release.sh</code>, because its duplicate-tag guard will stop.</p>
 
 
 

@@ -1467,7 +1467,8 @@
 <li>通过 <code>getSecret</code> 和 <code>trimSpace</code> 增加受约束的 Docker Secret 模板支持，
   不开放任意文件系统读取；</li>
 <li>将示例、容器标签、完整性校验命令和迁移下载版本更新到 7.3.0；</li>
-<li>将 Release CI 限制为只接受 Tag，并把发布、证明和验证拆为可安全重试的 Job。</li>
+<li>将 Release CI 限制为只接受 Tag，并把预检、发布、证明、验证和文档发布拆为
+  可安全重试的 Job。</li>
 </ul>
 <h2 id="_2">发布不变量</h2>
 <ul>
@@ -1475,8 +1476,9 @@
 <li>被打 Tag 的提交已经进入 <code>main</code>，且该提交的所有必需检查均通过。</li>
 <li>每个版本只打一次 Tag；绝不移动、删除或复用已经发布的 Tag。</li>
 <li>GitHub Release 和两个镜像仓库的镜像均由 Release 工作流创建。</li>
-<li><code>publish</code> 只能执行一次；<code>attest</code>、<code>verify</code> 或 Documentation 可以独立重试，
-  不会再次运行 GoReleaser。</li>
+<li><code>preflight</code> 在使用发布凭据或产生发布副作用前执行全部构建检查。<code>publish</code> 只能
+  执行一次；<code>attest</code>、<code>verify</code> 或 <code>documentation</code> 可以独立重试，不会再次运行
+  GoReleaser。</li>
 </ul>
 <h2 id="_3">发布前提</h2>
 <p>准备 Tag 前必须：</p>
@@ -1485,29 +1487,20 @@
 <li>等待最终 <code>main</code> 提交上的 Tests、容器 Smoke Test、Security Scan、CodeQL、
    Documentation 和 Benchmarks 全部通过。</li>
 <li>确认 Actions 可以使用 Docker Hub 凭据及 GitHub 仓库、Package 权限。</li>
-<li>本地安装 <code>go.mod</code> 指定的 Go、GitHub CLI 和 GoReleaser v2.18.0。文档构建
-   可以使用 MkDocs，或带 <code>venv</code> 的 Python 3；如果 <code>PATH</code> 中没有 <code>mkdocs</code>，
-   预检脚本会在临时虚拟环境中安装 <code>requirements-docs.txt</code> 锁定的依赖；首次
-   使用该回退路径时需要能够访问网络。</li>
+<li>本地只需要安装 Git。Go、Python、MkDocs、GoReleaser、Syft、Cosign 和
+   GitHub CLI 均由 GitHub Actions 提供，不再是本地发布依赖。</li>
 </ol>
 <p>7.3.0 选定的 <code>main</code> 提交必须同时包含 PR #177 和 PR #178。</p>
 <h2 id="_4">无误发布的准确顺序</h2>
-<p>在干净的 Clone 中执行以下命令。<code>release-preflight.sh</code> 会拒绝非 <code>main</code> 分支、
-存在未提交修改、落后于远端 <code>main</code> 或已经存在同名 Tag 的情况。</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>fetch<span class="w"> </span>origin<span class="w"> </span>main<span class="w"> </span>--tags
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>switch<span class="w"> </span>main
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>git<span class="w"> </span>pull<span class="w"> </span>--ff-only<span class="w"> </span>origin<span class="w"> </span>main
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">RELEASE_VERSION</span><span class="o">=</span><span class="m">7</span>.3.0
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>./scripts/release-preflight.sh<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nv">RELEASE_COMMIT</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span>HEAD<span class="k">)</span><span class="s2">"</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_COMMIT</span><span class="s2">"</span><span class="w"> </span>-m<span class="w"> </span><span class="s2">"Release </span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span><span class="s2">"refs/tags/</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
+<p>在已经同步、工作区干净的 <code>main</code> 中只执行一条命令：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>./scripts/release.sh<span class="w"> </span><span class="m">7</span>.3.0
 </code></pre></div>
-<p>只能推送上面这一枚 Tag。不要使用 <code>git push --tags</code>，否则可能把无关的本地 Tag
-一起发布。推送前不要创建 Draft 或空的 GitHub Release，因为该操作由 GoReleaser
-负责。</p>
+<p>该命令先执行快速、只依赖 Git 的本地预检，显示准确的提交 SHA，然后要求输入
+<code>7.3.0</code> 确认，最后创建并推送一枚 Annotated Tag。非 <code>main</code>、工作区不干净、
+本地与 <code>origin/main</code> 不一致、版本格式错误、文档版本未更新或同名 Tag 已存在时
+都会停止。</p>
+<p>推送前不要创建 Draft 或空的 GitHub Release，因为该操作由 GoReleaser 负责。
+脚本只会推送 <code>refs/tags/7.3.0</code>，不会批量推送其他本地 Tag。</p>
 <p>Tag 推送后会按以下顺序执行：</p>
 <table>
 <thead>
@@ -1521,39 +1514,43 @@
 <tbody>
 <tr>
 <td>1</td>
-<td>Release / <code>publish</code></td>
-<td>测试、构建、GitHub Release、压缩包、SBOM、已签名多架构镜像</td>
-<td>只执行一次</td>
+<td>Release / <code>preflight</code></td>
+<td>验证 Tag 和 <code>main</code> 祖先关系，执行 Race Test、严格文档构建和 GoReleaser 配置检查</td>
+<td>没有发布副作用，可安全重试</td>
 </tr>
 <tr>
 <td>2</td>
+<td>Release / <code>publish</code></td>
+<td>构建 GitHub Release、压缩包、SBOM 和已签名多架构镜像</td>
+<td>只执行一次</td>
+</tr>
+<tr>
+<td>3</td>
 <td>Release / <code>attest</code></td>
 <td>下载已发布资产并生成 GitHub Provenance</td>
 <td>只重试该 Job</td>
 </tr>
 <tr>
-<td>3</td>
+<td>4</td>
 <td>Release / <code>verify</code></td>
 <td>验证资产、Sigstore Bundle、Provenance、镜像 UID 和镜像签名</td>
 <td>只重试该 Job</td>
 </tr>
 <tr>
-<td>并行</td>
-<td>Documentation</td>
+<td>5</td>
+<td>Release / <code>documentation</code></td>
 <td>构建 <code>7.3.0</code>、更新 <code>latest</code> 并设置文档默认版本</td>
-<td>独立重试</td>
+<td>只重试该 Job</td>
 </tr>
 </tbody>
 </table>
-<p>必须等待两个工作流完成；看到 GitHub Release 已出现不代表发布已经完成。</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">RELEASE_RUN_ID</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>gh<span class="w"> </span>run<span class="w"> </span>list<span class="w"> </span>--workflow<span class="w"> </span>build.yml<span class="w"> </span>--branch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--json<span class="w"> </span>databaseId<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.[0].databaseId'</span><span class="k">)</span><span class="s2">"</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>gh<span class="w"> </span>run<span class="w"> </span>watch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_RUN_ID</span><span class="s2">"</span><span class="w"> </span>--exit-status
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">DOCS_RUN_ID</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>gh<span class="w"> </span>run<span class="w"> </span>list<span class="w"> </span>--workflow<span class="w"> </span>docs.yml<span class="w"> </span>--branch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--json<span class="w"> </span>databaseId<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.[0].databaseId'</span><span class="k">)</span><span class="s2">"</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>gh<span class="w"> </span>run<span class="w"> </span>watch<span class="w"> </span><span class="s2">"</span><span class="nv">$DOCS_RUN_ID</span><span class="s2">"</span><span class="w"> </span>--exit-status
+<p>必须等待 Release 工作流完成；看到 GitHub Release 已出现不代表发布已经完成。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">RELEASE_VERSION</span><span class="o">=</span><span class="m">7</span>.3.0
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">RELEASE_RUN_ID</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>gh<span class="w"> </span>run<span class="w"> </span>list<span class="w"> </span>--workflow<span class="w"> </span>build.yml<span class="w"> </span>--branch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--json<span class="w"> </span>databaseId<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.[0].databaseId'</span><span class="k">)</span><span class="s2">"</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>gh<span class="w"> </span>run<span class="w"> </span>watch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_RUN_ID</span><span class="s2">"</span><span class="w"> </span>--exit-status
 </code></pre></div>
 <h2 id="_5">发布后验证</h2>
-<p>两个工作流均通过后执行：</p>
+<p>Release 工作流通过后执行：</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>gh<span class="w"> </span>release<span class="w"> </span>view<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--repo<span class="w"> </span>soulteary/webhook<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--json<span class="w"> </span>tagName,isDraft,isPrerelease,url
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -1585,8 +1582,12 @@ Attestation、镜像签名及三类运行时镜像。</p>
 </thead>
 <tbody>
 <tr>
-<td>准备 PR 或本地预检</td>
-<td>修复分支并重新执行检查；此时还没有 Release</td>
+<td>本地预检或确认</td>
+<td>修复或更新工作区后重新运行命令；此时还没有 Release</td>
+</tr>
+<tr>
+<td>CI <code>preflight</code></td>
+<td>修复 <code>main</code>、准备新版本并推送新 Tag；此时尚未开始发布</td>
 </tr>
 <tr>
 <td><code>publish</code>，且 <strong>Run GoReleaser</strong> 尚未开始</td>
@@ -1605,14 +1606,17 @@ Attestation、镜像签名及三类运行时镜像。</p>
 <td>重试失败 Job，或只重试 <code>verify</code></td>
 </tr>
 <tr>
-<td>Documentation</td>
-<td>只重试 Documentation 工作流</td>
+<td><code>documentation</code></td>
+<td>只重试失败的 <code>documentation</code> Job</td>
 </tr>
 </tbody>
 </table>
 <p>如果 GoReleaser 已经开始，并且任意带版本号的 Release 资产或镜像已经存在，
 不要删除 Tag 后复用版本。保留现场，在 <code>main</code> 修复原因后发布下一个 Patch 版本
 （例如 7.3.1），避免同一个不可变版本对应不同的二进制内容。</p>
+<p>如果本地 Tag 已创建但推送失败，先用 <code>git show 7.3.0</code> 检查，再只重试
+<code>git push origin refs/tags/7.3.0</code>。不要重新运行 <code>release.sh</code>，它会被重复 Tag
+保护主动终止。</p>
 
 
 
