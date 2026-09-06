@@ -81,7 +81,7 @@ func BuildIndex() {
 	buildIndexLocked()
 }
 
-// updateIndexForFileLocked 在已持有写锁的情况下更新指定文件的索引（内部使用）
+// updateIndexForFileLocked atomically replaces a file's hooks and index entries.
 func updateIndexForFileLocked(hooksFilePath string, hooks hook.Hooks) {
 	// 先删除该文件原有的 hooks 索引
 	if oldHooks, exists := LoadedHooksFromFiles[hooksFilePath]; exists {
@@ -89,6 +89,7 @@ func updateIndexForFileLocked(hooksFilePath string, hooks hook.Hooks) {
 			delete(hooksIndex, oldHooks[i].ID)
 		}
 	}
+	LoadedHooksFromFiles[hooksFilePath] = hooks
 	// 添加新的 hooks 索引
 	for i := range hooks {
 		hooksIndex[hooks[i].ID] = &hooks[i]
@@ -138,15 +139,21 @@ func MatchLoadedHook(id string) *hook.Hook {
 }
 
 func ReloadHooks(hooksFilePath string, asTemplate bool) {
-	hooksInFile := hook.Hooks{}
+	ReloadHooksWithOptions(hooksFilePath, asTemplate, LoadOptions{})
+}
+
+// ReloadHooksWithOptions parses and validates a candidate before replacing
+// the currently active hooks. A rejected candidate leaves the old ruleset in
+// place.
+func ReloadHooksWithOptions(hooksFilePath string, asTemplate bool, options LoadOptions) {
 
 	// parse and swap
 	logger.Infof("attempting to reload hooks from %s", hooksFilePath)
 
-	err := hooksInFile.LoadFromFile(hooksFilePath, asTemplate)
+	hooksInFile, err := loadHooksFile(hooksFilePath, asTemplate, options)
 
 	if err != nil {
-		logger.Errorf("couldn't load hooks from file! %+v", err)
+		logger.Errorf("couldn't load or validate hooks from file; keeping previous configuration: %+v", err)
 	} else {
 		seenHooksIds := make(map[string]bool)
 
@@ -200,7 +207,6 @@ func ReloadHooks(hooksFilePath string, asTemplate bool) {
 		for _, hook := range hooksInFile {
 			logger.Debugf("\tloaded: %s", hook.ID)
 		}
-		LoadedHooksFromFiles[hooksFilePath] = hooksInFile
 		// 更新索引
 		updateIndexForFileLocked(hooksFilePath, hooksInFile)
 		hooksMutex.Unlock()

@@ -5,6 +5,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/soulteary/webhook/internal/flags"
+	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/rules"
 )
@@ -12,12 +13,19 @@ import (
 var watcher *fsnotify.Watcher
 
 func ApplyWatcher(appFlags flags.AppFlags) {
+	loadOptions := rules.LoadOptions{
+		Strict: appFlags.ValidateStrict,
+		Validate: func(hooksFilePath string, hooks hook.Hooks) error {
+			return flags.ValidateLoadedHooks(appFlags, hooksFilePath, hooks)
+		},
+	}
+
 	// -hooks-dir: watch directory for new/changed/removed hook config files (including when dir is empty)
 	if appFlags.HooksDir != "" {
 		if err := os.MkdirAll(appFlags.HooksDir, 0750); err != nil {
 			logger.Fatalf("error creating hooks-dir %s: %v", appFlags.HooksDir, err)
 		}
-		go WatchDir(appFlags.HooksDir, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic)
+		go WatchDir(appFlags.HooksDir, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, loadOptions)
 		return
 	}
 
@@ -45,7 +53,10 @@ func ApplyWatcher(appFlags flags.AppFlags) {
 	removeHooksFn := func(path string, verbose bool, noPanic bool) {
 		rules.RemoveHooks(path, verbose, noPanic, false)
 	}
-	go WatchForFileChange(watcher, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, rules.ReloadHooks, removeHooksFn)
+	reloadHooksFn := func(path string, asTemplate bool) {
+		rules.ReloadHooksWithOptions(path, asTemplate, loadOptions)
+	}
+	go WatchForFileChange(watcher, appFlags.AsTemplate, appFlags.Verbose, appFlags.NoPanic, reloadHooksFn, removeHooksFn)
 }
 
 // closeWatcherForTest 关闭全局 watcher，仅用于测试以停止 goroutine、避免与后续测试产生竞态或泄漏。

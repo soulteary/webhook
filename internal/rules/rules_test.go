@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRemoveHooks(t *testing.T) {
@@ -103,6 +105,98 @@ func TestReloadHooks(t *testing.T) {
 
 	// Verify hook is still loaded
 	assert.Equal(t, 1, rules.LenLoadedHooks())
+}
+
+func TestReloadHooksWithOptionsRejectsUnknownFieldsAndKeepsActiveHooks(t *testing.T) {
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{
+			"id": "protected-hook",
+			"execute-command": "/bin/false",
+			"trigger-rules": {"match": {"type": "value", "value": "x"}}
+		}
+	]`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadHooksWithOptions(hooksFile, false, rules.LoadOptions{Strict: true})
+
+	active := rules.MatchLoadedHook("protected-hook")
+	require.NotNil(t, active)
+	assert.Equal(t, "/bin/echo", active.ExecuteCommand)
+}
+
+func TestReloadHooksReplacesRemovedHookIDsInIndex(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{"id": "new-hook", "execute-command": "/bin/echo"}
+	]`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "old-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadHooks(hooksFile, false)
+
+	assert.Nil(t, rules.MatchLoadedHook("old-hook"))
+	assert.NotNil(t, rules.MatchLoadedHook("new-hook"))
+}
+
+func TestReloadHooksWithOptionsRejectsSemanticErrorsAndKeepsActiveHooks(t *testing.T) {
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`
+- id: protected-hook
+  execute-command: /bin/echo
+  pass-arguments-to-command:
+    - source: string
+      name: unsafe;argument
+`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+	appFlags := flags.AppFlags{ValidateStrict: true, StrictMode: true}
+	options := rules.LoadOptions{
+		Validate: func(path string, hooks hook.Hooks) error {
+			return flags.ValidateLoadedHooks(appFlags, path, hooks)
+		},
+	}
+
+	rules.ReloadHooksWithOptions(hooksFile, false, options)
+
+	active := rules.MatchLoadedHook("protected-hook")
+	require.NotNil(t, active)
+	assert.Empty(t, active.PassArgumentsToCommand)
+}
+
+func TestAddAndLoadHooksFileWithOptionsRejectsInvalidCandidate(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "invalid.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{
+			"id": "invalid-hook",
+			"execute-command": "/bin/echo",
+			"trigger-rules": {}
+		}
+	]`), 0o600))
+
+	rules.HooksFiles = nil
+	rules.LoadedHooksFromFiles = make(map[string]hook.Hooks)
+	rules.BuildIndex()
+	rules.AddAndLoadHooksFileWithOptions(hooksFile, false, rules.LoadOptions{Strict: true})
+
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.NotContains(t, rules.HooksFiles, hooksFile)
+	assert.Nil(t, rules.MatchLoadedHook("invalid-hook"))
 }
 
 func TestReloadHooks_WithTemplate(t *testing.T) {

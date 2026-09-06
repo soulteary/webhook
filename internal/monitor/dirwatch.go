@@ -24,7 +24,7 @@ func isHookFile(name string) bool {
 
 // WatchDir watches hooksDir for new/changed/removed hook config files and calls add/reload/remove.
 // When a new file appears, AddAndLoadHooksFile is called; when a file is modified, ReloadHooks; when removed, RemoveHooks.
-func WatchDir(hooksDir string, asTemplate bool, verbose bool, noPanic bool) {
+func WatchDir(hooksDir string, asTemplate bool, verbose bool, noPanic bool, loadOptions rules.LoadOptions) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		logger.Fatalf("error creating file watcher for hooks-dir: %v", err)
@@ -112,7 +112,7 @@ func WatchDir(hooksDir string, asTemplate bool, verbose bool, noPanic bool) {
 				}
 				p.processing = true
 				logger.Infof("new hook config file %s", pathAbs)
-				rules.AddAndLoadHooksFile(pathAbs, asTemplate)
+				rules.AddAndLoadHooksFileWithOptions(pathAbs, asTemplate, loadOptions)
 				p.processing = false
 				p.debounceTimer = nil
 			})
@@ -152,7 +152,10 @@ func WatchDir(hooksDir string, asTemplate bool, verbose bool, noPanic bool) {
 				}
 				p.processing = true
 				logger.Infof("hooks file %s modified", pathAbs)
-				retryReloadHooks(pathAbs, asTemplate, rules.ReloadHooks)
+				reloadHooksFn := func(path string, asTemplate bool) {
+					rules.ReloadHooksWithOptions(path, asTemplate, loadOptions)
+				}
+				retryReloadHooks(pathAbs, asTemplate, reloadHooksFn)
 				p.processing = false
 				p.debounceTimer = nil
 			})

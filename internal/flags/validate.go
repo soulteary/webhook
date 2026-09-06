@@ -42,6 +42,17 @@ func (r *ValidationResult) HasErrors() bool {
 	return len(r.Errors) > 0
 }
 
+// ValidateLoadedHooks applies the same hook-content policy used at startup to
+// an already parsed candidate. Watchers call this before atomically swapping a
+// reloaded file into the active ruleset.
+func ValidateLoadedHooks(flags AppFlags, hookFile string, hooks hook.Hooks) error {
+	result := &ValidationResult{}
+	validateHookContent(result, hookFile, hooks, make(map[string]string),
+		flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor,
+		flags.StrictMode, flags.MaxArgsCount, flags.MaxArgLength, flags.MaxTotalArgsLength)
+	return errors.Join(result.Errors...)
+}
+
 // Validate 验证配置的有效性
 func Validate(flags AppFlags) *ValidationResult {
 	result := &ValidationResult{}
