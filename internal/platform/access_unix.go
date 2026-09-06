@@ -36,6 +36,23 @@ func CheckFileModeAccess(info os.FileInfo, uid, gid int, required uint32) error 
 	return nil
 }
 
+// CheckFileChmodAccess verifies that a prospective runtime identity can chmod
+// a file. On Unix, chmod is permitted to the file owner or root; ordinary
+// read/write mode bits do not grant this operation.
+func CheckFileChmodAccess(info os.FileInfo, uid int) error {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return fmt.Errorf("cannot inspect ownership for %s", info.Name())
+	}
+	if uid < 0 {
+		uid = os.Geteuid()
+	}
+	if uid == 0 || strconv.Itoa(uid) == strconv.FormatUint(uint64(stat.Uid), 10) {
+		return nil
+	}
+	return fmt.Errorf("UID %d does not own %s", uid, info.Name())
+}
+
 func supplementaryGroupsContain(groups []int, fileGID uint32) bool {
 	fileGIDString := strconv.FormatUint(uint64(fileGID), 10)
 	for _, group := range groups {

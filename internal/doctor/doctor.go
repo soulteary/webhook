@@ -1,7 +1,9 @@
 package doctor
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -130,12 +132,18 @@ func Run(appFlags flags.AppFlags) []Check {
 
 		for _, configuredHook := range hooks {
 			subject := fmt.Sprintf("hook %q", configuredHook.ID)
-			resolvedCommand, err := checkCommand(configuredHook.ExecuteCommand, configuredHook.CommandWorkingDirectory)
+			resolvedCommand, needsChmod, err := checkCommand(configuredHook.ExecuteCommand, configuredHook.CommandWorkingDirectory, appFlags.AllowAutoChmod, accessUID)
 			if err == nil {
 				err = commandValidator.ValidateCommandPath(resolvedCommand)
 			}
 			if err == nil {
-				err = checkTargetPathAccess(resolvedCommand, accessUID, accessGID, 1)
+				required := uint32(1)
+				if needsChmod {
+					// Runtime will add execute bits before launching the command. Keep
+					// checking that the target identity can traverse the full path.
+					required = 0
+				}
+				err = checkTargetPathAccess(resolvedCommand, accessUID, accessGID, required)
 			}
 			if err != nil {
 				checks = append(checks, Check{Subject: subject + " command", Detail: err.Error()})
@@ -200,37 +208,54 @@ func HasFailures(checks []Check) bool {
 	return false
 }
 
-func checkCommand(command, workingDirectory string) (string, error) {
+func checkCommand(command, workingDirectory string, allowAutoChmod bool, uid int) (string, bool, error) {
 	command = strings.TrimSpace(command)
 	if command == "" {
-		return "", fmt.Errorf("execute-command is empty")
+		return "", false, fmt.Errorf("execute-command is empty")
 	}
 	candidate, err := security.ResolveCommandCandidate(command, workingDirectory)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	resolved, err := exec.LookPath(candidate)
-	if err != nil && filepath.IsAbs(command) {
+	if err != nil && !errors.Is(err, fs.ErrPermission) && filepath.IsAbs(command) {
 		base := filepath.Base(command)
 		if base == "true" || base == "false" {
 			resolved, err = exec.LookPath(base)
 		}
 	}
 	if err != nil {
-		return "", fmt.Errorf("not found: %s", candidate)
+		if !allowAutoChmod || !errors.Is(err, fs.ErrPermission) {
+			return "", false, fmt.Errorf("not found: %s", candidate)
+		}
+		info, statErr := os.Stat(candidate)
+		if statErr != nil {
+			return "", false, statErr
+		}
+		if !info.Mode().IsRegular() {
+			return "", false, fmt.Errorf("not a regular file: %s", candidate)
+		}
+		if chmodErr := platform.CheckFileChmodAccess(info, uid); chmodErr != nil {
+			return "", false, fmt.Errorf("cannot auto-chmod %s: %w", candidate, chmodErr)
+		}
+		resolved, err = filepath.Abs(candidate)
+		if err != nil {
+			return "", false, err
+		}
+		return resolved, true, nil
 	}
 	command = resolved
 	info, err := os.Stat(command)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("not a regular file: %s", command)
+		return "", false, fmt.Errorf("not a regular file: %s", command)
 	}
 	if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
-		return "", fmt.Errorf("not executable: %s", command)
+		return "", false, fmt.Errorf("not executable: %s", command)
 	}
-	return command, nil
+	return command, false, nil
 }
 
 func checkWorkingDirectory(path string) error {

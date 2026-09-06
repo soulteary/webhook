@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -160,6 +161,26 @@ func TestRunReportsMissingCommand(t *testing.T) {
 	require.True(t, HasFailures(checks))
 }
 
+func TestRunAllowsAutoChmodForOwnedCommand(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not use Unix execute bits")
+	}
+	tempDir := t.TempDir()
+	command := filepath.Join(tempDir, "command")
+	require.NoError(t, os.WriteFile(command, []byte("#!/bin/sh\n"), 0o600))
+	hooksPath := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksPath, []byte("- id: auto-chmod\n  execute-command: "+command+"\n"), 0o600))
+
+	appFlags := validFlags(hooksPath)
+	appFlags.AllowAutoChmod = true
+	checks := Run(appFlags)
+	require.False(t, HasFailures(checks), "%+v", checks)
+
+	info, err := os.Stat(command)
+	require.NoError(t, err)
+	require.Zero(t, info.Mode().Perm()&0o111, "doctor must not mutate command permissions")
+}
+
 func TestRunRejectsCommandOutsideAllowlist(t *testing.T) {
 	tempDir := t.TempDir()
 	command := filepath.Join(tempDir, "command")
@@ -249,8 +270,9 @@ func TestCheckCommandResolvesRelativeWorkingDirectoryAbsolutely(t *testing.T) {
 	require.NoError(t, os.Chdir(tempDir))
 	t.Cleanup(func() { require.NoError(t, os.Chdir(oldWorkingDirectory)) })
 
-	resolved, err := checkCommand("run.sh", "scripts")
+	resolved, needsChmod, err := checkCommand("run.sh", "scripts", false, currentIdentityID)
 	require.NoError(t, err)
+	require.False(t, needsChmod)
 	require.True(t, filepath.IsAbs(resolved), resolved)
 }
 

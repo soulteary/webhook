@@ -211,6 +211,34 @@ func TestReloadHooksWithOptionsRejectsSemanticErrorsAndKeepsActiveHooks(t *testi
 	assert.Empty(t, active.PassArgumentsToCommand)
 }
 
+func TestReloadHooksWithOptionsPreservesInvalidMethodsForValidation(t *testing.T) {
+	tempDir := t.TempDir()
+	hooksFile := filepath.Join(tempDir, "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`
+- id: protected-hook
+  execute-command: /bin/echo
+  http-methods: [POTS]
+`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo", HTTPMethods: []string{"GET"}}},
+	}
+	rules.BuildIndex()
+	appFlags := flags.AppFlags{Profile: "secure"}
+	options := rules.LoadOptions{
+		Validate: func(path string, hooks hook.Hooks) error {
+			return flags.ValidateLoadedHooks(appFlags, path, hooks)
+		},
+	}
+
+	rules.ReloadHooksWithOptions(hooksFile, false, options)
+
+	active := rules.MatchLoadedHook("protected-hook")
+	require.NotNil(t, active)
+	assert.Equal(t, []string{"GET"}, active.HTTPMethods)
+}
+
 func TestAddAndLoadHooksFileWithOptionsRejectsInvalidCandidate(t *testing.T) {
 	hooksFile := filepath.Join(t.TempDir(), "invalid.json")
 	require.NoError(t, os.WriteFile(hooksFile, []byte(`[

@@ -14,6 +14,11 @@ func loadHooksFile(hooksFilePath string, asTemplate bool, options LoadOptions) (
 	var err error
 	if options.Strict {
 		err = hooks.LoadFromFileStrict(hooksFilePath, asTemplate)
+	} else if options.Validate != nil {
+		// Semantic validation must inspect the original method values. The
+		// compatibility loader normalizes invalid methods away, which could turn
+		// an invalid per-hook allowlist into an unrestricted one during reload.
+		err = hooks.LoadFromFileForValidation(hooksFilePath, asTemplate)
 	} else {
 		err = hooks.LoadFromFile(hooksFilePath, asTemplate)
 	}
