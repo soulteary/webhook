@@ -16,5 +16,5 @@ func CheckCurrentPathAccess(path string, required uint32) error {
 	if required&1 != 0 {
 		mode |= unix.X_OK
 	}
-	return unix.Access(path, mode)
+	return unix.Faccessat(unix.AT_FDCWD, path, mode, unix.AT_EACCESS)
 }
