@@ -35,6 +35,16 @@ func Run(appFlags flags.AppFlags) []Check {
 		return checks
 	}
 	checks = append(checks, Check{OK: true, Subject: "configuration", Detail: "valid"})
+	if appFlags.SetUID != 0 && appFlags.SetGID != 0 && platform.SupportsPrivilegeDrop() {
+		uid, gid, ok := platform.EffectiveIdentity()
+		if !ok {
+			checks = append(checks, Check{Subject: "privilege drop", Detail: "cannot determine current process identity"})
+		} else if err := checkPrivilegeDropIdentity(uid, gid, appFlags.SetUID, appFlags.SetGID); err != nil {
+			checks = append(checks, Check{Subject: "privilege drop", Detail: err.Error()})
+		} else {
+			checks = append(checks, Check{OK: true, Subject: "privilege drop", Detail: fmt.Sprintf("UID %d/GID %d", appFlags.SetUID, appFlags.SetGID)})
+		}
+	}
 	accessUID, accessGID := appFlags.SetUID, appFlags.SetGID
 	if accessUID == 0 && accessGID == 0 {
 		if uid, gid, ok := platform.EffectiveIdentity(); ok {
@@ -151,6 +161,16 @@ func Run(appFlags flags.AppFlags) []Check {
 		}
 	}
 	return checks
+}
+
+func checkPrivilegeDropIdentity(currentUID, currentGID, targetUID, targetGID int) error {
+	if currentUID == 0 {
+		return nil
+	}
+	if targetUID != currentUID || targetGID != currentGID {
+		return fmt.Errorf("current UID %d/GID %d cannot switch to UID %d/GID %d without root privileges", currentUID, currentGID, targetUID, targetGID)
+	}
+	return nil
 }
 
 func usesFileAudit(appFlags flags.AppFlags) bool {

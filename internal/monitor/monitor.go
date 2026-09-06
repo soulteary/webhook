@@ -87,22 +87,25 @@ func handleEvent(event fsnotify.Event, watcher *fsnotify.Watcher, asTemplate boo
 	if event.Op&fsnotify.Create == fsnotify.Create {
 		processorsMu.RLock()
 		processor := (*processors)[fileName]
-		processorsMu.RUnlock()
 		if processor == nil {
+			processorsMu.RUnlock()
 			return
 		}
-		processor.mu.Lock()
 		awaitingCreate := processor.awaitingCreate
-		processor.mu.Unlock()
+		processorsMu.RUnlock()
 		if !awaitingCreate {
 			return
 		}
-		restoreRecreatedFile(watcher, fileName, asTemplate, reloadHooks, processor)
+		restoreRecreatedFile(watcher, fileName, asTemplate, reloadHooks, processor, processors, processorsMu)
 	} else if event.Op&fsnotify.Write == fsnotify.Write {
 		// 文件写入事件：使用 debounce 机制
 		processorsMu.Lock()
 		processor, exists := (*processors)[fileName]
 		if !exists {
+			if !watcherDirectlyWatchesFile(watcher, fileName) {
+				processorsMu.Unlock()
+				return
+			}
 			processor = &fileProcessor{}
 			(*processors)[fileName] = processor
 		}
@@ -232,9 +235,9 @@ func watchForRecreatedFile(watcher *fsnotify.Watcher, fileName string, asTemplat
 	}
 	processorsMu.Unlock()
 
-	processor.mu.Lock()
+	processorsMu.Lock()
 	processor.awaitingCreate = true
-	processor.mu.Unlock()
+	processorsMu.Unlock()
 
 	parent := filepath.Dir(fileName)
 	if err := (*watcher).Add(parent); err != nil {
@@ -245,20 +248,48 @@ func watchForRecreatedFile(watcher *fsnotify.Watcher, fileName string, asTemplat
 	// Close the gap between checking the missing path and attaching the parent
 	// watch. If the file already returned, restore it immediately.
 	if _, err := os.Stat(fileName); err == nil {
-		restoreRecreatedFile(watcher, fileName, asTemplate, reloadHooks, processor)
+		restoreRecreatedFile(watcher, fileName, asTemplate, reloadHooks, processor, processors, processorsMu)
 	}
 }
 
-func restoreRecreatedFile(watcher *fsnotify.Watcher, fileName string, asTemplate bool, reloadHooks func(hooksFilePath string, asTemplate bool), processor *fileProcessor) {
+func restoreRecreatedFile(watcher *fsnotify.Watcher, fileName string, asTemplate bool, reloadHooks func(hooksFilePath string, asTemplate bool), processor *fileProcessor, processors *map[string]*fileProcessor, processorsMu *sync.RWMutex) {
 	if err := (*watcher).Add(fileName); err != nil {
 		logger.Errorf("error restoring watcher for recreated hooks file %s: %v", fileName, err)
 		return
 	}
-	processor.mu.Lock()
+	processorsMu.Lock()
 	processor.awaitingCreate = false
-	processor.mu.Unlock()
+	stopWatchingParentIfUnusedLocked(watcher, fileName, processors)
+	processorsMu.Unlock()
 	logger.Infof("hooks file %s recreated, restoring file watcher and reloading hooks", fileName)
 	retryReloadHooks(fileName, asTemplate, reloadHooks)
+}
+
+func watcherDirectlyWatchesFile(watcher *fsnotify.Watcher, fileName string) bool {
+	cleanFileName := filepath.Clean(fileName)
+	for _, watchedPath := range (*watcher).WatchList() {
+		if filepath.Clean(watchedPath) != cleanFileName {
+			continue
+		}
+		info, err := os.Stat(watchedPath)
+		return err == nil && !info.IsDir()
+	}
+	return false
+}
+
+func stopWatchingParentIfUnusedLocked(watcher *fsnotify.Watcher, restoredFile string, processors *map[string]*fileProcessor) {
+	parent := filepath.Dir(restoredFile)
+	for path, processor := range *processors {
+		if path == restoredFile || filepath.Dir(path) != parent {
+			continue
+		}
+		if processor.awaitingCreate {
+			return
+		}
+	}
+	if err := (*watcher).Remove(parent); err != nil {
+		logger.Errorf("error removing temporary parent watcher %s after restoring hooks file %s: %v", parent, restoredFile, err)
+	}
 }
 
 // retryReloadHooks 使用重试机制执行 reloadHooks

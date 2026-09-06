@@ -25,6 +25,12 @@ func TestRunChecksCommandsAndWorkingDirectories(t *testing.T) {
 	require.False(t, HasFailures(checks), "%+v", checks)
 }
 
+func TestCheckPrivilegeDropIdentityRejectsUnprivilegedIdentityChange(t *testing.T) {
+	require.Error(t, checkPrivilegeDropIdentity(1000, 1000, 1001, 1001))
+	require.NoError(t, checkPrivilegeDropIdentity(1000, 1000, 1000, 1000))
+	require.NoError(t, checkPrivilegeDropIdentity(0, 0, 1001, 1001))
+}
+
 func TestTargetIdentityAccessUsesFileMode(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "private")
 	require.NoError(t, os.WriteFile(path, []byte("private"), 0o000))

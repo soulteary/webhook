@@ -345,17 +345,22 @@ func TestHandleEventRestoresRetainedHookFileWatcher(t *testing.T) {
 	processor := processors[testFile]
 	processorsMu.RUnlock()
 	require.NotNil(t, processor)
-	processor.mu.Lock()
+	processorsMu.RLock()
 	assert.True(t, processor.awaitingCreate)
-	processor.mu.Unlock()
+	processorsMu.RUnlock()
+	sibling := filepath.Join(tmpDir, "unconfigured.json")
+	require.NoError(t, os.WriteFile(sibling, []byte(`[]`), 0o600))
+	handleEvent(fsnotify.Event{Name: sibling, Op: fsnotify.Write}, watcher, false, true, true, reloadHooks, retainHooks, &processors, &processorsMu)
+	assert.Zero(t, reloadCount, "parent watcher must not authorize sibling hook files")
 
 	require.NoError(t, os.WriteFile(testFile, []byte(`[]`), 0o600))
 	handleEvent(fsnotify.Event{Name: testFile, Op: fsnotify.Create}, watcher, false, true, true, reloadHooks, retainHooks, &processors, &processorsMu)
 
 	assert.Equal(t, maxRetries, reloadCount)
-	processor.mu.Lock()
+	processorsMu.RLock()
 	assert.False(t, processor.awaitingCreate)
-	processor.mu.Unlock()
+	processorsMu.RUnlock()
+	assert.NotContains(t, watcher.WatchList(), tmpDir)
 }
 
 func TestWatchForFileChange_Remove_FileStillExists(t *testing.T) {
