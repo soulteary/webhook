@@ -1241,7 +1241,7 @@ func TestValidateRejectsUnreachableHookIDs(t *testing.T) {
 		message        string
 	}{
 		{name: "surrounding whitespace", id: " hello ", message: "leading or trailing whitespace"},
-		{name: "whitespace only in strict mode", id: "   ", validateStrict: true, message: "must not be empty"},
+		{name: "whitespace only in strict mode", id: "   ", validateStrict: true, message: "ERR_VALIDATE_HOOK_ID_EMPTY"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
