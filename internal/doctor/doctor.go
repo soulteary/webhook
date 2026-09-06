@@ -309,7 +309,13 @@ func nearestExistingParent(path string) (string, error) {
 
 func checkTargetPathAccess(path string, uid, gid int, required uint32) error {
 	if uid == 0 && gid == 0 {
-		return nil
+		// UID/GID 0 means root on Unix, but EffectiveIdentity deliberately
+		// reports ok=false on platforms without POSIX identities (Windows).
+		// In that case, verify access with the current process token instead of
+		// treating the zero values as an unconditional success.
+		if _, _, ok := platform.EffectiveIdentity(); ok {
+			return nil
+		}
 	}
 	path, err := filepath.Abs(filepath.Clean(path))
 	if err != nil {
@@ -335,7 +341,7 @@ func checkPathAndParentsAccess(path string, uid, gid int, required uint32) error
 	if err != nil {
 		return err
 	}
-	if err := platform.CheckFileModeAccess(info, uid, gid, required); err != nil {
+	if err := checkPathAccess(path, info, uid, gid, required); err != nil {
 		return fmt.Errorf("target identity cannot access %s: %w", path, err)
 	}
 	for parent := filepath.Dir(path); ; parent = filepath.Dir(parent) {
@@ -343,7 +349,7 @@ func checkPathAndParentsAccess(path string, uid, gid int, required uint32) error
 		if err != nil {
 			return err
 		}
-		if err := platform.CheckFileModeAccess(info, uid, gid, 1); err != nil {
+		if err := checkPathAccess(parent, info, uid, gid, 1); err != nil {
 			return fmt.Errorf("target identity cannot traverse %s: %w", parent, err)
 		}
 		next := filepath.Dir(parent)
@@ -352,6 +358,13 @@ func checkPathAndParentsAccess(path string, uid, gid int, required uint32) error
 		}
 	}
 	return nil
+}
+
+func checkPathAccess(path string, info os.FileInfo, uid, gid int, required uint32) error {
+	if uid == 0 && gid == 0 {
+		return platform.CheckCurrentPathAccess(path, required)
+	}
+	return platform.CheckFileModeAccess(info, uid, gid, required)
 }
 
 func checkWritableFilePath(path string, uid, gid int) error {

@@ -1198,6 +1198,21 @@ func TestValidateRejectsInvalidPassFilePattern(t *testing.T) {
 	assert.Contains(t, fmt.Sprint(result.Errors), "must not contain path separators")
 }
 
+func TestValidateRejectsInvalidResponseHeaderValues(t *testing.T) {
+	for _, value := range []string{"bad\rvalue", "bad\nvalue", "bad\x00value", "bad\x1fvalue", "bad\x7fvalue"} {
+		t.Run(fmt.Sprintf("%q", value), func(t *testing.T) {
+			result := &ValidationResult{}
+			validateResponseHeaders(result, "response-headers", hook.ResponseHeaders{{Name: "X-Test", Value: value}})
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), "invalid HTTP header field value")
+		})
+	}
+
+	result := &ValidationResult{}
+	validateResponseHeaders(result, "response-headers", hook.ResponseHeaders{{Name: "X-Test", Value: "valid\tvalue ä"}})
+	require.False(t, result.HasErrors(), "%+v", result.Errors)
+}
+
 func TestValidateRejectsInvalidResponseHeaderNames(t *testing.T) {
 	for _, name := range []string{"", "Bad Header", "Bad:Header", "Bad\r\nHeader"} {
 		t.Run(fmt.Sprintf("%q", name), func(t *testing.T) {

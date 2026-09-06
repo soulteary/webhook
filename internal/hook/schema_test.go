@@ -169,3 +169,79 @@ func TestSchemaConstrainsResponseHeaderNames(t *testing.T) {
 		}
 	}
 }
+
+func TestSchemaConstrainsResponseHeaderValues(t *testing.T) {
+	data, err := os.ReadFile("../../schema/hooks.schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Defs map[string]struct {
+			Properties map[string]struct {
+				Pattern string `json:"pattern"`
+			} `json:"properties"`
+		} `json:"$defs"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+	pattern := schema.Defs["header"].Properties["value"].Pattern
+	compiled, err := regexp.Compile(pattern)
+	if err != nil {
+		t.Fatalf("invalid response-header value pattern: %v", err)
+	}
+	for _, value := range []string{"", "text/plain", "valid\tvalue", "ümlaut"} {
+		if !compiled.MatchString(value) {
+			t.Errorf("schema rejected valid response-header value %q", value)
+		}
+	}
+	for _, value := range []string{"bad\rvalue", "bad\nvalue", "bad\x00value", "bad\x1fvalue", "bad\x7fvalue"} {
+		if compiled.MatchString(value) {
+			t.Errorf("schema accepted invalid response-header value %q", value)
+		}
+	}
+}
+
+func TestSchemaConstrainsTemporaryFilePatterns(t *testing.T) {
+	data, err := os.ReadFile("../../schema/hooks.schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Defs map[string]struct {
+			AllOf []struct {
+				Properties map[string]struct {
+					Pattern string `json:"pattern"`
+				} `json:"properties"`
+			} `json:"allOf"`
+		} `json:"$defs"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+
+	pattern := ""
+	for _, condition := range schema.Defs["fileArgument"].AllOf {
+		if condition.Properties["envname"].Pattern != "" {
+			pattern = condition.Properties["envname"].Pattern
+			break
+		}
+	}
+	if pattern == "" {
+		t.Fatal("schema is missing the temporary-file pattern constraint")
+	}
+	compiled, err := regexp.Compile(pattern)
+	if err != nil {
+		t.Fatalf("invalid temporary-file pattern: %v", err)
+	}
+	for _, value := range []string{"", "WEBHOOK_FILE", "payload-*.json"} {
+		if !compiled.MatchString(value) {
+			t.Errorf("schema rejected valid temporary-file pattern %q", value)
+		}
+	}
+	for _, value := range []string{`bad?name`, `bad:name`, `bad\"name`, `bad<name`, `bad>name`, `bad|name`, "bad\x00name", "bad\x1fname", "two**stars"} {
+		if compiled.MatchString(value) {
+			t.Errorf("schema accepted invalid temporary-file pattern %q", value)
+		}
+	}
+}

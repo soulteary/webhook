@@ -374,6 +374,9 @@ func validateResponseHeaders(result *ValidationResult, field string, headers hoo
 		if !isHTTPFieldName(header.Name) {
 			result.AddError(fmt.Sprintf("%s[%d].name", field, i), fmt.Sprintf("invalid HTTP header field name %q", header.Name))
 		}
+		if !isHTTPFieldValue(header.Value) {
+			result.AddError(fmt.Sprintf("%s[%d].value", field, i), "invalid HTTP header field value")
+		}
 	}
 }
 
@@ -390,6 +393,19 @@ func isHTTPFieldName(name string) bool {
 		case '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~':
 			continue
 		default:
+			return false
+		}
+	}
+	return true
+}
+
+func isHTTPFieldValue(value string) bool {
+	for i := 0; i < len(value); i++ {
+		c := value[i]
+		if c == '\t' {
+			continue
+		}
+		if c < 0x20 || c == 0x7f {
 			return false
 		}
 	}
@@ -501,6 +517,10 @@ func validateFileArguments(result *ValidationResult, field string, arguments []h
 		validateEnvironmentName(result, argumentField+".envname", pattern)
 		if strings.ContainsAny(pattern, `/\\`) {
 			result.AddError(argumentField+".envname", "effective temporary-file pattern must not contain path separators")
+			continue
+		}
+		if err := platform.ValidateTempFilePattern(pattern); err != nil {
+			result.AddError(argumentField+".envname", err.Error())
 			continue
 		}
 		if nameLimitErr != nil {

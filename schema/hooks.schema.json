@@ -78,7 +78,7 @@
         { "$ref": "#/$defs/environmentArgument" },
         {
           "properties": {
-            "envname": { "type": "string", "pattern": "^[^/\\\\]*$" }
+            "envname": { "type": "string", "pattern": "^[^<>:\"/\\\\|?*\\u0000-\\u001F]*(?:\\*[^<>:\"/\\\\|?*\\u0000-\\u001F]*)?$" }
           }
         },
         {
@@ -114,7 +114,7 @@
       "required": ["name", "value"],
       "properties": {
         "name": { "type": "string", "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$" },
-        "value": { "type": "string" }
+        "value": { "type": "string", "pattern": "^[^\\u0000-\\u0008\\u000A-\\u001F\\u007F]*$" }
       }
     },
     "match": {
