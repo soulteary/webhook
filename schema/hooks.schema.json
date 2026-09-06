@@ -78,7 +78,7 @@
         { "$ref": "#/$defs/environmentArgument" },
         {
           "properties": {
-            "envname": { "type": "string", "pattern": "^[^<>:\"/\\\\|?*\\u0000-\\u001F]*(?:\\*[^<>:\"/\\\\|?*\\u0000-\\u001F]*)?$" }
+            "envname": { "type": "string", "pattern": "^[^<>:\"/\\\\|?*\\x00-\\x1F]*(?:\\*[^<>:\"/\\\\|?*\\x00-\\x1F]*)?$" }
           }
         },
         {
@@ -89,7 +89,7 @@
             ]
           },
           "then": {
-            "properties": { "name": { "type": "string", "pattern": "^[^<>:\"/\\\\|?*\\u0000-\\u001F]*(?:\\*[^<>:\"/\\\\|?*\\u0000-\\u001F]*)?$" } }
+            "properties": { "name": { "type": "string", "pattern": "^[^<>:\"/\\\\|?*\\x00-\\x1F]*(?:\\*[^<>:\"/\\\\|?*\\x00-\\x1F]*)?$" } }
           }
         },
         {
@@ -114,7 +114,7 @@
       "required": ["name", "value"],
       "properties": {
         "name": { "type": "string", "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$" },
-        "value": { "type": "string", "pattern": "^[^\\u0000-\\u0008\\u000A-\\u001F\\u007F]*$" }
+        "value": { "type": "string", "pattern": "^[^\\x00-\\x08\\x0A-\\x1F\\x7F]*$" }
       }
     },
     "match": {

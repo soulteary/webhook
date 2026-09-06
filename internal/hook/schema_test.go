@@ -225,18 +225,27 @@ func TestSchemaConstrainsTemporaryFilePatterns(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	patterns := make([]string, 0, 2)
+	explicitPattern := ""
 	for _, condition := range schema.Defs["fileArgument"].AllOf {
 		if condition.Properties["envname"].Pattern != "" {
-			patterns = append(patterns, condition.Properties["envname"].Pattern)
-		}
-		if condition.Then.Properties["name"].Pattern != "" {
-			patterns = append(patterns, condition.Then.Properties["name"].Pattern)
+			explicitPattern = condition.Properties["envname"].Pattern
+			break
 		}
 	}
-	if len(patterns) != 2 {
-		t.Fatalf("schema should constrain explicit and derived temporary-file patterns; found %d constraints", len(patterns))
+	if explicitPattern == "" {
+		t.Fatal("schema is missing the explicit temporary-file pattern constraint")
 	}
+	derivedPattern := ""
+	for _, condition := range schema.Defs["fileArgument"].AllOf {
+		if condition.Then.Properties["name"].Pattern == explicitPattern {
+			derivedPattern = condition.Then.Properties["name"].Pattern
+			break
+		}
+	}
+	if derivedPattern == "" {
+		t.Fatal("schema is missing the derived temporary-file pattern constraint")
+	}
+	patterns := []string{explicitPattern, derivedPattern}
 	for _, pattern := range patterns {
 		compiled, err := regexp.Compile(pattern)
 		if err != nil {
