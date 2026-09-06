@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://soulteary.github.io/webhook/latest/en-US/Referencing-Request-Values/">
+        <link rel="canonical" href="https://soulteary.github.io/webhook/latest/en-US/Release-Guide/">
       
       
-        <link rel="prev" href="../Templates/">
+        <link rel="prev" href="../Migration-Guide/">
       
       
-        <link rel="next" href="../API-Reference/">
+        <link rel="next" href="../OwlMail-Integration/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Request values - WebHook</title>
+        <title>Release guide - WebHook</title>
       
     
     
@@ -68,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#referencing-request-values" class="md-skip">
+        <a href="#release-guide" class="md-skip">
           Skip to content
         </a>
       
@@ -103,7 +103,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Request values
+              Release guide
             
           </span>
         </div>
@@ -496,19 +496,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../Referencing-Request-Values/" class="md-nav__link">
         
   
   
@@ -524,7 +515,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -702,10 +692,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../Release-Guide/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release guide
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -721,6 +738,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#730-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3.0 scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release-invariants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release invariants
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exact-publishing-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exact publishing sequence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-release-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Post-release verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1260,6 +1363,80 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#730-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3.0 scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release-invariants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release invariants
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exact-publishing-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exact publishing sequence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-release-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Post-release verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1278,116 +1455,170 @@
   
 
 
-<h1 id="referencing-request-values">Referencing request values</h1>
-<p>There are four types of request values:</p>
+<h1 id="release-guide">Release guide</h1>
+<p>This is the maintainer runbook for publishing a stable WebHook release. A
+release is created only by pushing one immutable semantic-version tag. Do not
+create a GitHub Release manually and do not run the Release workflow from the
+Actions page.</p>
+<h2 id="730-scope">7.3.0 scope</h2>
+<p>The 7.3.0 release includes the following changes after 7.2.0:</p>
+<ul>
+<li>remove the duplicate <code>webhook-config-ui</code> release binary; use
+  <code>webhook -config-ui</code> with the single published binary;</li>
+<li>add constrained Docker Secret template support through <code>getSecret</code> and
+  <code>trimSpace</code>, without exposing arbitrary filesystem reads;</li>
+<li>update examples, container tags, integrity commands, and migration downloads
+  to 7.3.0;</li>
+<li>make Release CI tag-only and split publishing, attestation, and verification
+  into retry-safe jobs.</li>
+</ul>
+<h2 id="release-invariants">Release invariants</h2>
+<ul>
+<li>The release tag is exactly <code>MAJOR.MINOR.PATCH</code>, without a <code>v</code> prefix.</li>
+<li>The tagged commit is already on <code>main</code>, and all required checks passed on it.</li>
+<li>A version is tagged once. Never move, delete, or reuse a published tag.</li>
+<li>The Release workflow creates the GitHub Release and both registries' images.</li>
+<li><code>publish</code> runs once. <code>attest</code>, <code>verify</code>, or Documentation may be retried
+  independently without running GoReleaser again.</li>
+</ul>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>Before preparing a tag:</p>
 <ol>
-<li>
-<p>HTTP Request Header values</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"header"</span><span class="p">,</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Header-Name"</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">}</span>
-</code></pre></div>
-</li>
-<li>
-<p>HTTP Query parameters</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"url"</span><span class="p">,</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"parameter-name"</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">}</span>
-</code></pre></div>
-</li>
-<li>
-<p>HTTP Request parameters</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"request"</span><span class="p">,</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"method"</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">}</span>
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"request"</span><span class="p">,</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"remote-addr"</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
-</code></pre></div>
-</li>
-<li>
-<p>Payload (JSON or form-value encoded)
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"payload"</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"parameter-name"</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">}</span>
-</code></pre></div></p>
-<p><em>Note:</em> For JSON encoded payload, you can reference nested values using the dot-notation.
-For example, if you have following JSON payload</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">"commits"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">"commit"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="p">}</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="p">},</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">      </span><span class="nt">"commit"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="p">}</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span><span class="p">]</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">}</span>
-</code></pre></div>
-<p>You can reference the first commit id as</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"payload"</span><span class="p">,</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"commits.0.commit.id"</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p">}</span>
-</code></pre></div>
-<p>If the payload contains a key with the specified name "commits.0.commit.id", then the value of that key has priority over the dot-notation referencing.</p>
-</li>
-<li>
-<p>XML Payload</p>
-<p>Referencing XML payload parameters is much like the JSON examples above, but XML is more complex.
-Element attributes are prefixed by a hyphen (<code>-</code>).
-Element values are prefixed by a pound (<code>#</code>).</p>
-<p>Take the following XML payload:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">&lt;app&gt;</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">&lt;users&gt;</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">&lt;user</span><span class="w"> </span><span class="na">id=</span><span class="s">"1"</span><span class="w"> </span><span class="na">name=</span><span class="s">"Jeff"</span><span class="w"> </span><span class="nt">/&gt;</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">&lt;user</span><span class="w"> </span><span class="na">id=</span><span class="s">"2"</span><span class="w"> </span><span class="na">name=</span><span class="s">"Sally"</span><span class="w"> </span><span class="nt">/&gt;</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">&lt;/users&gt;</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">&lt;messages&gt;</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="nt">&lt;message</span><span class="w"> </span><span class="na">id=</span><span class="s">"1"</span><span class="w"> </span><span class="na">from_user=</span><span class="s">"1"</span><span class="w"> </span><span class="na">to_user=</span><span class="s">"2"</span><span class="nt">&gt;</span>Hello!!<span class="nt">&lt;/message&gt;</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nt">&lt;/messages&gt;</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="nt">&lt;/app&gt;</span>
-</code></pre></div>
-<p>To access a given <code>user</code> element, you must treat them as an array.
-So <code>app.users.user.0.name</code> yields <code>Jeff</code>.</p>
-<p>Since there's only one <code>message</code> tag, it's not treated as an array.
-So <code>app.messages.message.id</code> yields <code>1</code>.</p>
-<p>To access the text within the <code>message</code> tag, you would use: <code>app.messages.message.#text</code>.</p>
-</li>
+<li>Merge every release PR, including the version/documentation preparation PR.</li>
+<li>Wait for Tests, container smoke tests, Security Scan, CodeQL, Documentation,
+   and Benchmarks on the resulting <code>main</code> commit.</li>
+<li>Confirm the Docker Hub credentials and GitHub repository/package permissions
+   are available to Actions.</li>
+<li>Install Go according to <code>go.mod</code>, MkDocs dependencies from
+   <code>requirements-docs.txt</code>, GitHub CLI, and GoReleaser v2.18.0 locally.</li>
 </ol>
-<p>If you are referencing values for environment, you can use <code>envname</code> property to set the name of the environment variable like so
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"url"</span><span class="p">,</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"q"</span><span class="p">,</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">"envname"</span><span class="p">:</span><span class="w"> </span><span class="s2">"QUERY"</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">}</span>
+<p>For 7.3.0, PR #177 and PR #178 must both be present in the selected <code>main</code>
+commit.</p>
+<h2 id="exact-publishing-sequence">Exact publishing sequence</h2>
+<p>Run these commands from a clean clone. <code>release-preflight.sh</code> refuses to run
+from a branch other than <code>main</code>, from a dirty or stale checkout, or when the tag
+already exists.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>fetch<span class="w"> </span>origin<span class="w"> </span>main<span class="w"> </span>--tags
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>switch<span class="w"> </span>main
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>git<span class="w"> </span>pull<span class="w"> </span>--ff-only<span class="w"> </span>origin<span class="w"> </span>main
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">RELEASE_VERSION</span><span class="o">=</span><span class="m">7</span>.3.0
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>./scripts/release-preflight.sh<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nv">RELEASE_COMMIT</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span>HEAD<span class="k">)</span><span class="s2">"</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_COMMIT</span><span class="s2">"</span><span class="w"> </span>-m<span class="w"> </span><span class="s2">"Release </span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span><span class="s2">"refs/tags/</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
 </code></pre></div>
-to get the QUERY environment variable set to the <code>q</code> parameter passed in the query string.</p>
-<h1 id="special-cases">Special cases</h1>
-<p>If you want to pass the entire payload as JSON string to your command you can use
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"entire-payload"</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="p">}</span>
-</code></pre></div></p>
-<p>for headers you can use
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"entire-headers"</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="p">}</span>
-</code></pre></div></p>
-<p>and for query variables you can use
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"entire-query"</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="p">}</span>
-</code></pre></div></p>
+<p>Push only the one tag shown above. Do not use <code>git push --tags</code>; it can publish
+an unrelated local tag. Do not create a draft or empty GitHub Release before
+the push, because GoReleaser owns that operation.</p>
+<p>The tag push starts these paths:</p>
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Workflow/job</th>
+<th>Side effects</th>
+<th>Retry rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Release / <code>publish</code></td>
+<td>Tests, builds, GitHub Release, archives, SBOMs, signed container manifests</td>
+<td>Run once only</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Release / <code>attest</code></td>
+<td>Downloads published assets and creates GitHub provenance</td>
+<td>Retry this job only</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Release / <code>verify</code></td>
+<td>Verifies assets, Sigstore bundle, provenance, image UID, and image signatures</td>
+<td>Retry this job only</td>
+</tr>
+<tr>
+<td>Parallel</td>
+<td>Documentation</td>
+<td>Builds <code>7.3.0</code>, updates <code>latest</code>, and sets the documentation default</td>
+<td>Retry independently</td>
+</tr>
+</tbody>
+</table>
+<p>Wait for both workflows; a visible GitHub Release is not completion by itself.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">RELEASE_RUN_ID</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>gh<span class="w"> </span>run<span class="w"> </span>list<span class="w"> </span>--workflow<span class="w"> </span>build.yml<span class="w"> </span>--branch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--json<span class="w"> </span>databaseId<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.[0].databaseId'</span><span class="k">)</span><span class="s2">"</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>gh<span class="w"> </span>run<span class="w"> </span>watch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_RUN_ID</span><span class="s2">"</span><span class="w"> </span>--exit-status
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">DOCS_RUN_ID</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>gh<span class="w"> </span>run<span class="w"> </span>list<span class="w"> </span>--workflow<span class="w"> </span>docs.yml<span class="w"> </span>--branch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--json<span class="w"> </span>databaseId<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.[0].databaseId'</span><span class="k">)</span><span class="s2">"</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>gh<span class="w"> </span>run<span class="w"> </span>watch<span class="w"> </span><span class="s2">"</span><span class="nv">$DOCS_RUN_ID</span><span class="s2">"</span><span class="w"> </span>--exit-status
+</code></pre></div>
+<h2 id="post-release-verification">Post-release verification</h2>
+<p>After both workflows pass:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>gh<span class="w"> </span>release<span class="w"> </span>view<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--repo<span class="w"> </span>soulteary/webhook<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--json<span class="w"> </span>tagName,isDraft,isPrerelease,url
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">"release-</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>gh<span class="w"> </span>release<span class="w"> </span>download<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--repo<span class="w"> </span>soulteary/webhook<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--dir<span class="w"> </span><span class="s2">"release-</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>find<span class="w"> </span><span class="s2">"release-</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">1</span><span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-printf<span class="w"> </span><span class="s1">'%f\n'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sort
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nb">test</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>find<span class="w"> </span><span class="s2">"release-</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">'*webhook-config-ui*'</span><span class="w"> </span>-print<span class="w"> </span>-quit<span class="k">)</span><span class="s2">"</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="k">for</span><span class="w"> </span>variant<span class="w"> </span><span class="k">in</span><span class="w"> </span>core<span class="w"> </span>runner<span class="w"> </span>extended<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nv">image</span><span class="o">=</span><span class="s2">"ghcr.io/soulteary/webhook:</span><span class="si">${</span><span class="nv">variant</span><span class="si">}</span><span class="s2">-</span><span class="si">${</span><span class="nv">RELEASE_VERSION</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">  </span>docker<span class="w"> </span>pull<span class="w"> </span><span class="s2">"</span><span class="nv">$image</span><span class="s2">"</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span><span class="nb">test</span><span class="w"> </span><span class="s2">"</span><span class="k">$(</span>docker<span class="w"> </span>image<span class="w"> </span>inspect<span class="w"> </span>--format<span class="w"> </span><span class="s1">'{{ .Config.User }}'</span><span class="w"> </span><span class="s2">"</span><span class="nv">$image</span><span class="s2">"</span><span class="k">)</span><span class="s2">"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"65532:65532"</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span><span class="s2">"</span><span class="nv">$image</span><span class="s2">"</span><span class="w"> </span>-version<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="k">done</span>
+</code></pre></div>
+<p>Also confirm that both
+<code>https://soulteary.github.io/webhook/7.3.0/</code> and the <code>latest</code> documentation URL
+resolve correctly. The Release workflow already verifies the checksum Sigstore
+bundle, GitHub attestation, image signatures, and all three runtime variants.</p>
+<h2 id="failure-handling">Failure handling</h2>
+<p>Do not immediately press <strong>Re-run all jobs</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Failure point</th>
+<th>Safe action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Preparation PR or local preflight</td>
+<td>Fix the branch and rerun checks; no release exists yet</td>
+</tr>
+<tr>
+<td><code>publish</code>, before <strong>Run GoReleaser</strong> starts</td>
+<td>Re-run the failed <code>publish</code> job</td>
+</tr>
+<tr>
+<td><code>publish</code>, after <strong>Run GoReleaser</strong> starts</td>
+<td>Do not rerun; inspect the GitHub Release and both registries for partial immutable artifacts</td>
+</tr>
+<tr>
+<td><code>attest</code></td>
+<td>Re-run failed jobs; <code>publish</code> remains completed</td>
+</tr>
+<tr>
+<td><code>verify</code></td>
+<td>Re-run failed jobs or the <code>verify</code> job only</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Re-run only the Documentation workflow</td>
+</tr>
+</tbody>
+</table>
+<p>If GoReleaser started and any versioned release asset or image exists, do not
+delete the tag and reuse the version. Preserve the evidence, fix the cause on
+<code>main</code>, and publish the next patch version (for example, 7.3.1). This avoids
+serving different bytes under the same immutable version.</p>
 
 
 

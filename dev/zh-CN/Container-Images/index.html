@@ -693,6 +693,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../en-US/Release-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../en-US/OwlMail-Integration/" class="md-nav__link">
         
   
@@ -1215,6 +1243,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../Release-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../OwlMail-Integration/" class="md-nav__link">
         
   
@@ -1312,7 +1368,7 @@
 
 
 <h1 id="_1">容器镜像</h1>
-<p>WebHook 7.2.0 会向 Docker Hub 和 GHCR 发布三种多架构运行时镜像。所有变体
+<p>WebHook 7.3.0 会向 Docker Hub 和 GHCR 发布三种多架构运行时镜像。所有变体
 都以 UID/GID <code>65532</code> 运行，工作目录均为 <code>/var/lib/webhook</code>，并包含同一个
 静态链接的 WebHook 可执行文件。</p>
 <table>
@@ -1327,25 +1383,25 @@
 <tbody>
 <tr>
 <td>Core</td>
-<td><code>core-7.2.0</code></td>
+<td><code>core-7.3.0</code></td>
 <td><code>scratch</code>、CA 证书、WebHook</td>
 <td>所有被执行命令都是挂载进来的静态可执行文件</td>
 </tr>
 <tr>
 <td>Runner</td>
-<td><code>runner-7.2.0</code></td>
+<td><code>runner-7.3.0</code></td>
 <td>Alpine、BusyBox 工具、Bash、CA 证书</td>
 <td>Hook 执行普通 POSIX Shell 或 Bash 脚本</td>
 </tr>
 <tr>
 <td>Extended</td>
-<td><code>extended-7.2.0</code></td>
+<td><code>extended-7.3.0</code></td>
 <td>Runner 加 curl、jq 和 yq</td>
 <td>Hook 明确依赖网络或 JSON/YAML 命令行工具</td>
 </tr>
 </tbody>
 </table>
-<p>无前缀的 <code>7.2.0</code> 和 <code>latest</code> 都是 <code>core-7.2.0</code> 的别名。生产环境应固定
+<p>无前缀的 <code>7.3.0</code> 和 <code>latest</code> 都是 <code>core-7.3.0</code> 的别名。生产环境应固定
 版本标签，最好进一步固定镜像 Digest。两个镜像仓库使用相同的标签规则：</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>soulteary/webhook:&lt;tag&gt;
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>ghcr.io/soulteary/webhook:&lt;tag&gt;
@@ -1362,13 +1418,13 @@ Shell 脚本。</p>
 位置提供可写 tmpfs，并配合 Secure Profile 的命令白名单。挂载文件必须允许
 UID/GID <code>65532</code> 访问。</p>
 <h2 id="71">从 7.1 迁移</h2>
-<p>旧名称 <code>extend-7.2.0</code> 会继续作为 <code>extended-7.2.0</code> 的兼容别名。现有部署
+<p>旧名称 <code>extend-7.3.0</code> 会继续作为 <code>extended-7.3.0</code> 的兼容别名。现有部署
 不必立即改名，但新配置应使用 <code>extended-*</code>。</p>
 <p>旧版 Extended 镜像经常承担所有脚本执行场景。7.2 应按实际依赖选择最小运行时：</p>
 <ul>
-<li>只有 Shell 依赖的 Hook 迁移到 <code>runner-7.2.0</code>。</li>
-<li>需要 curl、jq 或 yq 的 Hook 使用 <code>extended-7.2.0</code>。</li>
-<li>只有命令本身为静态可执行文件时才使用 <code>core-7.2.0</code>。</li>
+<li>只有 Shell 依赖的 Hook 迁移到 <code>runner-7.3.0</code>。</li>
+<li>需要 curl、jq 或 yq 的 Hook 使用 <code>extended-7.3.0</code>。</li>
+<li>只有命令本身为静态可执行文件时才使用 <code>core-7.3.0</code>。</li>
 </ul>
 <p>默认镜像仍不包含 Shell，因此不能把现有的脚本型部署从 <code>extend-*</code> 直接改成无
 前缀的版本标签。</p>
