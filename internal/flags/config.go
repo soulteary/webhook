@@ -235,8 +235,9 @@ func ParseConfig() AppFlags {
 	// 3) otherwise => default directory mode
 	hooksDirEnvRaw, hooksDirEnvSet := os.LookupEnv(ENV_KEY_HOOKS_DIR)
 	hooksDirExplicit := visited["hooks-dir"] || (hooksDirEnvSet && strings.TrimSpace(hooksDirEnvRaw) != "")
+	_, hooksEnvSet := os.LookupEnv(ENV_KEY_HOOKS)
 	hooksEnv := env.GetTrimmed(ENV_KEY_HOOKS, "")
-	hooksExplicit := visited["hooks"] || hooksEnv != ""
+	hooksExplicit := visited["hooks"] || hooksEnvSet
 
 	useHooksDir := false
 	if hooksDirExplicit && flags.HooksDir != "" {

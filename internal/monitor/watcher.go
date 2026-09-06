@@ -15,9 +15,11 @@ var watcher *fsnotify.Watcher
 // HookLoadOptions builds the parsing and semantic policy shared by file,
 // directory, and signal-triggered reloads.
 func HookLoadOptions(appFlags flags.AppFlags) rules.LoadOptions {
+	validateSemantics := appFlags.Profile == "secure" || appFlags.ValidateConfig || appFlags.ValidateStrict || appFlags.Doctor
 	return rules.LoadOptions{
-		Strict:          appFlags.ValidateStrict,
-		RequireNonEmpty: appFlags.HooksDir == "",
+		Strict:              appFlags.ValidateStrict,
+		ValidateHTTPMethods: validateSemantics,
+		RequireNonEmpty:     appFlags.HooksDir == "",
 		Validate: func(hooksFilePath string, hooks hook.Hooks) error {
 			return flags.ValidateLoadedHooks(appFlags, hooksFilePath, hooks)
 		},

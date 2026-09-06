@@ -4,9 +4,10 @@ import "github.com/soulteary/webhook/internal/hook"
 
 // LoadOptions keeps reload parsing and validation aligned with startup.
 type LoadOptions struct {
-	Strict          bool
-	RequireNonEmpty bool
-	Validate        func(hooksFilePath string, hooks hook.Hooks) error
+	Strict              bool
+	ValidateHTTPMethods bool
+	RequireNonEmpty     bool
+	Validate            func(hooksFilePath string, hooks hook.Hooks) error
 }
 
 func loadHooksFile(hooksFilePath string, asTemplate bool, options LoadOptions) (hook.Hooks, error) {
@@ -14,7 +15,7 @@ func loadHooksFile(hooksFilePath string, asTemplate bool, options LoadOptions) (
 	var err error
 	if options.Strict {
 		err = hooks.LoadFromFileStrict(hooksFilePath, asTemplate)
-	} else if options.Validate != nil {
+	} else if options.ValidateHTTPMethods {
 		// Semantic validation must inspect the original method values. The
 		// compatibility loader normalizes invalid methods away, which could turn
 		// an invalid per-hook allowlist into an unrestricted one during reload.

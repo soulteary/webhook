@@ -227,6 +227,7 @@ func TestReloadHooksWithOptionsPreservesInvalidMethodsForValidation(t *testing.T
 	rules.BuildIndex()
 	appFlags := flags.AppFlags{Profile: "secure"}
 	options := rules.LoadOptions{
+		ValidateHTTPMethods: true,
 		Validate: func(path string, hooks hook.Hooks) error {
 			return flags.ValidateLoadedHooks(appFlags, path, hooks)
 		},
@@ -237,6 +238,34 @@ func TestReloadHooksWithOptionsPreservesInvalidMethodsForValidation(t *testing.T
 	active := rules.MatchLoadedHook("protected-hook")
 	require.NotNil(t, active)
 	assert.Equal(t, []string{"GET"}, active.HTTPMethods)
+}
+
+func TestReloadHooksWithOptionsKeepsCompatMethodSanitization(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`
+- id: compat-hook
+  execute-command: /bin/echo
+  http-methods: [POTS]
+`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "compat-hook", ExecuteCommand: "/bin/false", HTTPMethods: []string{"GET"}}},
+	}
+	rules.BuildIndex()
+	appFlags := flags.AppFlags{Profile: "compat"}
+	options := rules.LoadOptions{
+		Validate: func(path string, hooks hook.Hooks) error {
+			return flags.ValidateLoadedHooks(appFlags, path, hooks)
+		},
+	}
+
+	rules.ReloadHooksWithOptions(hooksFile, false, options)
+
+	active := rules.MatchLoadedHook("compat-hook")
+	require.NotNil(t, active)
+	assert.Equal(t, "/bin/echo", active.ExecuteCommand)
+	assert.Empty(t, active.HTTPMethods)
 }
 
 func TestAddAndLoadHooksFileWithOptionsRejectsInvalidCandidate(t *testing.T) {
