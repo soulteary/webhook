@@ -54,6 +54,27 @@ func TestRunInitJSON(t *testing.T) {
 	require.NoError(t, hooks.LoadFromFileStrict(output, true))
 }
 
+func TestStarterConfigUsesWindowsCommand(t *testing.T) {
+	t.Setenv("WEBHOOK_SECRET", "test-secret")
+	for _, format := range []string{"yaml", "json"} {
+		t.Run(format, func(t *testing.T) {
+			output := filepath.Join(t.TempDir(), "hooks."+format)
+			require.NoError(t, os.WriteFile(output, []byte(renderStarterConfig(format, "windows")), 0o600))
+
+			var hooks hook.Hooks
+			require.NoError(t, hooks.LoadFromFileStrict(output, true))
+			require.Len(t, hooks, 1)
+			require.Equal(t, "cmd.exe", hooks[0].ExecuteCommand)
+			require.Len(t, hooks[0].PassArgumentsToCommand, 3)
+			require.Equal(t, []string{"/c", "echo", "webhook received"}, []string{
+				hooks[0].PassArgumentsToCommand[0].Name,
+				hooks[0].PassArgumentsToCommand[1].Name,
+				hooks[0].PassArgumentsToCommand[2].Name,
+			})
+		})
+	}
+}
+
 func TestRunInitEscapesTemplateSecret(t *testing.T) {
 	secret := "quote=\" newline=\n slash=\\"
 	t.Setenv("WEBHOOK_SECRET", secret)
