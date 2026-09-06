@@ -1540,6 +1540,11 @@ func TestValidateRejectsNULInStaticProcessInputs(t *testing.T) {
 			content: `[{"id":"nul-environment","execute-command":"/bin/echo","pass-environment-to-command":[{"source":"string","name":"bad\u0000value","envname":"VALID_NAME"}]}]`,
 			field:   "pass-environment-to-command[0].name",
 		},
+		{
+			name:    "working directory",
+			content: `[{"id":"nul-directory","execute-command":"/bin/echo","command-working-directory":"/tmp\u0000bad"}]`,
+			field:   "command-working-directory",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			hookFile := filepath.Join(t.TempDir(), "hooks.json")
@@ -1552,6 +1557,23 @@ func TestValidateRejectsNULInStaticProcessInputs(t *testing.T) {
 			require.True(t, result.HasErrors())
 			assert.Contains(t, fmt.Sprint(result.Errors), tt.field)
 			assert.Contains(t, fmt.Sprint(result.Errors), "must not contain NUL")
+		})
+	}
+}
+
+func TestValidateRejectsInvalidHeaderArgumentNames(t *testing.T) {
+	for _, name := range []string{"Bad Header", "Bad:Header", "Bad\rHeader", "Bad\nHeader", "Bad\x00Header"} {
+		t.Run(fmt.Sprintf("%q", name), func(t *testing.T) {
+			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+			content := fmt.Sprintf("- id: header-argument\n  execute-command: /bin/echo\n  pass-arguments-to-command:\n    - source: header\n      name: %q\n", name)
+			require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+			appFlags := createValidFlags()
+			appFlags.ValidateConfig = true
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), "invalid HTTP header field name")
 		})
 	}
 }

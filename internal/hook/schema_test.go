@@ -112,6 +112,20 @@ func TestSchemaMatchesRuntimeArgumentNameRules(t *testing.T) {
 			t.Errorf("schema accepted unsupported request key %q", name)
 		}
 	}
+	headerPattern, err := regexp.Compile(patterns[SourceHeader])
+	if err != nil {
+		t.Fatalf("invalid header-name pattern: %v", err)
+	}
+	for _, name := range []string{"Content-Type", "X_Custom", "!#$%&'*+.^_`|~"} {
+		if !headerPattern.MatchString(name) {
+			t.Errorf("schema rejected valid header argument name %q", name)
+		}
+	}
+	for _, name := range []string{"", "Bad Header", "Bad:Header", "Bad\rHeader", "Bad\nHeader", "Bad\x00Header"} {
+		if headerPattern.MatchString(name) {
+			t.Errorf("schema accepted invalid header argument name %q", name)
+		}
+	}
 
 }
 
@@ -143,7 +157,10 @@ func TestSchemaRejectsNULInStaticProcessValues(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	patterns := []string{schema.Defs["hook"].Properties["execute-command"].Pattern}
+	patterns := []string{
+		schema.Defs["hook"].Properties["execute-command"].Pattern,
+		schema.Defs["hook"].Properties["command-working-directory"].Pattern,
+	}
 	for _, definition := range []string{"commandArgument", "environmentValueArgument"} {
 		for _, condition := range schema.Defs[definition].AllOf {
 			if condition.If.Properties["source"].Const == SourceString {
@@ -152,8 +169,8 @@ func TestSchemaRejectsNULInStaticProcessValues(t *testing.T) {
 			}
 		}
 	}
-	if len(patterns) != 3 {
-		t.Fatalf("schema should constrain executable, argument, and environment values; found %d constraints", len(patterns))
+	if len(patterns) != 4 {
+		t.Fatalf("schema should constrain executable, working directory, argument, and environment values; found %d constraints", len(patterns))
 	}
 	for _, pattern := range patterns {
 		compiled, err := regexp.Compile(pattern)

@@ -39,6 +39,15 @@
             "required": ["name"],
             "properties": { "name": { "type": "string", "pattern": "^(?:[Mm][Ee][Tt][Hh][Oo][Dd]|[Rr][Ee][Mm][Oo][Tt][Ee]-[Aa][Dd][Dd][Rr])$" } }
           }
+        },
+        {
+          "if": {
+            "properties": { "source": { "const": "header" } },
+            "required": ["source"]
+          },
+          "then": {
+            "properties": { "name": { "type": "string", "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$" } }
+          }
         }
       ]
     },
@@ -238,7 +247,7 @@
       "properties": {
         "id": { "type": "string", "minLength": 1, "pattern": "^\\S(?:[^\\r\\n\\t]*\\S)?$" },
         "execute-command": { "type": "string", "minLength": 1, "pattern": "^[^\\x00]*[^\\s\\x00][^\\x00]*$" },
-        "command-working-directory": { "type": "string" },
+        "command-working-directory": { "type": "string", "pattern": "^[^\\x00]*$" },
         "response-message": { "type": "string" },
         "response-headers": { "type": "array", "items": { "$ref": "#/$defs/header" } },
         "include-command-output-in-response": { "type": "boolean" },

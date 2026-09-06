@@ -356,6 +356,9 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 		}
 		if validateSemantics {
 			prefix := fmt.Sprintf("hook-file[%s].hooks[%d]", hookFile, i)
+			if strings.ContainsRune(h.CommandWorkingDirectory, '\x00') {
+				result.AddError(prefix+".command-working-directory", "must not contain NUL")
+			}
 			if maxArgsCount > 0 && 1+len(h.PassArgumentsToCommand) > maxArgsCount {
 				result.AddError(prefix+".pass-arguments-to-command",
 					fmt.Sprintf("command would have %d arguments including argv[0], exceeding max-args-count %d", 1+len(h.PassArgumentsToCommand), maxArgsCount))
@@ -554,7 +557,13 @@ func validateFileArguments(result *ValidationResult, field string, arguments []h
 
 func validateArgument(result *ValidationResult, field string, argument hook.Argument) {
 	switch argument.Source {
-	case hook.SourceHeader, hook.SourceQuery, hook.SourceQueryAlias, hook.SourcePayload:
+	case hook.SourceHeader:
+		if strings.TrimSpace(argument.Name) == "" {
+			result.AddError(field+".name", "must not be empty for a keyed source")
+		} else if !isHTTPFieldName(argument.Name) {
+			result.AddError(field+".name", fmt.Sprintf("invalid HTTP header field name %q", argument.Name))
+		}
+	case hook.SourceQuery, hook.SourceQueryAlias, hook.SourcePayload:
 		if strings.TrimSpace(argument.Name) == "" {
 			result.AddError(field+".name", "must not be empty for a keyed source")
 		}
