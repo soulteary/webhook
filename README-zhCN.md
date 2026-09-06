@@ -1,6 +1,6 @@
 # 什么是 WebHook (歪脖虎克)?
 
-[![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Benchmarks](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml) [![Go Report Card](.github/goreportcard.svg)](.github/goreportcard-report.md)
+[![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Benchmarks](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml) [![Go Report Card](.github/goreportcard.svg)](.github/goreportcard-report.md)
 
 
  <img src="./docs/logo/logo-600x600.jpg" alt="Webhook" align="left" width="180" />
@@ -72,17 +72,28 @@ go install github.com/soulteary/webhook@latest
 ![](.github/dockerhub.png)
 
 ```bash
-# 最新稳定版本
+# 最新稳定 Core 镜像
 docker pull soulteary/webhook:latest
 
-# 特定版本
-docker pull soulteary/webhook:7.1.0
+# 最小化 scratch 镜像（无前缀的 7.2.0 是它的别名）
+docker pull soulteary/webhook:core-7.2.0
 
-# 包含调试工具的扩展版本
-docker pull soulteary/webhook:extend-7.1.0
+# Shell 脚本运行环境
+docker pull soulteary/webhook:runner-7.2.0
+
+# 包含调试和网络工具的运行环境
+docker pull soulteary/webhook:extended-7.2.0
 ```
 
-两种 Release 镜像都以非 root 用户从 `/var/lib/webhook` 运行。默认镜像是基于 `scratch` 的 Core 镜像，适合挂载静态可执行文件且不依赖 Shell 的配置；`extend-*` 镜像包含 Alpine、Bash、curl、wget、jq 和 yq，适合执行 Shell 脚本。请确保挂载的 Hook、命令和审计目录可由 UID/GID `65532` 读取或写入。
+| 变体 | 内容 | 适用场景 |
+|---|---|---|
+| `core` | `scratch`、CA 证书和静态 WebHook 可执行文件；不含 Shell | 执行挂载的静态可执行文件，适合作为最小化生产镜像 |
+| `runner` | Alpine、BusyBox 工具、Bash 和 CA 证书 | 常规 Shell 脚本，不内置调试客户端 |
+| `extended` | `runner` 加 curl、jq 和 yq | 排障，以及明确依赖这些工具的脚本 |
+
+所有 Release 镜像均以 UID/GID `65532` 从 `/var/lib/webhook` 运行。无前缀的 `<version>` 和 `latest` 标签指向 `core`。7.2.0 继续提供历史名称 `extend-<version>`，作为 `extended-<version>` 的兼容别名；新部署应使用 `extended-*`。
+
+生产环境优先使用 `core` 或 `runner`。`extended` 的软件包和攻击面有意更大，不应只为交互调试方便而选择它。请确保挂载的 Hook、命令和审计目录可由 UID/GID `65532` 读取或写入。完整的标签和迁移约定见[容器镜像](docs/zh-CN/Container-Images.md)。
 
 需要立即发送签名请求时，可使用 [60 秒 Docker Compose 快速体验](example/quickstart/)。
 
@@ -232,13 +243,18 @@ http://yourserver:9000/hooks/redeploy-webhook
 Tag Release 会发布 SPDX SBOM、Checksum 文件的 Keyless Sigstore Bundle、已签名的多架构容器 Manifest，以及 GitHub 构建来源证明。验证示例：
 
 ```bash
-gh attestation verify webhook_7.1.0_linux_amd64.tar.gz -R soulteary/webhook
+gh attestation verify webhook_7.2.0_linux_amd64.tar.gz -R soulteary/webhook
 
 cosign verify-blob \
-  --bundle webhook_7.1.0_checksums.txt.sigstore.json \
+  --bundle webhook_7.2.0_checksums.txt.sigstore.json \
   --certificate-identity-regexp='^https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/.+$' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  webhook_7.1.0_checksums.txt
+  webhook_7.2.0_checksums.txt
+
+cosign verify \
+  --certificate-identity='https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/7.2.0' \
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+  ghcr.io/soulteary/webhook:runner-7.2.0
 ```
 
 ## 关于此 Fork

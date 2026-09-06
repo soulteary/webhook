@@ -1,6 +1,6 @@
 # Welcome to WebHook! [中文文档](./README-zhCN.md)
 
-[![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Benchmarks](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml) [![Go Report Card](.github/goreportcard.svg)](.github/goreportcard-report.md)
+[![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Benchmarks](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml) [![Go Report Card](.github/goreportcard.svg)](.github/goreportcard-report.md)
 
 
  <img src="./docs/logo/logo-600x600.jpg" alt="Webhook" align="left" width="180" />
@@ -72,17 +72,28 @@ Download pre-built binaries for Linux and macOS from the [Releases page](https:/
 ![](.github/dockerhub.png)
 
 ```bash
-# Latest stable version
+# Latest stable core image
 docker pull soulteary/webhook:latest
 
-# Specific version
-docker pull soulteary/webhook:7.1.0
+# Minimal scratch image (the unprefixed 7.2.0 tag is an alias)
+docker pull soulteary/webhook:core-7.2.0
 
-# Extended version with debugging tools
-docker pull soulteary/webhook:extend-7.1.0
+# Shell-script runtime
+docker pull soulteary/webhook:runner-7.2.0
+
+# Runtime with debugging and network tools
+docker pull soulteary/webhook:extended-7.2.0
 ```
 
-Both release variants run as non-root from `/var/lib/webhook`. The default image is a `scratch`-based core image: use it for mounted static executables and configurations that do not need a shell. The `extend-*` image includes Alpine, Bash, curl, wget, jq, and yq and is the appropriate variant for shell-script hooks. Ensure mounted hooks, commands, and audit paths are readable or writable by UID/GID `65532`.
+| Variant | Contents | Intended use |
+|---|---|---|
+| `core` | `scratch`, CA certificates, and the static WebHook binary; no shell | Smallest production image for hooks that execute mounted static binaries |
+| `runner` | Alpine, BusyBox utilities, Bash, and CA certificates | Normal shell-script hooks without bundled debugging clients |
+| `extended` | `runner` plus curl, jq, and yq | Troubleshooting and scripts that explicitly need these tools |
+
+All release variants run as UID/GID `65532` from `/var/lib/webhook`. The unprefixed `<version>` and `latest` tags point to `core`. The historical `extend-<version>` name remains a compatibility alias for `extended-<version>` in 7.2.0, but new deployments should use `extended-*`.
+
+Prefer `core` or `runner` in production. `extended` has a deliberately larger package set and attack surface; do not select it only for interactive convenience. Ensure mounted hooks, commands, and audit paths are readable or writable by UID/GID `65532`. See [Container images](docs/en-US/Container-Images.md) for the complete tag and migration contract.
 
 For a signed request you can run immediately, use the [60-second Docker Compose quickstart](example/quickstart/).
 
@@ -232,13 +243,18 @@ For more examples and use cases, check out [Hook Examples](docs/en-US/Hook-Examp
 Tagged releases publish SPDX SBOMs, a keyless Sigstore bundle for the checksum file, signed multi-architecture container manifests, and GitHub build-provenance attestations. Examples:
 
 ```bash
-gh attestation verify webhook_7.1.0_linux_amd64.tar.gz -R soulteary/webhook
+gh attestation verify webhook_7.2.0_linux_amd64.tar.gz -R soulteary/webhook
 
 cosign verify-blob \
-  --bundle webhook_7.1.0_checksums.txt.sigstore.json \
+  --bundle webhook_7.2.0_checksums.txt.sigstore.json \
   --certificate-identity-regexp='^https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/.+$' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  webhook_7.1.0_checksums.txt
+  webhook_7.2.0_checksums.txt
+
+cosign verify \
+  --certificate-identity='https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/7.2.0' \
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+  ghcr.io/soulteary/webhook:runner-7.2.0
 ```
 
 ## About This Fork

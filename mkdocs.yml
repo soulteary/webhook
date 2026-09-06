@@ -30,6 +30,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - English:
+      - Container images: en-US/Container-Images.md
       - Configuration tools: en-US/Configuration-Tools.md
       - Hook definition: en-US/Hook-Definition.md
       - Hook rules: en-US/Hook-Rules.md
@@ -45,6 +46,7 @@ nav:
       - Migration: en-US/Migration-Guide.md
       - OwlMail integration: en-US/OwlMail-Integration.md
   - 中文:
+      - 容器镜像: zh-CN/Container-Images.md
       - Hook 定义: zh-CN/Hook-Definition.md
       - Hook 规则: zh-CN/Hook-Rules.md
       - Hook 示例: zh-CN/Hook-Examples.md

@@ -1,6 +1,6 @@
 # 60-second quickstart
 
-This local-only demo starts the non-root extended image with the secure profile,
+This local-only demo starts the non-root runner image with the secure profile,
 an HMAC-authenticated POST hook, a read-only root filesystem, and an explicit
 command allowlist.
 

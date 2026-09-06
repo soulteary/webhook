@@ -13,7 +13,7 @@ SMTP 客户端 -> OwlMail v0.9.0 -> 带签名的 HTTP POST -> WebHook -> 命令/
 
 ## 使用要求
 
-- WebHook 7.1.0 或更高版本。
+- WebHook 7.2.0 或更高版本。
 - OwlMail v0.9.0（本示例固定使用的版本）或更高版本。
 - 至少 32 字节的随机共享密钥。
 - OwlMail 能够访问 WebHook 端点。

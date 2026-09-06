@@ -2,6 +2,10 @@
 
 This directory contains Dockerfiles for **manual or local** builds, as opposed to the release images produced by GoReleaser from `docker/goreleaser/`.
 
+These files are not the published `core`, `runner`, or `extended` variants. See
+[Container images](../../docs/en-US/Container-Images.md) before selecting a
+production runtime.
+
 - **Dockerfile** – standard manual build
 - **Dockerfile.alpine** – Alpine-based manual build
 

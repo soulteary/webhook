@@ -7,7 +7,7 @@
 
 OwlMail `v0.9.0` 为 Webhook 链路增加了持久本地 outbox、可选 Redis 恢复队列与
 防重放签名元数据。Compose Demo 固定使用
-`ghcr.io/soulteary/owlmail:0.9.0` 和 `soulteary/webhook:extend-7.1.0`，并显式
+`ghcr.io/soulteary/owlmail:0.9.0` 和 `soulteary/webhook:runner-7.2.0`，并显式
 保留 OwlMail 的安全默认并发值 `8`。
 
 ## 运行
