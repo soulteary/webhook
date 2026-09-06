@@ -37,7 +37,16 @@
           },
           "then": {
             "required": ["name"],
-            "properties": { "name": { "enum": ["method", "remote-addr"] } }
+            "properties": { "name": { "type": "string", "pattern": "^(?:[Mm][Ee][Tt][Hh][Oo][Dd]|[Rr][Ee][Mm][Oo][Tt][Ee]-[Aa][Dd][Dd][Rr])$" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "source": { "const": "string" } },
+            "required": ["source"]
+          },
+          "then": {
+            "properties": { "name": { "type": "string", "pattern": "^[^\\x00]*$" } }
           }
         }
       ]

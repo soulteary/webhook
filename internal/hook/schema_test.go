@@ -67,6 +67,64 @@ func TestSchemaRejectsUnreachableHookIDs(t *testing.T) {
 	}
 }
 
+func TestSchemaMatchesRuntimeArgumentNameRules(t *testing.T) {
+	data, err := os.ReadFile("../../schema/hooks.schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Defs map[string]struct {
+			AllOf []struct {
+				If struct {
+					Properties map[string]struct {
+						Const any `json:"const"`
+					} `json:"properties"`
+				} `json:"if"`
+				Then struct {
+					Properties map[string]struct {
+						Pattern string `json:"pattern"`
+					} `json:"properties"`
+				} `json:"then"`
+			} `json:"allOf"`
+		} `json:"$defs"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+
+	patterns := make(map[string]string)
+	for _, condition := range schema.Defs["argument"].AllOf {
+		if source, ok := condition.If.Properties["source"].Const.(string); ok {
+			patterns[source] = condition.Then.Properties["name"].Pattern
+		}
+	}
+	requestPattern, err := regexp.Compile(patterns[SourceRequest])
+	if err != nil {
+		t.Fatalf("invalid request-key pattern: %v", err)
+	}
+	for _, name := range []string{"method", "Method", "METHOD", "remote-addr", "REMOTE-ADDR"} {
+		if !requestPattern.MatchString(name) {
+			t.Errorf("schema rejected supported request key %q", name)
+		}
+	}
+	for _, name := range []string{"method-name", "remote_addr", "unsupported"} {
+		if requestPattern.MatchString(name) {
+			t.Errorf("schema accepted unsupported request key %q", name)
+		}
+	}
+
+	literalPattern, err := regexp.Compile(patterns[SourceString])
+	if err != nil {
+		t.Fatalf("invalid literal-argument pattern: %v", err)
+	}
+	if !literalPattern.MatchString("valid argument") {
+		t.Error("schema rejected a valid literal argument")
+	}
+	if literalPattern.MatchString("bad\x00argument") {
+		t.Error("schema accepted a literal argument containing NUL")
+	}
+}
+
 func TestSchemaConstrainsMSTeamsSecretsToStandardBase64(t *testing.T) {
 	data, err := os.ReadFile("../../schema/hooks.schema.json")
 	if err != nil {

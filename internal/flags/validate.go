@@ -419,6 +419,9 @@ func isHTTPFieldValue(value string) bool {
 
 func validateStaticCommandArguments(result *ValidationResult, prefix string, configuredHook hook.Hook, maxArgLength, maxTotalArgsLength int, strictMode bool) {
 	knownTotalLength := len(configuredHook.ExecuteCommand)
+	if strings.ContainsRune(configuredHook.ExecuteCommand, '\x00') {
+		result.AddError(prefix+".execute-command", "must not contain NUL")
+	}
 	if maxArgLength > 0 && knownTotalLength > maxArgLength {
 		result.AddError(prefix+".execute-command",
 			fmt.Sprintf("length %d exceeds max-arg-length %d", knownTotalLength, maxArgLength))
@@ -432,6 +435,9 @@ func validateStaticCommandArguments(result *ValidationResult, prefix string, con
 		}
 		argumentLength := len(argument.Name)
 		knownTotalLength += argumentLength
+		if strings.ContainsRune(argument.Name, '\x00') {
+			result.AddError(fmt.Sprintf("%s.pass-arguments-to-command[%d].name", prefix, i), "must not contain NUL")
+		}
 		if maxArgLength > 0 && argumentLength > maxArgLength {
 			result.AddError(fmt.Sprintf("%s.pass-arguments-to-command[%d].name", prefix, i),
 				fmt.Sprintf("literal argument length %d exceeds max-arg-length %d", argumentLength, maxArgLength))

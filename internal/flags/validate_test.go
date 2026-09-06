@@ -1519,6 +1519,38 @@ func TestValidateAllowsStaticallySafeStrictArguments(t *testing.T) {
 	require.False(t, result.HasErrors(), "%+v", result.Errors)
 }
 
+func TestValidateRejectsNULInStaticCommandInputs(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		content string
+		field   string
+	}{
+		{
+			name:    "execute command",
+			content: `[{"id":"nul-command","execute-command":"echo\u0000bad"}]`,
+			field:   "execute-command",
+		},
+		{
+			name:    "literal argument",
+			content: `[{"id":"nul-argument","execute-command":"/bin/echo","pass-arguments-to-command":[{"source":"string","name":"bad\u0000argument"}]}]`,
+			field:   "pass-arguments-to-command[0].name",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hookFile := filepath.Join(t.TempDir(), "hooks.json")
+			require.NoError(t, os.WriteFile(hookFile, []byte(tt.content), 0o600))
+
+			appFlags := createValidFlags()
+			appFlags.ValidateConfig = true
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), tt.field)
+			assert.Contains(t, fmt.Sprint(result.Errors), "must not contain NUL")
+		})
+	}
+}
+
 func TestValidateLiteralBase64FileArguments(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
