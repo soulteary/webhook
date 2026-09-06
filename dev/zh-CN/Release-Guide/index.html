@@ -1485,8 +1485,10 @@
 <li>等待最终 <code>main</code> 提交上的 Tests、容器 Smoke Test、Security Scan、CodeQL、
    Documentation 和 Benchmarks 全部通过。</li>
 <li>确认 Actions 可以使用 Docker Hub 凭据及 GitHub 仓库、Package 权限。</li>
-<li>本地安装 <code>go.mod</code> 指定的 Go、<code>requirements-docs.txt</code> 中的 MkDocs 依赖、
-   GitHub CLI 和 GoReleaser v2.18.0。</li>
+<li>本地安装 <code>go.mod</code> 指定的 Go、GitHub CLI 和 GoReleaser v2.18.0。文档构建
+   可以使用 MkDocs，或带 <code>venv</code> 的 Python 3；如果 <code>PATH</code> 中没有 <code>mkdocs</code>，
+   预检脚本会在临时虚拟环境中安装 <code>requirements-docs.txt</code> 锁定的依赖；首次
+   使用该回退路径时需要能够访问网络。</li>
 </ol>
 <p>7.3.0 选定的 <code>main</code> 提交必须同时包含 PR #177 和 PR #178。</p>
 <h2 id="_4">无误发布的准确顺序</h2>

@@ -1489,8 +1489,11 @@ Actions page.</p>
    and Benchmarks on the resulting <code>main</code> commit.</li>
 <li>Confirm the Docker Hub credentials and GitHub repository/package permissions
    are available to Actions.</li>
-<li>Install Go according to <code>go.mod</code>, MkDocs dependencies from
-   <code>requirements-docs.txt</code>, GitHub CLI, and GoReleaser v2.18.0 locally.</li>
+<li>Install Go according to <code>go.mod</code>, GitHub CLI, and GoReleaser v2.18.0
+   locally. For documentation, use either MkDocs or Python 3 with <code>venv</code>; when
+   <code>mkdocs</code> is not on <code>PATH</code>, the preflight script installs the pinned
+   <code>requirements-docs.txt</code> dependencies in a temporary virtual environment;
+   this fallback needs network access on its first run.</li>
 </ol>
 <p>For 7.3.0, PR #177 and PR #178 must both be present in the selected <code>main</code>
 commit.</p>
