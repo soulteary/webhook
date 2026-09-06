@@ -12,13 +12,19 @@ import (
 
 var watcher *fsnotify.Watcher
 
-func ApplyWatcher(appFlags flags.AppFlags) {
-	loadOptions := rules.LoadOptions{
+// HookLoadOptions builds the parsing and semantic policy shared by file,
+// directory, and signal-triggered reloads.
+func HookLoadOptions(appFlags flags.AppFlags) rules.LoadOptions {
+	return rules.LoadOptions{
 		Strict: appFlags.ValidateStrict,
 		Validate: func(hooksFilePath string, hooks hook.Hooks) error {
 			return flags.ValidateLoadedHooks(appFlags, hooksFilePath, hooks)
 		},
 	}
+}
+
+func ApplyWatcher(appFlags flags.AppFlags) {
+	loadOptions := HookLoadOptions(appFlags)
 
 	// -hooks-dir: watch directory for new/changed/removed hook config files (including when dir is empty)
 	if appFlags.HooksDir != "" {

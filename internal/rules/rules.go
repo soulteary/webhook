@@ -213,23 +213,28 @@ func ReloadHooksWithOptions(hooksFilePath string, asTemplate bool, options LoadO
 	}
 }
 
-func reloadAllHooks(asTemplate bool) {
+func reloadAllHooks(asTemplate bool, options LoadOptions) {
 	hooksMutex.RLock()
 	hooksFilesCopy := make([]string, len(HooksFiles))
 	copy(hooksFilesCopy, HooksFiles)
 	hooksMutex.RUnlock()
 
 	for _, hooksFilePath := range hooksFilesCopy {
-		ReloadHooks(hooksFilePath, asTemplate)
+		ReloadHooksWithOptions(hooksFilePath, asTemplate, options)
 	}
 }
 
 func ReloadAllHooksAsTemplate() {
-	reloadAllHooks(true)
+	reloadAllHooks(true, LoadOptions{})
 }
 
 func ReloadAllHooksNotAsTemplate() {
-	reloadAllHooks(false)
+	reloadAllHooks(false, LoadOptions{})
+}
+
+// ReloadAllHooksWithOptions applies the active startup policy to every file.
+func ReloadAllHooksWithOptions(asTemplate bool, options LoadOptions) {
+	reloadAllHooks(asTemplate, options)
 }
 
 // RLockHooksFiles 获取 HooksFiles 的读锁（用于外部包访问）

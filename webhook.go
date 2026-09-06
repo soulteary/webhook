@@ -280,12 +280,13 @@ func main() {
 		}
 	}
 
-	// set os signal watcher with shutdown callback
-	if appFlags.AsTemplate {
-		signals = platform.SetupSignalsWithShutdown(signals, rules.ReloadAllHooksAsTemplate, shutdownFn, pidFile, nil)
-	} else {
-		signals = platform.SetupSignalsWithShutdown(signals, rules.ReloadAllHooksNotAsTemplate, shutdownFn, pidFile, nil)
+	// Set the OS signal watcher with the same validation policy used by file
+	// watchers, so SIGHUP/SIGUSR1 cannot bypass strict reload validation.
+	reloadOptions := monitor.HookLoadOptions(appFlags)
+	reloadFn := func() {
+		rules.ReloadAllHooksWithOptions(appFlags.AsTemplate, reloadOptions)
 	}
+	signals = platform.SetupSignalsWithShutdown(signals, reloadFn, shutdownFn, pidFile, nil)
 
 	// 等待服务器关闭
 	select {}

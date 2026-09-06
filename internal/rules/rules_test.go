@@ -309,6 +309,29 @@ func TestReloadAllHooksNotAsTemplate(t *testing.T) {
 	assert.GreaterOrEqual(t, rules.LenLoadedHooks(), 0)
 }
 
+func TestReloadAllHooksWithOptionsRejectsInvalidFiles(t *testing.T) {
+	hooksFile := filepath.Join(t.TempDir(), "hooks.json")
+	require.NoError(t, os.WriteFile(hooksFile, []byte(`[
+		{
+			"id": "protected-hook",
+			"execute-command": "/bin/false",
+			"trigger-rules": {}
+		}
+	]`), 0o600))
+
+	rules.HooksFiles = []string{hooksFile}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		hooksFile: {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.ReloadAllHooksWithOptions(false, rules.LoadOptions{Strict: true})
+
+	active := rules.MatchLoadedHook("protected-hook")
+	require.NotNil(t, active)
+	assert.Equal(t, "/bin/echo", active.ExecuteCommand)
+}
+
 func TestParseAndLoadHooks(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
