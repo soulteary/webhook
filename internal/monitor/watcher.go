@@ -58,7 +58,7 @@ func ApplyWatcher(appFlags flags.AppFlags) {
 	}
 
 	removeHooksFn := func(path string, verbose bool, noPanic bool) {
-		rules.RemoveHooks(path, verbose, noPanic, false)
+		rules.RemoveHooksWithOptions(path, verbose, noPanic, loadOptions)
 	}
 	reloadHooksFn := func(path string, asTemplate bool) {
 		rules.ReloadHooksWithOptions(path, asTemplate, loadOptions)

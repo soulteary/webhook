@@ -507,6 +507,34 @@ func TestRemoveHooks_WithNoPanic(t *testing.T) {
 	assert.Equal(t, 0, rules.LenLoadedHooks())
 }
 
+func TestRemoveHooksWithOptionsKeepsLastExplicitHooks(t *testing.T) {
+	rules.HooksFiles = []string{"hooks.json"}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"hooks.json": {{ID: "protected-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.RemoveHooksWithOptions("hooks.json", true, true, rules.LoadOptions{RequireNonEmpty: true})
+
+	assert.Equal(t, 1, rules.LenLoadedHooks())
+	assert.Contains(t, rules.HooksFiles, "hooks.json")
+	assert.NotNil(t, rules.MatchLoadedHook("protected-hook"))
+}
+
+func TestRemoveHooksWithOptionsAllowsEmptyDirectoryRuleset(t *testing.T) {
+	rules.HooksFiles = []string{"hooks.json"}
+	rules.LoadedHooksFromFiles = map[string]hook.Hooks{
+		"hooks.json": {{ID: "removable-hook", ExecuteCommand: "/bin/echo"}},
+	}
+	rules.BuildIndex()
+
+	rules.RemoveHooksWithOptions("hooks.json", false, false, rules.LoadOptions{})
+
+	assert.Zero(t, rules.LenLoadedHooks())
+	assert.NotContains(t, rules.HooksFiles, "hooks.json")
+	assert.Nil(t, rules.MatchLoadedHook("removable-hook"))
+}
+
 func TestRemoveHooks_EmptyHooksFiles(t *testing.T) {
 	// Setup - empty hooks files
 	rules.HooksFiles = []string{}

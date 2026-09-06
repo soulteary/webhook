@@ -21,6 +21,26 @@ var (
 func RemoveHooks(hooksFilePath string, verbose bool, noPanic bool, allowZeroHooks bool) {
 	hooksMutex.Lock()
 	defer hooksMutex.Unlock()
+	removeHooksLocked(hooksFilePath, verbose, noPanic, allowZeroHooks)
+}
+
+// RemoveHooksWithOptions applies the same aggregate nonempty policy used by
+// startup and reloads. If removing the file would empty an explicit ruleset,
+// the last active hooks are retained even in verbose or nopanic mode.
+func RemoveHooksWithOptions(hooksFilePath string, verbose bool, noPanic bool, options LoadOptions) {
+	hooksMutex.Lock()
+	defer hooksMutex.Unlock()
+
+	remainingHooks := lenLoadedHooksLocked() - len(LoadedHooksFromFiles[hooksFilePath])
+	if options.RequireNonEmpty && remainingHooks == 0 {
+		logger.Errorf("couldn't remove hooks from file %s: explicit hook configuration must contain at least one hook", hooksFilePath)
+		return
+	}
+
+	removeHooksLocked(hooksFilePath, verbose, noPanic, !options.RequireNonEmpty)
+}
+
+func removeHooksLocked(hooksFilePath string, verbose bool, noPanic bool, allowZeroHooks bool) {
 
 	for _, hook := range LoadedHooksFromFiles[hooksFilePath] {
 		logger.Debugf("\tremoving: %s", hook.ID)
