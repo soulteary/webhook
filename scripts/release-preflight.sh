@@ -11,7 +11,7 @@ fail() {
   exit 1
 }
 
-for command_name in git go mkdocs goreleaser gh; do
+for command_name in git go goreleaser gh; do
   command -v "$command_name" >/dev/null 2>&1 || fail "missing required command: $command_name"
 done
 gh auth status >/dev/null 2>&1 || fail "GitHub CLI is not authenticated"
@@ -63,8 +63,31 @@ go test -race ./...
 goreleaser check
 
 documentation_output="$(mktemp -d)"
-trap 'rm -rf "$documentation_output"' EXIT
-mkdocs build --strict --site-dir "$documentation_output"
+documentation_environment=""
+cleanup() {
+  if [[ -n "$documentation_environment" && -d "$documentation_environment" ]]; then
+    rm -rf -- "$documentation_environment"
+  fi
+  if [[ -d "$documentation_output" ]]; then
+    rm -rf -- "$documentation_output"
+  fi
+}
+trap cleanup EXIT
+
+if command -v mkdocs >/dev/null 2>&1; then
+  mkdocs build --strict --site-dir "$documentation_output"
+else
+  command -v python3 >/dev/null 2>&1 || \
+    fail "missing mkdocs and python3; install one of them to build documentation"
+  documentation_environment="$(mktemp -d)"
+  python3 -m venv "$documentation_environment"
+  "$documentation_environment/bin/python" -m pip install \
+    --disable-pip-version-check \
+    -r requirements-docs.txt
+  "$documentation_environment/bin/mkdocs" build \
+    --strict \
+    --site-dir "$documentation_output"
+fi
 
 [[ -z "$(git status --porcelain)" ]] || fail "preflight changed the working tree"
 

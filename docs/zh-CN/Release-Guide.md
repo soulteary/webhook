@@ -32,8 +32,10 @@
 2. 等待最终 `main` 提交上的 Tests、容器 Smoke Test、Security Scan、CodeQL、
    Documentation 和 Benchmarks 全部通过。
 3. 确认 Actions 可以使用 Docker Hub 凭据及 GitHub 仓库、Package 权限。
-4. 本地安装 `go.mod` 指定的 Go、`requirements-docs.txt` 中的 MkDocs 依赖、
-   GitHub CLI 和 GoReleaser v2.18.0。
+4. 本地安装 `go.mod` 指定的 Go、GitHub CLI 和 GoReleaser v2.18.0。文档构建
+   可以使用 MkDocs，或带 `venv` 的 Python 3；如果 `PATH` 中没有 `mkdocs`，
+   预检脚本会在临时虚拟环境中安装 `requirements-docs.txt` 锁定的依赖；首次
+   使用该回退路径时需要能够访问网络。
 
 7.3.0 选定的 `main` 提交必须同时包含 PR #177 和 PR #178。
 
