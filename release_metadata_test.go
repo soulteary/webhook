@@ -74,6 +74,18 @@ func TestReleaseWorkflowIsTagOnlyAndRetrySafe(t *testing.T) {
 	assert.Contains(t, workflow, "    needs: attest")
 }
 
+func TestReleasePreflightBootstrapsDocumentationTools(t *testing.T) {
+	data, err := os.ReadFile("scripts/release-preflight.sh")
+	require.NoError(t, err)
+	script := string(data)
+
+	assert.NotContains(t, script, "git go mkdocs goreleaser gh")
+	assert.Contains(t, script, "if command -v mkdocs")
+	assert.Contains(t, script, "python3 -m venv")
+	assert.Contains(t, script, "-r requirements-docs.txt")
+	assert.Contains(t, script, `"$documentation_environment/bin/mkdocs" build`)
+}
+
 func TestGoReleaserPublishesSupplyChainMetadata(t *testing.T) {
 	data, err := os.ReadFile(".goreleaser.yaml")
 	require.NoError(t, err)
