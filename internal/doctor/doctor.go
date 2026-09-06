@@ -375,9 +375,13 @@ func checkWritableFilePath(path string, uid, gid int) error {
 	if linkErr != nil && !os.IsNotExist(linkErr) {
 		return linkErr
 	}
-	parent, err := nearestExistingParent(path)
+	parent := filepath.Dir(path)
+	parentInfo, err := os.Stat(parent)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot access immediate parent directory %s: %w", parent, err)
+	}
+	if !parentInfo.IsDir() {
+		return fmt.Errorf("immediate parent is not a directory: %s", parent)
 	}
 	return checkTargetPathAccess(parent, uid, gid, 3)
 }

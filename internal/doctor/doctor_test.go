@@ -69,6 +69,14 @@ func TestCheckWritableFilePathRejectsDanglingSymlinkTargetParent(t *testing.T) {
 	require.Error(t, checkWritableFilePath(link, 12345, 12345))
 }
 
+func TestCheckWritableFilePathRejectsMissingImmediateParent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing", "audit.log")
+
+	err := checkWritableFilePath(path, 0, 0)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "immediate parent directory")
+}
+
 func TestRunRejectsPIDFileForLiveProcess(t *testing.T) {
 	pidPath := filepath.Join(t.TempDir(), "webhook.pid")
 	require.NoError(t, os.WriteFile(pidPath, []byte(fmt.Sprint(os.Getpid())), 0o600))
@@ -210,7 +218,7 @@ func TestCheckCommandResolvesRelativeWorkingDirectoryAbsolutely(t *testing.T) {
 }
 
 func validFlags(hooksPath string) flags.AppFlags {
-	return flags.AppFlags{
+	appFlags := flags.AppFlags{
 		Profile:                  "compat",
 		Port:                     9000,
 		HooksFiles:               hook.HooksFiles{hooksPath},
@@ -228,4 +236,9 @@ func validFlags(hooksPath string) flags.AppFlags {
 		WriteTimeoutSeconds:      30,
 		IdleTimeoutSeconds:       90,
 	}
+	if hooksPath == "" {
+		appFlags.HooksFiles = nil
+		appFlags.HooksDir = flags.DEFAULT_HOOKS_DIR
+	}
+	return appFlags
 }

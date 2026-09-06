@@ -243,13 +243,20 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 
 	// 未提供 Hook 文件时跳过单文件校验（目录模式可在运行中发现新文件）。
 	if len(hooksFiles) == 0 {
+		if flags.HooksDir == "" {
+			result.AddError("hooks", "explicitly configured hook files must contain at least one non-empty path")
+		}
 		return
 	}
 
 	// Reject duplicate paths because runtime would load their Hook IDs twice.
 	seen := make(map[string]bool)
 	uniqueFiles := make(hook.HooksFiles, 0, len(hooksFiles))
-	for _, file := range hooksFiles {
+	for i, file := range hooksFiles {
+		if strings.TrimSpace(file) == "" {
+			result.AddError(fmt.Sprintf("hooks[%d]", i), "hook file path must not be empty")
+			continue
+		}
 		cleanFile := filepath.Clean(file)
 		if seen[cleanFile] {
 			result.AddError("hooks", fmt.Sprintf("duplicate hook file %q", file))

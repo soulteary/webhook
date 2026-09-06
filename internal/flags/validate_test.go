@@ -1291,6 +1291,28 @@ func TestValidateRejectsEmptyExplicitHookSet(t *testing.T) {
 	assert.Contains(t, fmt.Sprint(result.Errors), "must contain at least one hook")
 }
 
+func TestValidateRejectsBlankExplicitHookPaths(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		paths hook.HooksFiles
+	}{
+		{name: "single empty CLI value", paths: hook.HooksFiles{""}},
+		{name: "whitespace CLI value", paths: hook.HooksFiles{" \t "}},
+		{name: "empty parsed environment list", paths: nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			appFlags := createValidFlags()
+			appFlags.ValidateStrict = true
+			appFlags.HooksDir = ""
+			appFlags.HooksFiles = tt.paths
+
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), "hook")
+		})
+	}
+}
+
 func TestValidateAllowsEmptyHookFileInDirectoryMode(t *testing.T) {
 	hookFile := filepath.Join(t.TempDir(), "empty.yaml")
 	require.NoError(t, os.WriteFile(hookFile, []byte("[]\n"), 0o600))
