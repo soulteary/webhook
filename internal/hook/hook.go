@@ -818,9 +818,7 @@ func (h *Hooks) loadFromFileWithOptions(path string, asTemplate, strict, validat
 	}
 
 	if asTemplate {
-		funcMap := template.FuncMap{"getenv": getenv, "getenvRequired": getenvRequired}
-
-		tmpl, err := template.New("hooks").Funcs(funcMap).Parse(string(file))
+		tmpl, err := template.New("hooks").Funcs(templateFunctions()).Parse(string(file))
 		if err != nil {
 			return err
 		}
