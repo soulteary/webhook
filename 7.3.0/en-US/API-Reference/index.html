@@ -1,0 +1,2158 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Hardened and observable webhook-to-command runner">
+      
+      
+      
+        <link rel="canonical" href="https://soulteary.github.io/webhook/latest/en-US/API-Reference/">
+      
+      
+        <link rel="prev" href="../Referencing-Request-Values/">
+      
+      
+        <link rel="next" href="../Security-Best-Practices/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../logo/logo-600x600.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>API reference - WebHook</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="WebHook" class="md-header__button md-logo" aria-label="WebHook" data-md-component="logo">
+      
+  <img src="../../logo/logo-600x600.jpg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WebHook
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/soulteary/webhook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    soulteary/webhook
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="WebHook" class="md-nav__button md-logo" aria-label="WebHook" data-md-component="logo">
+      
+  <img src="../../logo/logo-600x600.jpg" alt="logo">
+
+    </a>
+    WebHook
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/soulteary/webhook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    soulteary/webhook
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Container-Images/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container images
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Configuration-Tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Hook-Definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook definition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Hook-Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Hook-Examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Webhook-Parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Referencing-Request-Values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Request values
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#base-url" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base URL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Endpoints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Endpoints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-root-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Root Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-health-check-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Health Check Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-liveness-and-readiness-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Liveness and Readiness Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-version-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Version Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-metrics-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Metrics Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-openapi-specification-endpoint-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. OpenAPI Specification Endpoint (Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-config-ui-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Config UI (Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-hook-execution-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Hook Execution Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#request-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#response-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response Headers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Response Headers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-response-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Response Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-specific-response-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook-Specific Response Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cors-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS Support
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeouts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeouts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#streaming-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-codes-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Codes Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Security-Best-Practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Performance-Tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Testing-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Migration-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Release-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OwlMail-Integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OwlMail integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Container-Images/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    容器镜像
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Hook-Definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook 定义
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Hook-Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook 规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Hook-Examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook 示例
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Webhook-Parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动参数
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Referencing-Request-Values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    请求参数
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/API-Reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Security-Best-Practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安全
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Performance-Tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    性能
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Testing-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    测试
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    故障排除
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Migration-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Release-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/OwlMail-Integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OwlMail 集成
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#base-url" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base URL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Endpoints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Endpoints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-root-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Root Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-health-check-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Health Check Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-liveness-and-readiness-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Liveness and Readiness Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-version-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Version Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-metrics-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Metrics Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-openapi-specification-endpoint-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. OpenAPI Specification Endpoint (Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-config-ui-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Config UI (Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-hook-execution-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Hook Execution Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#request-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#response-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response Headers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Response Headers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-response-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Response Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-specific-response-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook-Specific Response Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cors-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS Support
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeouts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeouts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#streaming-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-codes-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Codes Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="api-reference">API Reference</h1>
+<p>This document describes all HTTP endpoints provided by the Webhook server.</p>
+<h2 id="base-url">Base URL</h2>
+<p>By default, the Webhook server runs on port <code>9000</code>. The base URL format is:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>http://your-server:9000
+</code></pre></div>
+<p>You can customize the IP address and port using the <code>-ip</code> and <code>-port</code> command-line arguments or environment variables.</p>
+<p><strong>Reserved paths and path conflicts:</strong> Do not set <code>-openapi-path</code> or <code>-config-ui-path</code> to a path that conflicts with reserved endpoints. Reserved paths include <code>/</code>, <code>/health</code>, <code>/livez</code>, <code>/readyz</code>, <code>/version</code>, <code>/metrics</code>, and the hook base path (e.g. <code>/hooks</code>). If a conflict is detected at startup, the server will skip registering that route and log a warning.</p>
+<h2 id="endpoints">Endpoints</h2>
+<h3 id="1-root-endpoint">1. Root Endpoint</h3>
+<p><strong>Endpoint:</strong> <code>GET /</code></p>
+<p><strong>Description:</strong> Simple health check endpoint that returns "OK".</p>
+<p><strong>Response:</strong>
+- <strong>Status Code:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>text/plain</code>
+- <strong>Body:</strong> <code>OK</code></p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>http://localhost:9000/
+</code></pre></div></p>
+<hr />
+<h3 id="2-health-check-endpoint">2. Health Check Endpoint</h3>
+<p><strong>Endpoint:</strong> <code>GET /health</code></p>
+<p><strong>Description:</strong> Health check endpoint that returns server status in JSON format.</p>
+<p><strong>Response:</strong>
+- <strong>Status Code:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>application/json</code>
+- <strong>Body:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ok"</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>curl<span class="w"> </span>http://localhost:9000/health
+</code></pre></div></p>
+<p><strong>Note:</strong> The exact JSON structure is defined by the health check library (e.g. it may include multiple check results). For the precise schema, see the OpenAPI spec when <code>-openapi</code> is enabled.</p>
+<hr />
+<h3 id="3-liveness-and-readiness-endpoints">3. Liveness and Readiness Endpoints</h3>
+<p><strong>Endpoints:</strong> <code>GET /livez</code>, <code>GET /readyz</code></p>
+<p><strong>Description:</strong> Kubernetes-style liveness and readiness probes. <code>/livez</code> indicates the process is running; <code>/readyz</code> reports whether the server is ready to accept traffic (e.g. after loading hooks).</p>
+<p><strong>Response:</strong>
+- <strong>Status Code:</strong> <code>200 OK</code> when healthy/ready; non-2xx when not.
+- <strong>Content-Type:</strong> <code>application/json</code>
+- <strong>Body:</strong> Implementation-defined JSON (see OpenAPI spec for schema when <code>-openapi</code> is enabled).</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>curl<span class="w"> </span>http://localhost:9000/livez
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>curl<span class="w"> </span>http://localhost:9000/readyz
+</code></pre></div></p>
+<hr />
+<h3 id="4-version-endpoint">4. Version Endpoint</h3>
+<p><strong>Endpoint:</strong> <code>GET /version</code></p>
+<p><strong>Description:</strong> Returns server version and build information in JSON format, with optional <code>X-</code>-prefixed response headers for version details.</p>
+<p><strong>Response:</strong>
+- <strong>Status Code:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>application/json</code>
+- <strong>Headers:</strong> <code>X-Version</code> is always present. <code>X-Commit</code>, <code>X-Build-Date</code>, and <code>X-Branch</code> are included when the corresponding build metadata is available.
+- <strong>Body:</strong> JSON with <code>version</code>, <code>commit</code>, <code>build_date</code>, <code>branch</code>, <code>go_version</code>, <code>platform</code>, and <code>compiler</code>. Optional fields may be omitted when empty. The OpenAPI spec contains the complete object schema when <code>-openapi</code> is enabled.
+- <strong>Other methods:</strong> Return <code>405 Method Not Allowed</code> with <code>Allow: GET, HEAD</code>.</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>curl<span class="w"> </span>http://localhost:9000/version
+</code></pre></div></p>
+<p><code>0.0.0.0</code> is a bind address, not a client destination. Use <code>localhost</code>, <code>127.0.0.1</code>, or the server's reachable IP address or hostname when calling this endpoint.</p>
+<hr />
+<h3 id="5-metrics-endpoint">5. Metrics Endpoint</h3>
+<p><strong>Endpoint:</strong> <code>GET /metrics</code></p>
+<p><strong>Description:</strong> Prometheus metrics endpoint for monitoring and observability.</p>
+<p><strong>Response:</strong>
+- <strong>Status Code:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>text/plain; version=0.0.4; charset=utf-8</code>
+- <strong>Body:</strong> Prometheus metrics in text format</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>curl<span class="w"> </span>http://localhost:9000/metrics
+</code></pre></div></p>
+<p><strong>Available Metrics:</strong>
+- <code>webhook_http_requests_total</code>: Total number of HTTP requests
+- <code>webhook_http_request_duration_seconds</code>: HTTP request duration histogram
+- <code>webhook_hook_executions_total</code>: Total number of hook executions
+- <code>webhook_hook_execution_duration_seconds</code>: Hook execution duration histogram
+- <code>webhook_system_memory_bytes</code>: System memory usage
+- <code>webhook_system_cpu_percent</code>: System CPU usage percentage</p>
+<hr />
+<h3 id="6-openapi-specification-endpoint-optional">6. OpenAPI Specification Endpoint (Optional)</h3>
+<p><strong>Endpoint:</strong> <code>GET /openapi</code> (or custom path via <code>-openapi-path</code>)</p>
+<p><strong>Availability:</strong> Only when the server is started with the <code>-openapi</code> flag (or <code>OPENAPI_ENABLED=true</code>). Not exposed by default. Recommend use only for debugging or intranet.</p>
+<p><strong>Description:</strong> Returns the OpenAPI 3.0.x specification (JSON) for the webhook HTTP API. Use with Swagger UI, Swagger Editor, or client code generators.</p>
+<p><strong>Response:</strong>
+- <strong>Status Code:</strong> <code>200 OK</code>
+- <strong>Content-Type:</strong> <code>application/json; charset=utf-8</code>
+- <strong>Body:</strong> OpenAPI 3.0.3 document describing <code>/</code>, <code>/health</code>, <code>/livez</code>, <code>/readyz</code>, <code>/version</code>, <code>/metrics</code>, and <code>/hooks/{id}</code> (or custom hook prefix).</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Start server with OpenAPI enabled</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>./webhook<span class="w"> </span>-hooks<span class="w"> </span>hooks.json<span class="w"> </span>-openapi
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Fetch the spec</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>curl<span class="w"> </span>http://localhost:9000/openapi
+</code></pre></div></p>
+<p>You can also print the spec to stdout at startup with <code>-openapi-print</code> (e.g. <code>./webhook -openapi -openapi-print &gt; openapi.json</code>).</p>
+<hr />
+<h3 id="7-config-ui-optional">7. Config UI (Optional)</h3>
+<p><strong>Endpoints:</strong> <code>GET /config-ui</code>, <code>GET /config-ui/</code>, <code>POST /config-ui/api/generate</code> (or custom path via <code>-config-ui-path</code>)</p>
+<p><strong>Availability:</strong> Config UI is mounted on the webhook server when <code>-config-ui</code> is enabled (path via <code>-config-ui-path</code>, default <code>/config-ui</code>). Not exposed by default; recommend use only for debugging or intranet.</p>
+<p><strong>Description:</strong> Web UI and API for generating hook configuration (YAML/JSON) and call examples.</p>
+<ul>
+<li><strong>GET</strong> <code>{config-ui-path}</code> or <code>{config-ui-path}/</code>: Returns the config generator HTML page.</li>
+<li><strong>GET</strong> <code>{config-ui-path}/static/*</code>: Static assets (CSS, JS).</li>
+<li><strong>POST</strong> <code>{config-ui-path}/api/generate</code>: Accepts JSON body with form fields (e.g. <code>id</code>, <code>execute-command</code>, <code>response-message</code>, <code>trigger-rule</code>). Returns <code>{ "yaml", "json", "callUrl", "curlExample" }</code> on success, or <code>{ "error": "..." }</code> with 4xx on validation error.</li>
+<li><strong>GET</strong> <code>{config-ui-path}/api/capabilities</code>: Returns <code>{ "saveToDir": true|false }</code>. When <code>true</code>, the UI shows a "Save to directory" option (directory mode: default <code>./hooks</code> or explicit <code>-hooks-dir</code>).</li>
+<li><strong>POST</strong> <code>{config-ui-path}/api/save</code>: Writes generated config to hooks directory. Body: <code>{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }</code>. Returns <code>{ "ok": "&lt;absolute-path&gt;" }</code> on success, or <code>{ "error": "..." }</code> with 4xx when disabled or invalid (e.g. path traversal, format mismatch, invalid hook config). Filename must have extension <code>.json</code>, <code>.yaml</code>, or <code>.yml</code>.</li>
+</ul>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Enable Config UI on webhook server (default port 9000)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>./webhook<span class="w"> </span>-config-ui
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># Open http://localhost:9000/config-ui in a browser</span>
+</code></pre></div></p>
+<hr />
+<h3 id="8-hook-execution-endpoint">8. Hook Execution Endpoint</h3>
+<p><strong>Endpoint:</strong> <code>ANY /hooks/{hook-id}</code> by default; configurable per hook or with <code>-http-methods</code></p>
+<p><strong>Description:</strong> Execute a configured hook. A hook-level <code>http-methods</code> list takes precedence over the <code>-http-methods</code> flag. When neither is configured, all standard HTTP methods accepted by the server are allowed for backward compatibility.</p>
+<p><strong>URL Parameters:</strong>
+- <code>hook-id</code> (required): The ID of the hook to execute, as defined in your hooks configuration file.</p>
+<p><strong>Request Headers:</strong>
+- <code>Content-Type</code>: Optional. Can be <code>application/json</code>, <code>application/x-www-form-urlencoded</code>, <code>multipart/form-data</code>, or <code>text/plain</code>.
+- <code>X-Request-Id</code>: Optional. If provided and <code>-x-request-id</code> is enabled, this will be used as the request ID for logging.</p>
+<p><strong>Request Body:</strong>
+The request body can contain:
+- JSON data
+- Form data (URL-encoded or multipart)
+- Plain text
+- Query parameters (for GET requests)</p>
+<p><strong>Response:</strong>
+- <strong>Status Code:</strong> 
+  - <code>200 OK</code>: Hook executed successfully
+  - <code>400 Bad Request</code>: Invalid request (e.g., malformed JSON, missing required parameters)
+  - <code>404 Not Found</code>: Hook ID not found
+  - <code>405 Method Not Allowed</code>: HTTP method not allowed for this hook
+  - <code>408 Request Timeout</code>: Request timeout
+  - <code>429 Too Many Requests</code>: Rate limit exceeded (if rate limiting is enabled)
+  - <code>500 Internal Server Error</code>: Server error during hook execution
+  - <code>503 Service Unavailable</code>: Server is shutting down
+  - Custom status code: As configured in <code>success-http-response-code</code> or <code>trigger-rule-mismatch-http-response-code</code></p>
+<ul>
+<li><strong>Content-Type:</strong> </li>
+<li><code>text/plain; charset=utf-8</code> for default success and error responses</li>
+<li>
+<p>As configured in <code>response-headers</code></p>
+</li>
+<li>
+<p><strong>405 response header:</strong> <code>Allow</code> lists the methods configured for the matched hook.</p>
+</li>
+<li>
+<p><strong>Response Body:</strong></p>
+</li>
+<li>Success: Custom message from <code>response-message</code>, command output (if <code>include-command-output-in-response</code> is enabled), or default message</li>
+<li>Error: Plain-text compatibility message. Request and hook identifiers remain available in logs and tracing.</li>
+</ul>
+<p>Malformed, non-empty JSON sent with a JSON content type returns <code>400 Bad Request</code> with <code>Invalid JSON payload.</code>. Trigger rules and the configured command are not evaluated after this parsing failure. An empty body remains valid for hooks that authenticate the exact empty payload with HMAC.</p>
+<p><strong>Example - Successful Execution:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># POST request with JSON body</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:9000/hooks/redeploy-webhook<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"branch": "main", "commit": "abc123"}'</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># GET request with query parameters</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>curl<span class="w"> </span><span class="s2">"http://localhost:9000/hooks/redeploy-webhook?branch=main&amp;commit=abc123"</span>
+</code></pre></div></p>
+<p><strong>Example - Hook Not Found:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:9000/hooks/non-existent-hook
+</code></pre></div></p>
+<p><strong>Response:</strong> <code>Hook not found.</code></p>
+<p><strong>Example - Method Not Allowed:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># If hook only allows POST, but we send GET</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>http://localhost:9000/hooks/post-only-hook
+</code></pre></div></p>
+<p><strong>Response:</strong> <code>HTTP GET method not allowed for hook "post-only-hook"</code></p>
+<p><strong>Response header:</strong> <code>Allow: POST</code></p>
+<hr />
+<h2 id="request-id">Request ID</h2>
+<p>Webhook automatically generates a unique request ID for each request. This ID is used for:
+- Logging and tracing
+- Error responses
+- Request correlation</p>
+<p>You can customize the request ID behavior:
+- Use <code>-x-request-id</code> to use the <code>X-Request-Id</code> header if present
+- Use <code>-x-request-id-limit</code> to limit the length of the <code>X-Request-Id</code> header</p>
+<p>The request ID appears in:
+- Server logs
+- Error responses
+- Debug output</p>
+<hr />
+<h2 id="response-headers">Response Headers</h2>
+<h3 id="custom-response-headers">Custom Response Headers</h3>
+<p>You can set custom response headers using the <code>-header</code> flag:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>webhook<span class="w"> </span>-header<span class="w"> </span><span class="s2">"X-Custom-Header=value"</span><span class="w"> </span>-header<span class="w"> </span><span class="s2">"X-Another-Header=another-value"</span>
+</code></pre></div>
+<p>These headers will be included in all responses.</p>
+<h3 id="hook-specific-response-headers">Hook-Specific Response Headers</h3>
+<p>You can also configure response headers per hook in your hooks configuration:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-hook"</span><span class="p">,</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">"execute-command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/path/to/script.sh"</span><span class="p">,</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nt">"response-headers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"X-Custom-Header"</span><span class="p">,</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"custom-value"</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="rate-limiting">Rate Limiting</h2>
+<p>If rate limiting is enabled (via <code>-rate-limit-enabled</code>, <code>-rate-limit-rps</code>, and <code>-rate-limit-burst</code>), the server will return <code>429 Too Many Requests</code> when the rate limit is exceeded.</p>
+<p><strong>Response Headers:</strong>
+- <code>X-RateLimit-Limit</code>: Maximum number of requests allowed
+- <code>X-RateLimit-Remaining</code>: Number of requests remaining in the current window
+- <code>X-RateLimit-Reset</code>: Time when the rate limit resets</p>
+<hr />
+<h2 id="cors-support">CORS Support</h2>
+<p>To enable CORS, use the <code>-header</code> flag to set CORS headers:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>webhook<span class="w"> </span>-header<span class="w"> </span><span class="s2">"Access-Control-Allow-Origin=*"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">        </span>-header<span class="w"> </span><span class="s2">"Access-Control-Allow-Methods=GET,POST,OPTIONS"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">        </span>-header<span class="w"> </span><span class="s2">"Access-Control-Allow-Headers=Content-Type"</span>
+</code></pre></div>
+<hr />
+<h2 id="timeouts">Timeouts</h2>
+<p>The server has configurable timeouts:
+- <code>-read-header-timeout-seconds</code>: Time to read request headers (default: 5 seconds)
+- <code>-read-timeout-seconds</code>: Time to read request body (default: 10 seconds)
+- <code>-write-timeout-seconds</code>: Time to write response (default: 30 seconds)
+- <code>-idle-timeout-seconds</code>: Time to keep idle connections (default: 90 seconds)
+- <code>-hook-timeout-seconds</code>: Time for hook execution (default: 30 seconds)</p>
+<p>If a timeout occurs, the server will return an appropriate error response.</p>
+<hr />
+<h2 id="streaming-output">Streaming Output</h2>
+<p>If a hook has <code>stream-command-output</code> enabled, the command's stdout and stderr are streamed in real-time to the HTTP response. This is useful for long-running commands.</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:9000/hooks/long-running-hook
+</code></pre></div></p>
+<p>The response will stream the command output as it is produced.</p>
+<hr />
+<h2 id="status-codes-summary">Status Codes Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Status Code</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Success</td>
+</tr>
+<tr>
+<td>400</td>
+<td>Bad Request - Invalid request format or parameters</td>
+</tr>
+<tr>
+<td>404</td>
+<td>Not Found - Hook ID not found</td>
+</tr>
+<tr>
+<td>405</td>
+<td>Method Not Allowed - HTTP method not allowed for this hook</td>
+</tr>
+<tr>
+<td>408</td>
+<td>Request Timeout</td>
+</tr>
+<tr>
+<td>429</td>
+<td>Too Many Requests - Rate limit exceeded</td>
+</tr>
+<tr>
+<td>500</td>
+<td>Internal Server Error - Server error during execution</td>
+</tr>
+<tr>
+<td>503</td>
+<td>Service Unavailable - Server is shutting down</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li>
+<p><strong>Use HTTPS</strong>: Always use a reverse proxy (nginx, Traefik, etc.) to provide HTTPS in production.</p>
+</li>
+<li>
+<p><strong>Set Request Timeouts</strong>: Configure appropriate timeouts based on your use case.</p>
+</li>
+<li>
+<p><strong>Enable Rate Limiting</strong>: Use rate limiting to prevent abuse.</p>
+</li>
+<li>
+<p><strong>Use Request IDs</strong>: Include <code>X-Request-Id</code> headers for better traceability.</p>
+</li>
+<li>
+<p><strong>Monitor Metrics</strong>: Use the <code>/metrics</code> endpoint for monitoring and alerting.</p>
+</li>
+<li>
+<p><strong>Handle Errors Gracefully</strong>: Check status codes and parse error responses appropriately.</p>
+</li>
+<li>
+<p><strong>Use Health Checks</strong>: Monitor the <code>/health</code> endpoint for service availability.</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
