@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/soulteary/cli-kit/validator"
+	"github.com/soulteary/webhook/internal/hook"
 	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/stretchr/testify/assert"
@@ -1230,6 +1231,106 @@ func TestValidateRejectsCommandArgumentCountIncludingExecutable(t *testing.T) {
 	result := Validate(appFlags)
 	require.True(t, result.HasErrors())
 	assert.Contains(t, fmt.Sprint(result.Errors), "including argv[0]")
+}
+
+func TestValidateRejectsUnreachableHookIDs(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		id             string
+		validateStrict bool
+		message        string
+	}{
+		{name: "surrounding whitespace", id: " hello ", message: "leading or trailing whitespace"},
+		{name: "whitespace only in strict mode", id: "   ", validateStrict: true, message: "must not be empty"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+			content := fmt.Sprintf("- id: %q\n  execute-command: /bin/echo\n", tt.id)
+			require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+			appFlags := createValidFlags()
+			appFlags.ValidateConfig = !tt.validateStrict
+			appFlags.ValidateStrict = tt.validateStrict
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), tt.message)
+		})
+	}
+}
+
+func TestValidateRejectsStaticallyOversizedCommandArguments(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		command        string
+		argument       string
+		argumentSource string
+		maxArgLength   int
+		maxTotalLength int
+		message        string
+	}{
+		{
+			name:           "executable exceeds per-argument limit",
+			command:        "/bin/echo",
+			maxArgLength:   4,
+			maxTotalLength: 100,
+			message:        "execute-command: length 9 exceeds max-arg-length 4",
+		},
+		{
+			name:           "literal exceeds per-argument limit",
+			command:        "/bin/echo",
+			argument:       "01234567890",
+			argumentSource: hook.SourceString,
+			maxArgLength:   10,
+			maxTotalLength: 100,
+			message:        "literal argument length 11 exceeds max-arg-length 10",
+		},
+		{
+			name:           "known arguments exceed total limit",
+			command:        "/bin/echo",
+			argument:       "ok",
+			argumentSource: hook.SourceString,
+			maxArgLength:   100,
+			maxTotalLength: 10,
+			message:        "known command argument length 11 exceeds max-total-args-length 10",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+			content := fmt.Sprintf("- id: static-limit\n  execute-command: %s\n", tt.command)
+			if tt.argumentSource != "" {
+				content += fmt.Sprintf("  pass-arguments-to-command:\n    - source: %s\n      name: %q\n", tt.argumentSource, tt.argument)
+			}
+			require.NoError(t, os.WriteFile(hookFile, []byte(content), 0o600))
+
+			appFlags := createValidFlags()
+			appFlags.ValidateConfig = true
+			appFlags.MaxArgLength = tt.maxArgLength
+			appFlags.MaxTotalArgsLength = tt.maxTotalLength
+			appFlags.HooksFiles = []string{hookFile}
+			result := Validate(appFlags)
+			require.True(t, result.HasErrors())
+			assert.Contains(t, fmt.Sprint(result.Errors), tt.message)
+		})
+	}
+}
+
+func TestValidateAllowsDynamicArgumentAtStaticTotalBoundary(t *testing.T) {
+	hookFile := filepath.Join(t.TempDir(), "hooks.yaml")
+	require.NoError(t, os.WriteFile(hookFile, []byte(`
+- id: dynamic-limit
+  execute-command: /bin/echo
+  pass-arguments-to-command:
+    - source: raw-request-body
+`), 0o600))
+
+	appFlags := createValidFlags()
+	appFlags.ValidateConfig = true
+	appFlags.MaxArgLength = len("/bin/echo")
+	appFlags.MaxTotalArgsLength = len("/bin/echo")
+	appFlags.HooksFiles = []string{hookFile}
+	result := Validate(appFlags)
+	require.False(t, result.HasErrors(), "%+v", result.Errors)
 }
 
 func TestValidateRejectsOutOfRangeHookResponseCodes(t *testing.T) {

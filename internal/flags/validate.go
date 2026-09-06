@@ -276,18 +276,22 @@ func validateHookFiles(result *ValidationResult, flags AppFlags) {
 		// 验证 Hook 内容
 		validateHookContent(result, hookFile, hooks, hookOrigins,
 			flags.Profile == "secure" || flags.ValidateConfig || flags.ValidateStrict || flags.Doctor,
-			flags.MaxArgsCount)
+			flags.MaxArgsCount, flags.MaxArgLength, flags.MaxTotalArgsLength)
 	}
 }
 
 // validateHookContent 验证 Hook 内容
-func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string, validateSemantics bool, maxArgsCount int) {
+func validateHookContent(result *ValidationResult, hookFile string, hooks hook.Hooks, hookOrigins map[string]string, validateSemantics bool, maxArgsCount, maxArgLength, maxTotalArgsLength int) {
 	for i, h := range hooks {
+		idField := fmt.Sprintf("hook-file[%s].hooks[%d].id", hookFile, i)
 		// 验证 Hook ID
-		if h.ID == "" {
-			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].id", hookFile, i),
+		if strings.TrimSpace(h.ID) == "" {
+			result.AddError(idField,
 				i18n.Sprintf(i18n.ERR_VALIDATE_HOOK_ID_EMPTY))
 			continue
+		}
+		if strings.TrimSpace(h.ID) != h.ID {
+			result.AddError(idField, "must not contain leading or trailing whitespace")
 		}
 		if validateSemantics && strings.TrimSpace(h.ExecuteCommand) == "" {
 			result.AddError(fmt.Sprintf("hook-file[%s].hooks[%d].execute-command", hookFile, i),
@@ -318,6 +322,7 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 				result.AddError(prefix+".pass-arguments-to-command",
 					fmt.Sprintf("command would have %d arguments including argv[0], exceeding max-args-count %d", 1+len(h.PassArgumentsToCommand), maxArgsCount))
 			}
+			validateStaticCommandArguments(result, prefix, h, maxArgLength, maxTotalArgsLength)
 			validateRuleContent(result, prefix+".trigger-rule", h.TriggerRule)
 			validateEnvironmentArguments(result, prefix+".pass-environment-to-command", h.PassEnvironmentToCommand)
 			validateArguments(result, prefix+".pass-arguments-to-command", h.PassArgumentsToCommand)
@@ -327,6 +332,29 @@ func validateHookContent(result *ValidationResult, hookFile string, hooks hook.H
 
 		// 验证命令路径（如果指定了允许的命令路径）
 		// 注意：这里只做基本验证，实际执行时的安全检查在 security 模块中
+	}
+}
+
+func validateStaticCommandArguments(result *ValidationResult, prefix string, configuredHook hook.Hook, maxArgLength, maxTotalArgsLength int) {
+	knownTotalLength := len(configuredHook.ExecuteCommand)
+	if maxArgLength > 0 && knownTotalLength > maxArgLength {
+		result.AddError(prefix+".execute-command",
+			fmt.Sprintf("length %d exceeds max-arg-length %d", knownTotalLength, maxArgLength))
+	}
+	for i, argument := range configuredHook.PassArgumentsToCommand {
+		if argument.Source != hook.SourceString {
+			continue
+		}
+		argumentLength := len(argument.Name)
+		knownTotalLength += argumentLength
+		if maxArgLength > 0 && argumentLength > maxArgLength {
+			result.AddError(fmt.Sprintf("%s.pass-arguments-to-command[%d].name", prefix, i),
+				fmt.Sprintf("literal argument length %d exceeds max-arg-length %d", argumentLength, maxArgLength))
+		}
+	}
+	if maxTotalArgsLength > 0 && knownTotalLength > maxTotalArgsLength {
+		result.AddError(prefix+".pass-arguments-to-command",
+			fmt.Sprintf("known command argument length %d exceeds max-total-args-length %d", knownTotalLength, maxTotalArgsLength))
 	}
 }
 

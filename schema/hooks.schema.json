@@ -183,7 +183,7 @@
       "additionalProperties": false,
       "required": ["id", "execute-command"],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$" },
         "execute-command": { "type": "string", "minLength": 1 },
         "command-working-directory": { "type": "string" },
         "response-message": { "type": "string" },
