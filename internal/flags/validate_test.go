@@ -105,6 +105,7 @@ func createValidFlags() AppFlags {
 		MaxMultipartMem:    int64(DEFAULT_MAX_MPART_MEM),
 		MaxRequestBodySize: int64(DEFAULT_MAX_REQUEST_BODY_SIZE),
 		MaxHeaderBytes:     DEFAULT_MAX_HEADER_BYTES,
+		HooksDir:           DEFAULT_HOOKS_DIR,
 		HooksFiles:         []string{}, // 默认目录模式下允许为空
 	}
 }
