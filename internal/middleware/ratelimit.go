@@ -17,6 +17,17 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const (
+	// defaultRateLimitWindowSeconds 是 WindowSeconds 未配置时使用的窗口长度。
+	defaultRateLimitWindowSeconds = 60
+
+	// defaultFallbackRPS 是配置额度非正时兜底使用的速率（每秒请求数）。
+	//
+	// redis-kit v1.6.0 起，非正的 limit 表示"一律拒绝"，而不再是放行每个窗口
+	// 的第一个请求，因此每条 Redis 限流路径都必须先兜底再调用。
+	defaultFallbackRPS = 100
+)
+
 // RateLimiter 提供基于 IP 和基于 hook 的限流功能
 // 支持内存限流（默认）和 Redis 分布式限流
 type RateLimiter struct {
@@ -198,12 +209,26 @@ func (rl *RateLimiter) getHookLimiter(hookID string, rps int, burst int) *rate.L
 	return limiter
 }
 
+// windowSeconds 返回归一化后的限流窗口长度（秒）。
+func (rl *RateLimiter) windowSeconds() int {
+	if rl.config.WindowSeconds <= 0 {
+		return defaultRateLimitWindowSeconds
+	}
+	return rl.config.WindowSeconds
+}
+
+// fallbackRedisLimit 返回 defaultFallbackRPS 在当前窗口下对应的请求数。
+//
+// checkRedisLimit 是按窗口而非按秒计额度的，所以兜底值必须跟着窗口一起换算：
+// 固定成 6000 的话，窗口配成 3600 秒就变成每小时 6000 次，配成 1 秒就变成每秒
+// 6000 次。
+func (rl *RateLimiter) fallbackRedisLimit() int {
+	return defaultFallbackRPS * rl.windowSeconds()
+}
+
 // checkRedisLimit 使用 Redis 检查限流
 func (rl *RateLimiter) checkRedisLimit(ctx context.Context, key string, limit int) (bool, int, time.Duration) {
-	window := time.Duration(rl.config.WindowSeconds) * time.Second
-	if window == 0 {
-		window = 60 * time.Second // 默认 60 秒窗口
-	}
+	window := time.Duration(rl.windowSeconds()) * time.Second
 
 	allowed, remaining, resetTime, err := rl.redisLimiter.CheckLimit(ctx, key, limit, window)
 	if err != nil {
@@ -303,7 +328,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			globalKey := "global"
 			globalLimit := rl.config.RPS * rl.config.WindowSeconds
 			if globalLimit <= 0 {
-				globalLimit = 100 * 60 // 默认每分钟 6000 请求
+				globalLimit = rl.fallbackRedisLimit()
 			}
 
 			allowed, _, retryAfter := rl.checkRedisLimit(r.Context(), globalKey, globalLimit)
@@ -318,7 +343,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			ipKey := "ip:" + ip
 			ipLimit := rl.config.RPS * rl.config.WindowSeconds
 			if ipLimit <= 0 {
-				ipLimit = 100 * 60 // 默认每分钟 6000 请求
+				ipLimit = rl.fallbackRedisLimit()
 			}
 
 			allowed, remaining, retryAfter := rl.checkRedisLimit(r.Context(), ipKey, ipLimit)
@@ -381,11 +406,15 @@ func (rl *RateLimiter) HookMiddleware(rps int, burst int) func(next http.Handler
 					// 使用 Redis 分布式限流
 					hookKey := "hook:" + hookID
 					// 计算时间窗口内允许的请求数
-					windowSeconds := rl.config.WindowSeconds
-					if windowSeconds <= 0 {
-						windowSeconds = 60
+					hookLimit := rps * rl.windowSeconds()
+					// Same guard as the global and per-IP paths above.
+					// redis-kit v1.6.0 made a non-positive limit mean "allow
+					// nothing" -- it used to let the first request of each
+					// window through -- so an unguarded rps of 0 here would
+					// 429 every request to the hook rather than not limit it.
+					if hookLimit <= 0 {
+						hookLimit = rl.fallbackRedisLimit()
 					}
-					hookLimit := rps * windowSeconds
 
 					allowed, remaining, retryAfter := rl.checkRedisLimit(r.Context(), hookKey, hookLimit)
 					if !allowed {
