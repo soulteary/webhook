@@ -679,3 +679,29 @@ func TestHookMiddleware_NonPositiveRPSDoesNotBlockEverything(t *testing.T) {
 		}
 	}
 }
+
+// TestFallbackRedisLimit_ScalesWithWindow pins the fallback to a rate rather
+// than a fixed request count.
+//
+// checkRedisLimit charges the limit against the configured window, so a fixed
+// 6000 would mean 6000 per hour on a 3600s window and 6000 per second on a 1s
+// one. The fallback has to be computed from the same window it is spent over.
+func TestFallbackRedisLimit_ScalesWithWindow(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		windowSeconds int
+		wantWindow    int
+		wantLimit     int
+	}{
+		{"unset falls back to 60s", 0, 60, defaultFallbackRPS * 60},
+		{"negative falls back to 60s", -1, 60, defaultFallbackRPS * 60},
+		{"one second window", 1, 1, defaultFallbackRPS * 1},
+		{"one hour window", 3600, 3600, defaultFallbackRPS * 3600},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rl := &RateLimiter{config: RateLimitConfig{WindowSeconds: tc.windowSeconds}}
+			assert.Equal(t, tc.wantWindow, rl.windowSeconds())
+			assert.Equal(t, tc.wantLimit, rl.fallbackRedisLimit())
+		})
+	}
+}
