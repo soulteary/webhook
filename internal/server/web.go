@@ -206,6 +206,10 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		Pretty:         true,
 		IncludeHeaders: true,
 		HeaderPrefix:   "X-",
+		// version-kit v2.2.0 made the build details opt-in. /version is
+		// documented in the OpenAPI spec with go_version, platform and
+		// compiler as required, so keep serving them.
+		IncludeBuildDetails: true,
 	}
 	versionHandler := func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()

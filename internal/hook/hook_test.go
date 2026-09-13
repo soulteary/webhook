@@ -53,20 +53,25 @@ var checkPayloadSignatureTests = []struct {
 	payload   []byte
 	secret    string
 	signature string
-	mac       string
-	ok        bool
+	// mac is what the checker returns: the matching signature, or "" when
+	// nothing matched.
+	mac string
+	// computedMAC is the real HMAC for the payload. It must never surface in
+	// the error a rejected signature produces.
+	computedMAC string
+	ok          bool
 }{
-	{[]byte(`{"a": "z"}`), "secret", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", true},
-	{[]byte(`{"a": "z"}`), "secret", "sha1=b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", true},
-	{[]byte(`{"a": "z"}`), "secret", "sha1=XXXe04cbb22afa8ffbff8796fc1894ed27badd9e,sha1=b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", true},
-	{[]byte(``), "secret", "25af6174a0fcecc4d346680a72b7ce644b9a88e8", "25af6174a0fcecc4d346680a72b7ce644b9a88e8", true},
+	{[]byte(`{"a": "z"}`), "secret", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", true},
+	{[]byte(`{"a": "z"}`), "secret", "sha1=b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", true},
+	{[]byte(`{"a": "z"}`), "secret", "sha1=XXXe04cbb22afa8ffbff8796fc1894ed27badd9e,sha1=b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", true},
+	{[]byte(``), "secret", "25af6174a0fcecc4d346680a72b7ce644b9a88e8", "25af6174a0fcecc4d346680a72b7ce644b9a88e8", "25af6174a0fcecc4d346680a72b7ce644b9a88e8", true},
 	// failures
-	{[]byte(`{"a": "z"}`), "secret", "XXXe04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", false},
-	{[]byte(`{"a": "z"}`), "secret", "sha1=XXXe04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", false},
-	{[]byte(`{"a": "z"}`), "secret", "sha1=XXXe04cbb22afa8ffbff8796fc1894ed27badd9e,sha1=XXXe04cbb22afa8ffbff8796fc1894ed27badd9e", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", false},
-	{[]byte(`{"a": "z"}`), "secreX", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "900225703e9342328db7307692736e2f7cc7b36e", false},
-	{[]byte(`{"a": "z"}`), "", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "", false},
-	{[]byte(``), "secret", "XXXf6174a0fcecc4d346680a72b7ce644b9a88e8", "25af6174a0fcecc4d346680a72b7ce644b9a88e8", false},
+	{[]byte(`{"a": "z"}`), "secret", "XXXe04cbb22afa8ffbff8796fc1894ed27badd9e", "", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", false},
+	{[]byte(`{"a": "z"}`), "secret", "sha1=XXXe04cbb22afa8ffbff8796fc1894ed27badd9e", "", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", false},
+	{[]byte(`{"a": "z"}`), "secret", "sha1=XXXe04cbb22afa8ffbff8796fc1894ed27badd9e,sha1=XXXe04cbb22afa8ffbff8796fc1894ed27badd9e", "", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", false},
+	{[]byte(`{"a": "z"}`), "secreX", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "", "900225703e9342328db7307692736e2f7cc7b36e", false},
+	{[]byte(`{"a": "z"}`), "", "b17e04cbb22afa8ffbff8796fc1894ed27badd9e", "", "", false},
+	{[]byte(``), "secret", "XXXf6174a0fcecc4d346680a72b7ce644b9a88e8", "", "25af6174a0fcecc4d346680a72b7ce644b9a88e8", false},
 }
 
 func TestCheckPayloadSignature(t *testing.T) {
@@ -77,7 +82,7 @@ func TestCheckPayloadSignature(t *testing.T) {
 				t.Errorf("failed to check payload signature:\nexpected {mac:%#v, ok:%#v},\ngot {mac:%#v, ok:%#v}", tt.mac, tt.ok, mac, (err == nil))
 			}
 
-			if err != nil && tt.mac != "" && strings.Contains(err.Error(), tt.mac) {
+			if err != nil && tt.computedMAC != "" && strings.Contains(err.Error(), tt.computedMAC) {
 				t.Errorf("error message should not disclose expected mac: %s", err)
 			}
 		})
@@ -88,19 +93,24 @@ var checkPayloadSignature256Tests = []struct {
 	payload   []byte
 	secret    string
 	signature string
-	mac       string
-	ok        bool
+	// mac is what the checker returns: the matching signature, or "" when
+	// nothing matched.
+	mac string
+	// computedMAC is the real HMAC for the payload. It must never surface in
+	// the error a rejected signature produces.
+	computedMAC string
+	ok          bool
 }{
-	{[]byte(`{"a": "z"}`), "secret", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", true},
-	{[]byte(`{"a": "z"}`), "secret", "sha256=f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", true},
-	{[]byte(`{"a": "z"}`), "secret", "sha256=XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89,sha256=f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", true},
-	{[]byte(``), "secret", "f9e66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169", "f9e66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169", true},
+	{[]byte(`{"a": "z"}`), "secret", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", true},
+	{[]byte(`{"a": "z"}`), "secret", "sha256=f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", true},
+	{[]byte(`{"a": "z"}`), "secret", "sha256=XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89,sha256=f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", true},
+	{[]byte(``), "secret", "f9e66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169", "f9e66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169", "f9e66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169", true},
 	// failures
-	{[]byte(`{"a": "z"}`), "secret", "XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", false},
-	{[]byte(`{"a": "z"}`), "secret", "sha256=XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", false},
-	{[]byte(`{"a": "z"}`), "secret", "sha256=XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89,sha256=XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", false},
-	{[]byte(`{"a": "z"}`), "", "XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "", false},
-	{[]byte(``), "secret", "XXX66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169", "f9e66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169", false},
+	{[]byte(`{"a": "z"}`), "secret", "XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", false},
+	{[]byte(`{"a": "z"}`), "secret", "sha256=XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", false},
+	{[]byte(`{"a": "z"}`), "secret", "sha256=XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89,sha256=XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "", "f417af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", false},
+	{[]byte(`{"a": "z"}`), "", "XXX7af3a21bd70379b5796d5f013915e7029f62c580fb0f500f59a35a6f04c89", "", "", false},
+	{[]byte(``), "secret", "XXX66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169", "", "f9e66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169", false},
 }
 
 func TestCheckPayloadSignature256(t *testing.T) {
@@ -111,7 +121,7 @@ func TestCheckPayloadSignature256(t *testing.T) {
 				t.Errorf("failed to check payload signature:\nexpected {mac:%#v, ok:%#v},\ngot {mac:%#v, ok:%#v}", tt.mac, tt.ok, mac, (err == nil))
 			}
 
-			if err != nil && tt.mac != "" && strings.Contains(err.Error(), tt.mac) {
+			if err != nil && tt.computedMAC != "" && strings.Contains(err.Error(), tt.computedMAC) {
 				t.Errorf("error message should not disclose expected mac: %s", err)
 			}
 		})
@@ -122,16 +132,21 @@ var checkPayloadSignature512Tests = []struct {
 	payload   []byte
 	secret    string
 	signature string
-	mac       string
-	ok        bool
+	// mac is what the checker returns: the matching signature, or "" when
+	// nothing matched.
+	mac string
+	// computedMAC is the real HMAC for the payload. It must never surface in
+	// the error a rejected signature produces.
+	computedMAC string
+	ok          bool
 }{
-	{[]byte(`{"a": "z"}`), "secret", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", true},
-	{[]byte(`{"a": "z"}`), "secret", "sha512=4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", true},
-	{[]byte(``), "secret", "b0e9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901", "b0e9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901", true},
+	{[]byte(`{"a": "z"}`), "secret", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", true},
+	{[]byte(`{"a": "z"}`), "secret", "sha512=4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", true},
+	{[]byte(``), "secret", "b0e9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901", "b0e9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901", "b0e9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901", true},
 	// failures
-	{[]byte(`{"a": "z"}`), "secret", "74a0081f5b5988f4f3e8b8dd34dadc6291611f2e6260635a7e1535f8e95edb97ff520ba8b152e8ca5760ac42639854f3242e29efc81be73a8bf52d474d31ffea", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", false},
-	{[]byte(`{"a": "z"}`), "", "74a0081f5b5988f4f3e8b8dd34dadc6291611f2e6260635a7e1535f8e95edb97ff520ba8b152e8ca5760ac42639854f3242e29efc81be73a8bf52d474d31ffea", "", false},
-	{[]byte(``), "secret", "XXX9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901", "b0e9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901", false},
+	{[]byte(`{"a": "z"}`), "secret", "74a0081f5b5988f4f3e8b8dd34dadc6291611f2e6260635a7e1535f8e95edb97ff520ba8b152e8ca5760ac42639854f3242e29efc81be73a8bf52d474d31ffea", "", "4ab17cc8ec668ead8bf498f87f8f32848c04d5ca3c9bcfcd3db9363f0deb44e580b329502a7fdff633d4d8fca301cc5c94a55a2fec458c675fb0ff2655898324", false},
+	{[]byte(`{"a": "z"}`), "", "74a0081f5b5988f4f3e8b8dd34dadc6291611f2e6260635a7e1535f8e95edb97ff520ba8b152e8ca5760ac42639854f3242e29efc81be73a8bf52d474d31ffea", "", "", false},
+	{[]byte(``), "secret", "XXX9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901", "", "b0e9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901", false},
 }
 
 func TestCheckPayloadSignature512(t *testing.T) {
@@ -142,7 +157,7 @@ func TestCheckPayloadSignature512(t *testing.T) {
 				t.Errorf("failed to check payload signature:\nexpected {mac:%#v, ok:%#v},\ngot {mac:%#v, ok:%#v}", tt.mac, tt.ok, mac, (err == nil))
 			}
 
-			if err != nil && tt.mac != "" && strings.Contains(err.Error(), tt.mac) {
+			if err != nil && tt.computedMAC != "" && strings.Contains(err.Error(), tt.computedMAC) {
 				t.Errorf("error message should not disclose expected mac: %s", err)
 			}
 		})
