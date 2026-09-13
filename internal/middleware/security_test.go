@@ -24,8 +24,11 @@ func TestSecurityHeaders_Default(t *testing.T) {
 	if got := rr.Header().Get("X-Frame-Options"); got != "DENY" {
 		t.Errorf("X-Frame-Options = %q, want %q", got, "DENY")
 	}
-	if got := rr.Header().Get("X-XSS-Protection"); got != "1; mode=block" {
-		t.Errorf("X-XSS-Protection = %q, want %q", got, "1; mode=block")
+	// middleware-kit v2.2.0 defaults this to "0": the legacy filter that
+	// "1; mode=block" turned on caused XSS bugs of its own, and the header is
+	// deprecated in favour of Content-Security-Policy.
+	if got := rr.Header().Get("X-XSS-Protection"); got != "0" {
+		t.Errorf("X-XSS-Protection = %q, want %q", got, "0")
 	}
 	if got := rr.Header().Get("Referrer-Policy"); got != "strict-origin-when-cross-origin" {
 		t.Errorf("Referrer-Policy = %q, want %q", got, "strict-origin-when-cross-origin")
