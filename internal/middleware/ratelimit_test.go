@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -642,4 +643,39 @@ func TestRateLimiter_HookMiddleware_WithConfig(t *testing.T) {
 	handler.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// TestHookMiddleware_NonPositiveRPSDoesNotBlockEverything pins the guard on the
+// Redis hook path.
+//
+// redis-kit v1.6.0 changed a non-positive limit from "let the first request of
+// each window through" to "allow nothing". The global and per-IP paths already
+// substituted a default for a non-positive limit; the hook path did not, so an
+// rps of 0 turned into a hard 429 on every request instead of an unconfigured
+// limit.
+func TestHookMiddleware_NonPositiveRPSDoesNotBlockEverything(t *testing.T) {
+	mr := miniredis.RunT(t)
+
+	rl := NewRateLimiterWithRedis(true, 100, 10, mr.Addr(), "", 0, "test:", 60)
+	if rl == nil {
+		t.Fatal("NewRateLimiterWithRedis returned nil")
+	}
+	t.Cleanup(func() { _ = rl.Close() })
+	if !rl.IsRedisEnabled() {
+		t.Fatal("expected the Redis-backed limiter to be enabled")
+	}
+
+	handler := rl.HookMiddleware(0, 0)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	for i := range 3 {
+		req := httptest.NewRequest(http.MethodPost, "/hooks/some-hook", nil)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("request %d: got %d, want %d — a non-positive rps must not reject every request",
+				i+1, rr.Code, http.StatusOK)
+		}
+	}
 }
