@@ -3,7 +3,7 @@ module github.com/soulteary/webhook
 go 1.27.0
 
 require (
-	github.com/alicebob/miniredis/v2 v2.36.1
+	github.com/alicebob/miniredis/v2 v2.39.0
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gofiber/fiber/v3 v3.5.0
