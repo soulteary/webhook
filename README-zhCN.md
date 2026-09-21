@@ -75,14 +75,14 @@ go install github.com/soulteary/webhook@latest
 # 最新稳定 Core 镜像
 docker pull soulteary/webhook:latest
 
-# 最小化 scratch 镜像（无前缀的 7.2.0 是它的别名）
-docker pull soulteary/webhook:core-7.2.0
+# 最小化 scratch 镜像（无前缀的 7.3.1 是它的别名）
+docker pull soulteary/webhook:core-7.3.1
 
 # Shell 脚本运行环境
-docker pull soulteary/webhook:runner-7.2.0
+docker pull soulteary/webhook:runner-7.3.1
 
 # 包含调试和网络工具的运行环境
-docker pull soulteary/webhook:extended-7.2.0
+docker pull soulteary/webhook:extended-7.3.1
 ```
 
 | 变体 | 内容 | 适用场景 |
@@ -91,7 +91,7 @@ docker pull soulteary/webhook:extended-7.2.0
 | `runner` | Alpine、BusyBox 工具、Bash 和 CA 证书 | 常规 Shell 脚本，不内置调试客户端 |
 | `extended` | `runner` 加 curl、jq 和 yq | 排障，以及明确依赖这些工具的脚本 |
 
-所有 Release 镜像均以 UID/GID `65532` 从 `/var/lib/webhook` 运行。无前缀的 `<version>` 和 `latest` 标签指向 `core`。7.2.0 继续提供历史名称 `extend-<version>`，作为 `extended-<version>` 的兼容别名；新部署应使用 `extended-*`。
+所有 Release 镜像均以 UID/GID `65532` 从 `/var/lib/webhook` 运行。无前缀的 `<version>` 和 `latest` 标签指向 `core`。自 7.2.0 起，历史名称 `extend-<version>` 继续作为 `extended-<version>` 的兼容别名；新部署应使用 `extended-*`。
 
 生产环境优先使用 `core` 或 `runner`。`extended` 的软件包和攻击面有意更大，不应只为交互调试方便而选择它。请确保挂载的 Hook、命令和审计目录可由 UID/GID `65532` 读取或写入。完整的标签和迁移约定见[容器镜像](docs/zh-CN/Container-Images.md)。
 
@@ -243,18 +243,18 @@ http://yourserver:9000/hooks/redeploy-webhook
 Tag Release 会发布 SPDX SBOM、Checksum 文件的 Keyless Sigstore Bundle、已签名的多架构容器 Manifest，以及 GitHub 构建来源证明。验证示例：
 
 ```bash
-gh attestation verify webhook_7.2.0_linux_amd64.tar.gz -R soulteary/webhook
+gh attestation verify webhook_7.3.1_linux_amd64.tar.gz -R soulteary/webhook
 
 cosign verify-blob \
-  --bundle webhook_7.2.0_checksums.txt.sigstore.json \
+  --bundle webhook_7.3.1_checksums.txt.sigstore.json \
   --certificate-identity-regexp='^https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/.+$' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  webhook_7.2.0_checksums.txt
+  webhook_7.3.1_checksums.txt
 
 cosign verify \
-  --certificate-identity='https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/7.2.0' \
+  --certificate-identity='https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/7.3.1' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  ghcr.io/soulteary/webhook:runner-7.2.0
+  ghcr.io/soulteary/webhook:runner-7.3.1
 ```
 
 ## 关于此 Fork

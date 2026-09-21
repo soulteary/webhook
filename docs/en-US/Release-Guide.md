@@ -5,18 +5,21 @@ release is created only by pushing one immutable semantic-version tag. Do not
 create a GitHub Release manually and do not run the Release workflow from the
 Actions page.
 
-## 7.3.0 scope
+## 7.3.1 scope
 
-The 7.3.0 release includes the following changes after 7.2.0:
+The 7.3.1 release includes the following changes after 7.3.0:
 
-- remove the duplicate `webhook-config-ui` release binary; use
-  `webhook -config-ui` with the single published binary;
-- add constrained Docker Secret template support through `getSecret` and
-  `trimSpace`, without exposing arbitrary filesystem reads;
+- scale the Redis rate-limit fallback by the configured window, so it stays
+  100 rps whatever `WindowSeconds` is set to, and normalize a negative window
+  that previously disabled Redis rate limiting altogether;
+- guard the hook rate-limit path against a non-positive Redis limit, which
+  redis-kit v1.6.0 turned from "effectively unlimited" into "reject every
+  request";
+- upgrade ten soulteary kits to their latest major versions, moving optional
+  dependencies out of the root packages that used to link them;
+- bump `golang.org/x/time` to 0.16.0;
 - update examples, container tags, integrity commands, and migration downloads
-  to 7.3.0;
-- make Release CI tag-only and split validation, publishing, attestation,
-  verification, and release documentation into retry-safe jobs.
+  to 7.3.1.
 
 ## Release invariants
 
@@ -40,24 +43,24 @@ Before preparing a tag:
 4. Install Git. Go, Python, MkDocs, GoReleaser, Syft, Cosign, and GitHub CLI are
    provided by GitHub Actions and are not local release dependencies.
 
-For 7.3.0, PR #177 and PR #178 must both be present in the selected `main`
-commit.
+For 7.3.1, PR #182, #183, #185, and #186 must all be present in the selected
+`main` commit.
 
 ## Exact publishing sequence
 
 From an up-to-date, clean `main` checkout, run one command:
 
 ```bash
-./scripts/release.sh 7.3.0
+./scripts/release.sh 7.3.1
 ```
 
 The command runs a fast Git-only preflight, displays the exact commit, and asks
-you to type `7.3.0` before it creates and pushes one annotated tag. It refuses a
+you to type `7.3.1` before it creates and pushes one annotated tag. It refuses a
 dirty checkout, a non-`main` branch, a checkout that differs from `origin/main`,
 an invalid version, stale version references, or an existing local/remote tag.
 
 Do not create a draft or empty GitHub Release first; GoReleaser owns that
-operation. The script pushes only `refs/tags/7.3.0`, never all local tags.
+operation. The script pushes only `refs/tags/7.3.1`, never all local tags.
 
 The tag push starts these paths:
 
@@ -67,13 +70,13 @@ The tag push starts these paths:
 | 2 | Release / `publish` | Builds the GitHub Release, archives, SBOMs, and signed container manifests | Run once only |
 | 3 | Release / `attest` | Downloads published assets and creates GitHub provenance | Retry this job only |
 | 4 | Release / `verify` | Verifies assets, Sigstore bundle, provenance, image UID, and image signatures | Retry this job only |
-| 5 | Release / `documentation` | Builds `7.3.0`, updates `latest`, and sets the documentation default | Retry this job only |
+| 5 | Release / `documentation` | Builds `7.3.1`, updates `latest`, and sets the documentation default | Retry this job only |
 
 Wait for the Release workflow; a visible GitHub Release is not completion by
 itself.
 
 ```bash
-RELEASE_VERSION=7.3.0
+RELEASE_VERSION=7.3.1
 RELEASE_RUN_ID="$(gh run list --workflow build.yml --branch "$RELEASE_VERSION" --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh run watch "$RELEASE_RUN_ID" --exit-status
 ```
@@ -102,7 +105,7 @@ done
 ```
 
 Also confirm that both
-`https://soulteary.github.io/webhook/7.3.0/` and the `latest` documentation URL
+`https://soulteary.github.io/webhook/7.3.1/` and the `latest` documentation URL
 resolve correctly. The Release workflow already verifies the checksum Sigstore
 bundle, GitHub attestation, image signatures, and all three runtime variants.
 
@@ -126,5 +129,5 @@ delete the tag and reuse the version. Preserve the evidence, fix the cause on
 serving different bytes under the same immutable version.
 
 If the local tag was created but the push failed, inspect it with
-`git show 7.3.0`, then retry only `git push origin refs/tags/7.3.0`. Do not rerun
+`git show 7.3.1`, then retry only `git push origin refs/tags/7.3.1`. Do not rerun
 `release.sh`, because its duplicate-tag guard will stop.
