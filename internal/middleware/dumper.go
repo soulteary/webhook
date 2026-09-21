@@ -14,7 +14,7 @@ import (
 	"sort"
 	"strings"
 
-	loggerkit "github.com/soulteary/logger-kit/v2"
+	loggerkit "github.com/soulteary/logger-kit/v3"
 )
 
 // responseDupper tees the response to a buffer and a response writer.
