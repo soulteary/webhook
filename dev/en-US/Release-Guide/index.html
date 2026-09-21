@@ -755,10 +755,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#730-scope" class="md-nav__link">
+  <a href="#731-scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.3.0 scope
+        7.3.1 scope
       
     </span>
   </a>
@@ -1370,10 +1370,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#730-scope" class="md-nav__link">
+  <a href="#731-scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.3.0 scope
+        7.3.1 scope
       
     </span>
   </a>
@@ -1460,17 +1460,20 @@
 release is created only by pushing one immutable semantic-version tag. Do not
 create a GitHub Release manually and do not run the Release workflow from the
 Actions page.</p>
-<h2 id="730-scope">7.3.0 scope</h2>
-<p>The 7.3.0 release includes the following changes after 7.2.0:</p>
+<h2 id="731-scope">7.3.1 scope</h2>
+<p>The 7.3.1 release includes the following changes after 7.3.0:</p>
 <ul>
-<li>remove the duplicate <code>webhook-config-ui</code> release binary; use
-  <code>webhook -config-ui</code> with the single published binary;</li>
-<li>add constrained Docker Secret template support through <code>getSecret</code> and
-  <code>trimSpace</code>, without exposing arbitrary filesystem reads;</li>
+<li>scale the Redis rate-limit fallback by the configured window, so it stays
+  100 rps whatever <code>WindowSeconds</code> is set to, and normalize a negative window
+  that previously disabled Redis rate limiting altogether;</li>
+<li>guard the hook rate-limit path against a non-positive Redis limit, which
+  redis-kit v1.6.0 turned from "effectively unlimited" into "reject every
+  request";</li>
+<li>upgrade ten soulteary kits to their latest major versions, moving optional
+  dependencies out of the root packages that used to link them;</li>
+<li>bump <code>golang.org/x/time</code> to 0.16.0;</li>
 <li>update examples, container tags, integrity commands, and migration downloads
-  to 7.3.0;</li>
-<li>make Release CI tag-only and split validation, publishing, attestation,
-  verification, and release documentation into retry-safe jobs.</li>
+  to 7.3.1.</li>
 </ul>
 <h2 id="release-invariants">Release invariants</h2>
 <ul>
@@ -1493,18 +1496,18 @@ Actions page.</p>
 <li>Install Git. Go, Python, MkDocs, GoReleaser, Syft, Cosign, and GitHub CLI are
    provided by GitHub Actions and are not local release dependencies.</li>
 </ol>
-<p>For 7.3.0, PR #177 and PR #178 must both be present in the selected <code>main</code>
-commit.</p>
+<p>For 7.3.1, PR #182, #183, #185, and #186 must all be present in the selected
+<code>main</code> commit.</p>
 <h2 id="exact-publishing-sequence">Exact publishing sequence</h2>
 <p>From an up-to-date, clean <code>main</code> checkout, run one command:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>./scripts/release.sh<span class="w"> </span><span class="m">7</span>.3.0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>./scripts/release.sh<span class="w"> </span><span class="m">7</span>.3.1
 </code></pre></div>
 <p>The command runs a fast Git-only preflight, displays the exact commit, and asks
-you to type <code>7.3.0</code> before it creates and pushes one annotated tag. It refuses a
+you to type <code>7.3.1</code> before it creates and pushes one annotated tag. It refuses a
 dirty checkout, a non-<code>main</code> branch, a checkout that differs from <code>origin/main</code>,
 an invalid version, stale version references, or an existing local/remote tag.</p>
 <p>Do not create a draft or empty GitHub Release first; GoReleaser owns that
-operation. The script pushes only <code>refs/tags/7.3.0</code>, never all local tags.</p>
+operation. The script pushes only <code>refs/tags/7.3.1</code>, never all local tags.</p>
 <p>The tag push starts these paths:</p>
 <table>
 <thead>
@@ -1543,14 +1546,14 @@ operation. The script pushes only <code>refs/tags/7.3.0</code>, never all local 
 <tr>
 <td>5</td>
 <td>Release / <code>documentation</code></td>
-<td>Builds <code>7.3.0</code>, updates <code>latest</code>, and sets the documentation default</td>
+<td>Builds <code>7.3.1</code>, updates <code>latest</code>, and sets the documentation default</td>
 <td>Retry this job only</td>
 </tr>
 </tbody>
 </table>
 <p>Wait for the Release workflow; a visible GitHub Release is not completion by
 itself.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">RELEASE_VERSION</span><span class="o">=</span><span class="m">7</span>.3.0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">RELEASE_VERSION</span><span class="o">=</span><span class="m">7</span>.3.1
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">RELEASE_RUN_ID</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>gh<span class="w"> </span>run<span class="w"> </span>list<span class="w"> </span>--workflow<span class="w"> </span>build.yml<span class="w"> </span>--branch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_VERSION</span><span class="s2">"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--json<span class="w"> </span>databaseId<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.[0].databaseId'</span><span class="k">)</span><span class="s2">"</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>gh<span class="w"> </span>run<span class="w"> </span>watch<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_RUN_ID</span><span class="s2">"</span><span class="w"> </span>--exit-status
 </code></pre></div>
@@ -1574,7 +1577,7 @@ itself.</p>
 <a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="k">done</span>
 </code></pre></div>
 <p>Also confirm that both
-<code>https://soulteary.github.io/webhook/7.3.0/</code> and the <code>latest</code> documentation URL
+<code>https://soulteary.github.io/webhook/7.3.1/</code> and the <code>latest</code> documentation URL
 resolve correctly. The Release workflow already verifies the checksum Sigstore
 bundle, GitHub attestation, image signatures, and all three runtime variants.</p>
 <h2 id="failure-handling">Failure handling</h2>
@@ -1622,7 +1625,7 @@ delete the tag and reuse the version. Preserve the evidence, fix the cause on
 <code>main</code>, and publish the next patch version (for example, 7.3.1). This avoids
 serving different bytes under the same immutable version.</p>
 <p>If the local tag was created but the push failed, inspect it with
-<code>git show 7.3.0</code>, then retry only <code>git push origin refs/tags/7.3.0</code>. Do not rerun
+<code>git show 7.3.1</code>, then retry only <code>git push origin refs/tags/7.3.1</code>. Do not rerun
 <code>release.sh</code>, because its duplicate-tag guard will stop.</p>
 
 
