@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	i18nkit "github.com/soulteary/i18n-kit/v2"
+	i18nkit "github.com/soulteary/i18n-kit/v4"
+	"github.com/soulteary/i18n-kit/v4/yamlloader"
 	"github.com/soulteary/webhook/internal/fn"
 )
 
@@ -50,7 +51,7 @@ func InitLocaleByFiles(localesDir string, webhookLocalesEmbed embed.FS) error {
 			// 根据文件扩展名加载
 			switch ext {
 			case ".yaml", ".yml":
-				if err := bundle.LoadYAMLFile(lang, file); err != nil {
+				if err := yamlloader.LoadFile(bundle, lang, file); err != nil {
 					fmt.Printf("failed to load YAML file %s: %v\n", file, err)
 					continue
 				}
@@ -94,7 +95,7 @@ func InitLocaleByFiles(localesDir string, webhookLocalesEmbed embed.FS) error {
 
 			switch ext {
 			case ".yaml", ".yml":
-				if err := bundle.LoadYAML(lang, data); err != nil {
+				if err := yamlloader.Load(bundle, lang, data); err != nil {
 					fmt.Printf("failed to load YAML from embed %s: %v\n", fileName, err)
 					continue
 				}

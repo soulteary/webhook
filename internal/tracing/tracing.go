@@ -4,8 +4,9 @@ import (
 	"context"
 	"net/http"
 
-	loggerkit "github.com/soulteary/logger-kit/v2"
-	tracingkit "github.com/soulteary/tracing-kit"
+	loggerkit "github.com/soulteary/logger-kit/v3"
+	tracingkit "github.com/soulteary/tracing-kit/v2"
+	otlp "github.com/soulteary/tracing-kit/v2/otlp"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
@@ -43,7 +44,7 @@ func Init(config TracingConfig) error {
 
 	// 如果配置了 OTLP 端点，初始化 OpenTelemetry tracer
 	if config.OTLPEndpoint != "" {
-		_, err := tracingkit.InitTracer(config.ServiceName, config.ServiceVersion, config.OTLPEndpoint)
+		_, err := otlp.InitTracer(config.ServiceName, config.ServiceVersion, config.OTLPEndpoint)
 		if err != nil {
 			return err
 		}

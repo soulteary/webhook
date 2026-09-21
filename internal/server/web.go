@@ -13,10 +13,13 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	healthkit "github.com/soulteary/health-kit/v2"
-	loggerkit "github.com/soulteary/logger-kit/v2"
-	middlewarekit "github.com/soulteary/middleware-kit/v2"
-	versionkit "github.com/soulteary/version-kit/v2"
+	healthkit "github.com/soulteary/health-kit/v4"
+	loggerkit "github.com/soulteary/logger-kit/v3"
+	loggerfiber "github.com/soulteary/logger-kit/v3/fiberadapter"
+	middlewarekit "github.com/soulteary/middleware-kit/v3"
+	mwfiber "github.com/soulteary/middleware-kit/v3/fiberadapter"
+	versionkit "github.com/soulteary/version-kit/v4"
+	versionhttp "github.com/soulteary/version-kit/v4/httpadapter"
 	"github.com/soulteary/webhook/internal/configui"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/link"
@@ -92,7 +95,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	} else {
 		kitSecurityCfg = middlewarekit.DefaultSecurityHeadersConfig()
 	}
-	app.Use(middlewarekit.SecurityHeaders(kitSecurityCfg))
+	app.Use(mwfiber.SecurityHeaders(kitSecurityCfg))
 
 	// logger-kit Fiber 中间件
 	if logger.DefaultLogger == nil {
@@ -105,7 +108,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	if appFlags.UseXRequestID {
 		loggerCfg.GenerateRequestID = nil
 	}
-	app.Use(loggerkit.FiberMiddleware(loggerCfg))
+	app.Use(loggerfiber.Middleware(loggerfiber.Config{MiddlewareConfig: loggerCfg}))
 	app.Use(recover.New())
 
 	// 限流中间件（适配 Std 中间件）
@@ -213,7 +216,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	}
 	versionHandler := func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
-		handler := versionkit.Handler(versionConfig)
+		handler := versionhttp.Handler(versionConfig)
 		handler(w, r)
 		metrics.RecordHTTPRequest(r.Method, "200", "/version", time.Since(startTime))
 	}

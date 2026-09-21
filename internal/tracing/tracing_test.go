@@ -6,7 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	tracingkit "github.com/soulteary/tracing-kit"
+	tracingkit "github.com/soulteary/tracing-kit/v2"
+	tracingtest "github.com/soulteary/tracing-kit/v2/tracingtest"
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/soulteary/webhook/internal/middleware"
@@ -16,7 +17,7 @@ import (
 func resetTracingState() {
 	tracingEnabled = false
 	globalConfig = TracingConfig{}
-	tracingkit.TeardownTestTracer()
+	tracingtest.Teardown()
 }
 
 func TestInit(t *testing.T) {
@@ -121,8 +122,8 @@ func TestStartSpanWithSpan(t *testing.T) {
 	defer resetTracingState()
 
 	// 使用 test tracer 设置
-	tp, _ := tracingkit.SetupTestTracer(t)
-	defer tracingkit.ShutdownTracerProvider(tp)
+	tp, _ := tracingtest.Setup(t)
+	defer tracingtest.Shutdown(tp)
 
 	tracingEnabled = true
 	globalConfig = TracingConfig{Enabled: true}
@@ -160,8 +161,8 @@ func TestRecordError(t *testing.T) {
 	defer resetTracingState()
 
 	// 使用 test tracer 设置
-	tp, _ := tracingkit.SetupTestTracer(t)
-	defer tracingkit.ShutdownTracerProvider(tp)
+	tp, _ := tracingtest.Setup(t)
+	defer tracingtest.Shutdown(tp)
 
 	tracingEnabled = true
 
@@ -179,8 +180,8 @@ func TestGetSpanFromContext(t *testing.T) {
 	defer resetTracingState()
 
 	// 使用 test tracer 设置
-	tp, _ := tracingkit.SetupTestTracer(t)
-	defer tracingkit.ShutdownTracerProvider(tp)
+	tp, _ := tracingtest.Setup(t)
+	defer tracingtest.Shutdown(tp)
 
 	tracingEnabled = true
 
@@ -236,8 +237,8 @@ func TestInjectTraceContextWithOTLP(t *testing.T) {
 	defer resetTracingState()
 
 	// 使用 test tracer 设置
-	tp, _ := tracingkit.SetupTestTracer(t)
-	defer tracingkit.ShutdownTracerProvider(tp)
+	tp, _ := tracingtest.Setup(t)
+	defer tracingtest.Shutdown(tp)
 
 	tracingEnabled = true
 
@@ -283,8 +284,8 @@ func TestExtractTraceContextWithOTLP(t *testing.T) {
 	defer resetTracingState()
 
 	// 使用 test tracer 设置
-	tp, _ := tracingkit.SetupTestTracer(t)
-	defer tracingkit.ShutdownTracerProvider(tp)
+	tp, _ := tracingtest.Setup(t)
+	defer tracingtest.Shutdown(tp)
 
 	tracingEnabled = true
 

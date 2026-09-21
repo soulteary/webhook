@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	auditkit "github.com/soulteary/audit-kit"
+	auditkit "github.com/soulteary/audit-kit/v2"
 	"github.com/soulteary/webhook/internal/flags"
 	"github.com/soulteary/webhook/internal/logger"
 )

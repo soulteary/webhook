@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/invopop/yaml"
-	secure "github.com/soulteary/secure-kit"
+	secure "github.com/soulteary/secure-kit/v2"
 	"github.com/soulteary/webhook/internal/logger"
 )
 

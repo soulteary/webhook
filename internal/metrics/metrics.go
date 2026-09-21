@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	metricskit "github.com/soulteary/metrics-kit/v2"
+	metricskit "github.com/soulteary/metrics-kit/v3"
 )
 
 // 为了向后兼容，保留原有的全局变量
