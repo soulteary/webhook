@@ -1,6 +1,6 @@
 services:
   webhook:
-    image: ${WEBHOOK_IMAGE:-soulteary/webhook:runner-7.3.0}
+    image: ${WEBHOOK_IMAGE:-soulteary/webhook:runner-7.3.1}
     container_name: webhook-quickstart
     command:
       - -profile
