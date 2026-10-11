@@ -1,0 +1,193 @@
+{
+  "schema_version": "1.0",
+  "tests": {
+    "total": 601,
+    "passed": 596,
+    "failed": 0,
+    "skipped": 5
+  },
+  "coverage": {
+    "covered_statements": 3349,
+    "total_statements": 4393,
+    "percentage": 76.23,
+    "threshold": 0
+  },
+  "packages": [
+    {
+      "name": ".",
+      "status": "pass",
+      "tests": 51,
+      "failed": 0,
+      "coverage": 13.28
+    },
+    {
+      "name": "example/owlmail",
+      "status": "pass",
+      "tests": 2,
+      "failed": 0,
+      "coverage": null
+    },
+    {
+      "name": "internal/audit",
+      "status": "pass",
+      "tests": 17,
+      "failed": 0,
+      "coverage": 63.86
+    },
+    {
+      "name": "internal/cli",
+      "status": "pass",
+      "tests": 6,
+      "failed": 0,
+      "coverage": 71.43
+    },
+    {
+      "name": "internal/configui",
+      "status": "pass",
+      "tests": 22,
+      "failed": 0,
+      "coverage": 74.34
+    },
+    {
+      "name": "internal/doctor",
+      "status": "pass",
+      "tests": 25,
+      "failed": 0,
+      "coverage": 73.96
+    },
+    {
+      "name": "internal/flags",
+      "status": "pass",
+      "tests": 67,
+      "failed": 0,
+      "coverage": 93.74
+    },
+    {
+      "name": "internal/fn",
+      "status": "pass",
+      "tests": 5,
+      "failed": 0,
+      "coverage": 88.46
+    },
+    {
+      "name": "internal/hook",
+      "status": "pass",
+      "tests": 65,
+      "failed": 0,
+      "coverage": 86.25
+    },
+    {
+      "name": "internal/hooksdir",
+      "status": "no_tests",
+      "tests": 0,
+      "failed": 0,
+      "coverage": 0
+    },
+    {
+      "name": "internal/i18n",
+      "status": "pass",
+      "tests": 9,
+      "failed": 0,
+      "coverage": 50
+    },
+    {
+      "name": "internal/link",
+      "status": "pass",
+      "tests": 3,
+      "failed": 0,
+      "coverage": 100
+    },
+    {
+      "name": "internal/logger",
+      "status": "pass",
+      "tests": 20,
+      "failed": 0,
+      "coverage": 90.32
+    },
+    {
+      "name": "internal/metrics",
+      "status": "pass",
+      "tests": 9,
+      "failed": 0,
+      "coverage": 69.88
+    },
+    {
+      "name": "internal/middleware",
+      "status": "pass",
+      "tests": 66,
+      "failed": 0,
+      "coverage": 82.62
+    },
+    {
+      "name": "internal/monitor",
+      "status": "pass",
+      "tests": 20,
+      "failed": 0,
+      "coverage": 45.08
+    },
+    {
+      "name": "internal/openapi",
+      "status": "pass",
+      "tests": 7,
+      "failed": 0,
+      "coverage": 92.68
+    },
+    {
+      "name": "internal/pidfile",
+      "status": "pass",
+      "tests": 7,
+      "failed": 0,
+      "coverage": 88.89
+    },
+    {
+      "name": "internal/platform",
+      "status": "pass",
+      "tests": 16,
+      "failed": 0,
+      "coverage": 66.67
+    },
+    {
+      "name": "internal/rules",
+      "status": "pass",
+      "tests": 34,
+      "failed": 0,
+      "coverage": 88.89
+    },
+    {
+      "name": "internal/security",
+      "status": "pass",
+      "tests": 10,
+      "failed": 0,
+      "coverage": 91.01
+    },
+    {
+      "name": "internal/server",
+      "status": "pass",
+      "tests": 109,
+      "failed": 0,
+      "coverage": 75.38
+    },
+    {
+      "name": "internal/tracing",
+      "status": "pass",
+      "tests": 15,
+      "failed": 0,
+      "coverage": 94.12
+    },
+    {
+      "name": "internal/version",
+      "status": "pass",
+      "tests": 1,
+      "failed": 0,
+      "coverage": 0
+    },
+    {
+      "name": "test",
+      "status": "pass",
+      "tests": 15,
+      "failed": 0,
+      "coverage": 80.95
+    }
+  ],
+  "failures": null
+}
