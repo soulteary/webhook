@@ -1,0 +1,3467 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Hardened and observable webhook-to-command runner">
+      
+      
+      
+        <link rel="canonical" href="https://soulteary.github.io/webhook/latest/en-US/Webhook-Parameters/">
+      
+      
+        <link rel="prev" href="../Hook-Examples/">
+      
+      
+        <link rel="next" href="../Templates/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../logo/logo-600x600.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Parameters - WebHook</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#webhook-parameters" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="WebHook" class="md-header__button md-logo" aria-label="WebHook" data-md-component="logo">
+      
+  <img src="../../logo/logo-600x600.jpg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WebHook
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Parameters
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/soulteary/webhook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    soulteary/webhook
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="WebHook" class="md-nav__button md-logo" aria-label="WebHook" data-md-component="logo">
+      
+  <img src="../../logo/logo-600x600.jpg" alt="logo">
+
+    </a>
+    WebHook
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/soulteary/webhook" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    soulteary/webhook
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Container-Images/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container images
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Configuration-Tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Hook-Definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook definition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Hook-Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Hook-Examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command-Line Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command-Line Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logging-and-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging and Debugging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request ID
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internationalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internationalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-execution-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Execution Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redis-rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redis Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-server-timeouts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Server Timeouts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openapi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAPI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logging-and-debugging_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging and Debugging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-options_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-management_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internationalization_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internationalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-execution-control_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Execution Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rate-limiting_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redis-rate-limiting_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redis Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-server-timeouts_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Server Timeouts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tracing_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openapi_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAPI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-ui_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Security Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#secure-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secure Profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-path-whitelisting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Path Whitelisting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strict-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strict Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rate-limiting_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Priority
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#live-reloading-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live Reloading Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Referencing-Request-Values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Request values
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API-Reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Security-Best-Practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Performance-Tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Testing-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Migration-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Release-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OwlMail-Integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OwlMail integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Container-Images/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    容器镜像
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Hook-Definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook 定义
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Hook-Rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook 规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Hook-Examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook 示例
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Webhook-Parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动参数
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Referencing-Request-Values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    请求参数
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/API-Reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Security-Best-Practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安全
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Performance-Tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    性能
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Testing-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    测试
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    故障排除
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Migration-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/Release-Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh-CN/OwlMail-Integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OwlMail 集成
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command-Line Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command-Line Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logging-and-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging and Debugging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request ID
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internationalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internationalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-execution-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Execution Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redis-rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redis Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-server-timeouts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Server Timeouts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openapi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAPI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logging-and-debugging_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging and Debugging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-options_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-management_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internationalization_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internationalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-execution-control_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Execution Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rate-limiting_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redis-rate-limiting_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redis Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-server-timeouts_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Server Timeouts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tracing_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openapi_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAPI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-ui_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Security Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#secure-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secure Profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-path-whitelisting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Path Whitelisting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strict-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strict Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rate-limiting_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Priority
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#live-reloading-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live Reloading Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="webhook-parameters">Webhook Parameters</h1>
+<p>This document describes all available command-line parameters and environment variables for configuring webhook.</p>
+<h2 id="command-line-parameters">Command-Line Parameters</h2>
+<h3 id="basic-configuration">Basic Configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-profile string</code></td>
+<td>Configuration profile: <code>compat</code> preserves historical defaults; <code>secure</code> applies production-safe defaults and requires a command allowlist</td>
+<td><code>compat</code></td>
+</tr>
+<tr>
+<td><code>-ip string</code></td>
+<td>IP address the webhook should serve hooks on</td>
+<td><code>0.0.0.0</code></td>
+</tr>
+<tr>
+<td><code>-port int</code></td>
+<td>Port the webhook should serve hooks on</td>
+<td><code>9000</code></td>
+</tr>
+<tr>
+<td><code>-hooks value</code></td>
+<td>Explicit single-file mode: path to JSON/YAML hook definitions (can be used multiple times)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>-hooks-dir string</code></td>
+<td>Directory to scan for hook config files (<em>.json, </em>.yaml, *.yml). Default <code>./hooks</code>. If explicitly set to an empty string, directory mode is not used; when set to a non-empty path, that directory is scanned and (with <code>-hotreload</code> or directory watch) can be watched for new files. With Config UI, enables save-to-dir when in directory mode.</td>
+<td><code>./hooks</code></td>
+</tr>
+<tr>
+<td><code>-urlprefix string</code></td>
+<td>URL prefix for served hooks (protocol://yourserver:port/PREFIX/:hook-id); also used by Config UI for the generated call URL</td>
+<td><code>hooks</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="logging-and-debugging">Logging and Debugging</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-verbose</code></td>
+<td>Show verbose output</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-debug</code></td>
+<td>Show debug output</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-logfile string</code></td>
+<td>Send log output to a file; implicitly enables verbose logging</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>-nopanic</code></td>
+<td>Do not panic if hooks cannot be loaded when not in verbose mode</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-log-request-body</code></td>
+<td>Log request body in debug mode (SECURITY: may expose sensitive data)</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="feature-options">Feature Options</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-hotreload</code></td>
+<td>Watch hooks file for changes and reload automatically</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-template</code></td>
+<td>Parse hooks file as a Go template</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-http-methods string</code></td>
+<td>Set default allowed HTTP methods (e.g., "POST"); separate with comma</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>-max-multipart-mem int</code></td>
+<td>Maximum memory in bytes for parsing multipart form data before disk caching</td>
+<td><code>1048576</code> (1MB)</td>
+</tr>
+<tr>
+<td><code>-max-request-body-size int</code></td>
+<td>Maximum size in bytes for request body</td>
+<td><code>10485760</code> (10MB)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="request-id">Request ID</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-x-request-id</code></td>
+<td>Use X-Request-Id header, if present, as request ID</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-x-request-id-limit int</code></td>
+<td>Truncate X-Request-Id header to limit</td>
+<td><code>0</code> (no limit)</td>
+</tr>
+</tbody>
+</table>
+<p><em>Note:</em> The length limit is configurable only via the <code>-x-request-id-limit</code> flag; no separate environment variable is defined in the current implementation.</p>
+<h3 id="response-headers">Response Headers</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-header value</code></td>
+<td>Response header to return (format: name=value); can be used multiple times</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="process-management">Process Management</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-pidfile string</code></td>
+<td>Create PID file at the given path</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>-setuid int</code></td>
+<td>Set user ID after opening listening port; must be used with setgid; unsupported on Linux and Windows</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>-setgid int</code></td>
+<td>Set group ID after opening listening port; must be used with setuid; unsupported on Linux and Windows</td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="internationalization">Internationalization</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-lang string</code></td>
+<td>Set the language code for the webhook</td>
+<td><code>en-US</code></td>
+</tr>
+<tr>
+<td><code>-lang-dir string</code></td>
+<td>Set the directory for i18n files</td>
+<td><code>./locales</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="hook-execution-control">Hook Execution Control</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-hook-timeout-seconds int</code></td>
+<td>Default timeout in seconds for hook execution</td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>-max-concurrent-hooks int</code></td>
+<td>Maximum number of concurrent hook executions</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>-hook-execution-timeout int</code></td>
+<td>Timeout in seconds for acquiring execution slot when max concurrent hooks reached</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>-allow-auto-chmod</code></td>
+<td>Allow automatically modifying file permissions when permission denied (SECURITY RISK)</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="rate-limiting">Rate Limiting</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-rate-limit-enabled</code></td>
+<td>Enable rate limiting</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-rate-limit-rps int</code></td>
+<td>Rate limit requests per second</td>
+<td><code>100</code></td>
+</tr>
+<tr>
+<td><code>-rate-limit-burst int</code></td>
+<td>Rate limit burst size</td>
+<td><code>10</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="redis-rate-limiting">Redis Rate Limiting</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-redis-enabled</code></td>
+<td>Enable Redis for distributed rate limiting</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-redis-addr string</code></td>
+<td>Redis server address</td>
+<td><code>localhost:6379</code></td>
+</tr>
+<tr>
+<td><code>-redis-password string</code></td>
+<td>Redis password</td>
+<td>(empty)</td>
+</tr>
+<tr>
+<td><code>-redis-db int</code></td>
+<td>Redis database index</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>-redis-key-prefix string</code></td>
+<td>Redis key prefix for rate limiting</td>
+<td><code>webhook:ratelimit:</code></td>
+</tr>
+<tr>
+<td><code>-rate-limit-window int</code></td>
+<td>Rate limit window in seconds</td>
+<td><code>60</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="http-server-timeouts">HTTP Server Timeouts</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-read-header-timeout-seconds int</code></td>
+<td>Timeout in seconds for reading request headers</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>-read-timeout-seconds int</code></td>
+<td>Timeout in seconds for reading request body</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>-write-timeout-seconds int</code></td>
+<td>Timeout in seconds for writing response</td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>-idle-timeout-seconds int</code></td>
+<td>Timeout in seconds for idle connections</td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>-max-header-bytes int</code></td>
+<td>Maximum size in bytes for request headers</td>
+<td><code>1048576</code> (1MB)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="security-configuration">Security Configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-allowed-command-paths string</code></td>
+<td>Comma-separated list of allowed command paths for whitelist; empty means no check</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>-max-arg-length int</code></td>
+<td>Maximum length for a single command argument in bytes</td>
+<td><code>1048576</code> (1MB)</td>
+</tr>
+<tr>
+<td><code>-max-total-args-length int</code></td>
+<td>Maximum total length for all command arguments in bytes</td>
+<td><code>10485760</code> (10MB)</td>
+</tr>
+<tr>
+<td><code>-max-args-count int</code></td>
+<td>Maximum number of command arguments</td>
+<td><code>1000</code></td>
+</tr>
+<tr>
+<td><code>-strict-mode</code></td>
+<td>Reject arguments containing potentially dangerous characters</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="tracing">Tracing</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-tracing-enabled</code></td>
+<td>Enable distributed tracing with OpenTelemetry</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-otlp-endpoint string</code></td>
+<td>OTLP exporter endpoint (e.g., localhost:4318)</td>
+<td>(empty)</td>
+</tr>
+<tr>
+<td><code>-tracing-service-name string</code></td>
+<td>Service name for tracing</td>
+<td><code>webhook</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="audit">Audit</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-audit-enabled</code></td>
+<td>Enable audit logging</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-audit-storage-type string</code></td>
+<td>Audit storage type: file, redis, or database</td>
+<td><code>file</code></td>
+</tr>
+<tr>
+<td><code>-audit-file-path string</code></td>
+<td>Audit log file path when storage type is file</td>
+<td><code>./audit.log</code></td>
+</tr>
+<tr>
+<td><code>-audit-queue-size int</code></td>
+<td>Audit async write queue size</td>
+<td><code>1000</code></td>
+</tr>
+<tr>
+<td><code>-audit-workers int</code></td>
+<td>Number of audit async write workers</td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td><code>-audit-mask-ip</code></td>
+<td>Mask IP addresses in audit logs</td>
+<td><code>true</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="openapi">OpenAPI</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-openapi</code></td>
+<td>Enable OpenAPI spec: serve at openapi-path and/or print to stdout; recommend only for debugging or intranet</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-openapi-path string</code></td>
+<td>HTTP path for OpenAPI spec when openapi is enabled</td>
+<td><code>/openapi</code></td>
+</tr>
+<tr>
+<td><code>-openapi-print</code></td>
+<td>Print OpenAPI spec to stdout at startup when openapi is enabled</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<p><em>Note:</em> When <code>-openapi</code> is set, the spec is available via GET at <code>-openapi-path</code> (e.g. <code>/openapi</code>) and can be used with Swagger UI or client code generation. Use only in debugging or intranet environments. Do not set <code>-openapi-path</code> to a reserved path (e.g. <code>/</code>, <code>/health</code>, <code>/version</code>, <code>/metrics</code>, or the hooks prefix like <code>/hooks</code>); if you do, the OpenAPI route will not be registered and a warning will be logged.</p>
+<h3 id="config-ui">Config UI</h3>
+<p>Mode is determined by whether <code>-config-ui</code> is enabled and whether hooks are currently loaded:</p>
+<ul>
+<li><strong>Webhook + Config UI:</strong> When <code>-config-ui</code> is set, Config UI is mounted on the webhook server (e.g. <code>http://localhost:9000/config-ui</code>).</li>
+<li><strong>Webhook only:</strong> When <code>-config-ui</code> is not set, only the webhook service runs.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-config-ui</code></td>
+<td>Enable config generator Web UI on the same webhook server port; recommend only for debugging or intranet</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>-config-ui-path string</code></td>
+<td>HTTP path for Config UI when mounted on webhook server (trailing slash is normalized; e.g. <code>/config-ui/</code> becomes <code>/config-ui</code>)</td>
+<td><code>/config-ui</code></td>
+</tr>
+</tbody>
+</table>
+<p><em>Note:</em> Config UI is mounted using <code>-config-ui-path</code> (default <code>/config-ui</code>) on the same server. Do not set <code>-config-ui-path</code> to a reserved path (e.g. <code>/</code>, <code>/health</code>, <code>/hooks</code>, <code>/openapi</code>); if you do, the Config UI route will not be registered and a warning will be logged. The call URL and curl example generated by the Config UI use <code>-urlprefix</code> (e.g. with <code>-urlprefix=events</code>, the generated URL is <code>/events/:id</code>). In directory mode (default <code>./hooks</code> or explicit <code>-hooks-dir</code>), the UI exposes a "Save to directory" option and saved configs can be hot-loaded for immediate endpoint validation; in explicit single-file mode (<code>-hooks</code>) it does not.</p>
+<h3 id="other">Other</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-version</code></td>
+<td>Display webhook version and quit</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>-validate-config</code></td>
+<td>Validate configuration and exit (does not start server)</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h2 id="environment-variables">Environment Variables</h2>
+<p>All command-line parameters can also be set via environment variables:</p>
+<h3 id="basic-configuration_1">Basic Configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PROFILE</code></td>
+<td><code>-profile</code></td>
+<td>Configuration profile (<code>compat</code> or <code>secure</code>)</td>
+<td><code>compat</code></td>
+</tr>
+<tr>
+<td><code>HOST</code></td>
+<td><code>-ip</code></td>
+<td>Listen IP address</td>
+<td><code>0.0.0.0</code></td>
+</tr>
+<tr>
+<td><code>PORT</code></td>
+<td><code>-port</code></td>
+<td>Listen port</td>
+<td><code>9000</code></td>
+</tr>
+<tr>
+<td><code>HOOKS</code></td>
+<td><code>-hooks</code></td>
+<td>Hook file paths (comma-separated, explicit single-file mode)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>HOOKS_DIR</code></td>
+<td><code>-hooks-dir</code></td>
+<td>Directory to scan for hook config files; enables save-to-dir in Config UI in directory mode</td>
+<td><code>./hooks</code></td>
+</tr>
+<tr>
+<td><code>URL_PREFIX</code></td>
+<td><code>-urlprefix</code></td>
+<td>URL prefix for hooks and Config UI generated call URL</td>
+<td><code>hooks</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="logging-and-debugging_1">Logging and Debugging</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>VERBOSE</code></td>
+<td><code>-verbose</code></td>
+<td>Verbose output</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>DEBUG</code></td>
+<td><code>-debug</code></td>
+<td>Debug output</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>LOG_PATH</code></td>
+<td><code>-logfile</code></td>
+<td>Log file path</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>NO_PANIC</code></td>
+<td><code>-nopanic</code></td>
+<td>Don't panic</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>LOG_REQUEST_BODY</code></td>
+<td><code>-log-request-body</code></td>
+<td>Log request body (debug)</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="feature-options_1">Feature Options</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>HOT_RELOAD</code></td>
+<td><code>-hotreload</code></td>
+<td>Hot reload</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>TEMPLATE</code></td>
+<td><code>-template</code></td>
+<td>Template mode</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>HTTP_METHODS</code></td>
+<td><code>-http-methods</code></td>
+<td>HTTP methods</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>MAX_MPART_MEM</code></td>
+<td><code>-max-multipart-mem</code></td>
+<td>Max multipart memory</td>
+<td><code>1048576</code></td>
+</tr>
+<tr>
+<td><code>MAX_REQUEST_BODY_SIZE</code></td>
+<td><code>-max-request-body-size</code></td>
+<td>Max request body size</td>
+<td><code>10485760</code></td>
+</tr>
+<tr>
+<td><code>X_REQUEST_ID</code></td>
+<td><code>-x-request-id</code></td>
+<td>Use X-Request-Id</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>HEADER</code></td>
+<td><code>-header</code></td>
+<td>Response header</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><em>Note:</em> The X-Request-Id length limit is only configurable via the <code>-x-request-id-limit</code> flag; there is no dedicated environment variable.</p>
+<h3 id="process-management_1">Process Management</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PID_FILE</code></td>
+<td><code>-pidfile</code></td>
+<td>PID file path</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>UID</code></td>
+<td><code>-setuid</code></td>
+<td>User ID</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>GID</code></td>
+<td><code>-setgid</code></td>
+<td>Group ID</td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="internationalization_1">Internationalization</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LANGUAGE</code></td>
+<td><code>-lang</code></td>
+<td>Language code</td>
+<td><code>en-US</code></td>
+</tr>
+<tr>
+<td><code>LANG_DIR</code></td>
+<td><code>-lang-dir</code></td>
+<td>i18n directory</td>
+<td><code>./locales</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="hook-execution-control_1">Hook Execution Control</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>HOOK_TIMEOUT_SECONDS</code></td>
+<td><code>-hook-timeout-seconds</code></td>
+<td>Hook execution timeout (sec)</td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>MAX_CONCURRENT_HOOKS</code></td>
+<td><code>-max-concurrent-hooks</code></td>
+<td>Max concurrent hooks</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>HOOK_EXECUTION_TIMEOUT</code></td>
+<td><code>-hook-execution-timeout</code></td>
+<td>Execution slot timeout (sec)</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>ALLOW_AUTO_CHMOD</code></td>
+<td><code>-allow-auto-chmod</code></td>
+<td>Allow auto chmod</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="rate-limiting_1">Rate Limiting</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RATE_LIMIT_ENABLED</code></td>
+<td><code>-rate-limit-enabled</code></td>
+<td>Enable rate limiting</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>RATE_LIMIT_RPS</code></td>
+<td><code>-rate-limit-rps</code></td>
+<td>Requests per second</td>
+<td><code>100</code></td>
+</tr>
+<tr>
+<td><code>RATE_LIMIT_BURST</code></td>
+<td><code>-rate-limit-burst</code></td>
+<td>Burst size</td>
+<td><code>10</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="redis-rate-limiting_1">Redis Rate Limiting</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>REDIS_ENABLED</code></td>
+<td><code>-redis-enabled</code></td>
+<td>Enable Redis for distributed rate limiting</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>REDIS_ADDR</code></td>
+<td><code>-redis-addr</code></td>
+<td>Redis server address</td>
+<td><code>localhost:6379</code></td>
+</tr>
+<tr>
+<td><code>REDIS_PASSWORD</code></td>
+<td><code>-redis-password</code></td>
+<td>Redis password</td>
+<td>(empty)</td>
+</tr>
+<tr>
+<td><code>REDIS_DB</code></td>
+<td><code>-redis-db</code></td>
+<td>Redis database index</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>REDIS_KEY_PREFIX</code></td>
+<td><code>-redis-key-prefix</code></td>
+<td>Redis key prefix for rate limiting</td>
+<td><code>webhook:ratelimit:</code></td>
+</tr>
+<tr>
+<td><code>RATE_LIMIT_WINDOW</code></td>
+<td><code>-rate-limit-window</code></td>
+<td>Rate limit window (seconds)</td>
+<td><code>60</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="http-server-timeouts_1">HTTP Server Timeouts</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>READ_HEADER_TIMEOUT_SECONDS</code></td>
+<td><code>-read-header-timeout-seconds</code></td>
+<td>Read header timeout (sec)</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>READ_TIMEOUT_SECONDS</code></td>
+<td><code>-read-timeout-seconds</code></td>
+<td>Read body timeout (sec)</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>WRITE_TIMEOUT_SECONDS</code></td>
+<td><code>-write-timeout-seconds</code></td>
+<td>Write response timeout (sec)</td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>IDLE_TIMEOUT_SECONDS</code></td>
+<td><code>-idle-timeout-seconds</code></td>
+<td>Idle connection timeout (sec)</td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>MAX_HEADER_BYTES</code></td>
+<td><code>-max-header-bytes</code></td>
+<td>Max header size (bytes)</td>
+<td><code>1048576</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="security-configuration_1">Security Configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ALLOWED_COMMAND_PATHS</code></td>
+<td><code>-allowed-command-paths</code></td>
+<td>Allowed command paths (comma-separated)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>MAX_ARG_LENGTH</code></td>
+<td><code>-max-arg-length</code></td>
+<td>Max single argument length (bytes)</td>
+<td><code>1048576</code></td>
+</tr>
+<tr>
+<td><code>MAX_TOTAL_ARGS_LENGTH</code></td>
+<td><code>-max-total-args-length</code></td>
+<td>Max total arguments length (bytes)</td>
+<td><code>10485760</code></td>
+</tr>
+<tr>
+<td><code>MAX_ARGS_COUNT</code></td>
+<td><code>-max-args-count</code></td>
+<td>Max argument count</td>
+<td><code>1000</code></td>
+</tr>
+<tr>
+<td><code>STRICT_MODE</code></td>
+<td><code>-strict-mode</code></td>
+<td>Strict mode</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="tracing_1">Tracing</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TRACING_ENABLED</code></td>
+<td><code>-tracing-enabled</code></td>
+<td>Enable distributed tracing</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>OTLP_ENDPOINT</code></td>
+<td><code>-otlp-endpoint</code></td>
+<td>OTLP exporter endpoint</td>
+<td>(empty)</td>
+</tr>
+<tr>
+<td><code>TRACING_SERVICE_NAME</code></td>
+<td><code>-tracing-service-name</code></td>
+<td>Tracing service name</td>
+<td><code>webhook</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="audit_1">Audit</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AUDIT_ENABLED</code></td>
+<td><code>-audit-enabled</code></td>
+<td>Enable audit logging</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>AUDIT_STORAGE_TYPE</code></td>
+<td><code>-audit-storage-type</code></td>
+<td>Audit storage type (file/redis/database)</td>
+<td><code>file</code></td>
+</tr>
+<tr>
+<td><code>AUDIT_FILE_PATH</code></td>
+<td><code>-audit-file-path</code></td>
+<td>Audit log file path</td>
+<td><code>./audit.log</code></td>
+</tr>
+<tr>
+<td><code>AUDIT_QUEUE_SIZE</code></td>
+<td><code>-audit-queue-size</code></td>
+<td>Audit async queue size</td>
+<td><code>1000</code></td>
+</tr>
+<tr>
+<td><code>AUDIT_WORKERS</code></td>
+<td><code>-audit-workers</code></td>
+<td>Audit async workers</td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td><code>AUDIT_MASK_IP</code></td>
+<td><code>-audit-mask-ip</code></td>
+<td>Mask IP in audit logs</td>
+<td><code>true</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="openapi_1">OpenAPI</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OPENAPI_ENABLED</code></td>
+<td><code>-openapi</code></td>
+<td>Enable OpenAPI spec</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>OPENAPI_PATH</code></td>
+<td><code>-openapi-path</code></td>
+<td>HTTP path for OpenAPI spec</td>
+<td><code>/openapi</code></td>
+</tr>
+<tr>
+<td><code>OPENAPI_PRINT</code></td>
+<td><code>-openapi-print</code></td>
+<td>Print OpenAPI spec to stdout at startup</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="config-ui_1">Config UI</h3>
+<table>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>CLI Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CONFIG_UI_ENABLED</code></td>
+<td><code>-config-ui</code></td>
+<td>Enable config generator Web UI on webhook server</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>CONFIG_UI_PATH</code></td>
+<td><code>-config-ui-path</code></td>
+<td>HTTP path for Config UI when mounted on webhook server</td>
+<td><code>/config-ui</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="security-best-practices">Security Best Practices</h2>
+<h3 id="secure-profile">Secure Profile</h3>
+<p>Use <code>-profile secure</code> for production-oriented defaults:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>./webhook<span class="w"> </span>-profile<span class="w"> </span>secure<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>-allowed-command-paths<span class="o">=</span><span class="s2">"/usr/bin,/opt/scripts"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-hooks<span class="w"> </span>hooks.json
+</code></pre></div>
+<p>Unless explicitly overridden by a CLI flag or environment variable, this profile sets <code>-http-methods=POST</code>, <code>-strict-mode=true</code>, <code>-rate-limit-enabled=true</code>, <code>-x-request-id=true</code>, and <code>-audit-enabled=true</code>. Startup validation rejects the secure profile when <code>-allowed-command-paths</code> is empty. Hook authentication is still configured per hook; prefer an HMAC header rule.</p>
+<h3 id="command-path-whitelisting">Command Path Whitelisting</h3>
+<p>Use <code>-allowed-command-paths</code> to restrict which commands can be executed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Allow commands from specific directories</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>-allowed-command-paths<span class="o">=</span><span class="s2">"/usr/bin,/opt/scripts"</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Allow specific files only</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>-allowed-command-paths<span class="o">=</span><span class="s2">"/usr/bin/git,/opt/scripts/deploy.sh"</span>
+</code></pre></div>
+<h3 id="strict-mode">Strict Mode</h3>
+<p>Enable <code>-strict-mode</code> to reject arguments containing potentially dangerous shell characters (<code>;</code>, <code>|</code>, <code>&amp;</code>, <code>`</code>, <code>$</code>, <code>()</code>, <code>{}</code>, etc.).</p>
+<h3 id="rate-limiting_2">Rate Limiting</h3>
+<p>Enable rate limiting to protect against DoS attacks:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>-rate-limit-enabled<span class="w"> </span>-rate-limit-rps<span class="o">=</span><span class="m">100</span><span class="w"> </span>-rate-limit-burst<span class="o">=</span><span class="m">10</span>
+</code></pre></div>
+<h2 id="configuration-priority">Configuration Priority</h2>
+<p>When using both environment variables and command-line flags, <strong>command-line flags take priority</strong>. The resolution order is:</p>
+<ol>
+<li>Default values</li>
+<li>Environment variables (override defaults)</li>
+<li>Command-line flags (override environment variables)</li>
+</ol>
+<p>For hook config source selection, webhook uses: explicit non-empty <code>-hooks-dir</code> / <code>HOOKS_DIR</code> first, then explicit <code>-hooks</code> / <code>HOOKS</code>, otherwise the default directory <code>./hooks</code>.</p>
+<h2 id="live-reloading-hooks">Live Reloading Hooks</h2>
+<p>If your OS supports HUP or USR1 signals, you can use them to trigger hook reload without restarting:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">kill</span><span class="w"> </span>-USR1<span class="w"> </span>&lt;webhook_pid&gt;
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># or</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">kill</span><span class="w"> </span>-HUP<span class="w"> </span>&lt;webhook_pid&gt;
+</code></pre></div>
+<p>Alternatively, use <code>-hotreload</code> (or <code>HOT_RELOAD=true</code>) for automatic hot reloading when hook files change.</p>
+<h2 id="example-usage">Example Usage</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Basic usage</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>./webhook<span class="w"> </span>-verbose
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Explicit single-file mode (still supported)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>./webhook<span class="w"> </span>-hooks<span class="w"> </span>hooks.json<span class="w"> </span>-verbose
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># With production-oriented security defaults</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>./webhook<span class="w"> </span>-profile<span class="w"> </span>secure<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span>-hooks<span class="w"> </span>hooks.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span>-allowed-command-paths<span class="o">=</span><span class="s2">"/usr/bin,/opt/scripts"</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="c1"># With HTTP server tuning</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>./webhook<span class="w"> </span>-hooks<span class="w"> </span>hooks.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span>-read-header-timeout-seconds<span class="o">=</span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">  </span>-read-timeout-seconds<span class="o">=</span><span class="m">30</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">  </span>-write-timeout-seconds<span class="o">=</span><span class="m">60</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">  </span>-max-concurrent-hooks<span class="o">=</span><span class="m">20</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="c1"># With OpenAPI spec (for Swagger UI or client generation; recommend debugging/intranet only)</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>./webhook<span class="w"> </span>-hooks<span class="w"> </span>hooks.json<span class="w"> </span>-openapi
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="c1"># Or print spec to stdout: ./webhook -hooks hooks.json -openapi -openapi-print &gt; openapi.json</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="c1"># Using environment variables</span>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PORT</span><span class="o">=</span><span class="m">8080</span>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HOOKS_DIR</span><span class="o">=</span>/path/to/hooks
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RATE_LIMIT_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>./webhook
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
