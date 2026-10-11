@@ -20,7 +20,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: go-quality-${{ inputs.source_ref || github.ref }}
+  group: go-quality-${{ inputs.source_ref || github.ref }}-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   release_gate:
@@ -70,8 +70,26 @@ jobs:
                   for run in data.get("workflow_runs", []):
                       if run.get("event") == "push" and run.get("head_sha") == sha:
                           if run.get("status") == "completed" and run.get("conclusion") == "success":
-                              enabled = False
-                              break
+                              artifact_url = f"{base}/repos/{os.environ['REPOSITORY']}/actions/runs/{run['id']}/artifacts?per_page=100"
+                              while artifact_url:
+                                  artifact_request = urllib.request.Request(artifact_url, headers=dict(request.headers))
+                                  with urllib.request.urlopen(artifact_request, timeout=30) as artifact_response:
+                                      artifacts = json.load(artifact_response)
+                                      artifact_link = artifact_response.headers.get("Link", "")
+                                  expected = f"go-quality-stable-{run['id']}-{run['run_attempt']}"
+                                  if any(a.get("name") == expected and a.get("expired") is False for a in artifacts.get("artifacts", [])):
+                                      enabled = False
+                                      break
+                                  artifact_url = None
+                                  for relation in artifact_link.split(","):
+                                      if 'rel="next"' in relation:
+                                          candidate = relation.strip().split(">", 1)[0].lstrip("<")
+                                          if not candidate.startswith(base + "/"):
+                                              raise RuntimeError("Unexpected artifact pagination API host")
+                                          artifact_url = candidate
+                                          break
+                              if not enabled:
+                                  break
                   if not enabled:
                       break
                   url = None
@@ -86,7 +104,7 @@ jobs:
               output.write(f"enabled={str(enabled).lower()}\n")
           if not enabled:
               with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
-                  summary.write("Existing successful tag-push reports cover this source; skipping duplicate release tests.\n")
+                  summary.write("Available artifacts from successful tag-push reports cover this source; skipping duplicate release tests.\n")
           PYTHON
   reports:
     needs: release_gate
@@ -110,6 +128,7 @@ jobs:
         run: |-
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Remove stale generated report evidence
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
