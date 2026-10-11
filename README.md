@@ -1,8 +1,6 @@
 # Welcome to WebHook! [中文文档](./README-zhCN.md)
 
-[![Go Test Coverage](./.github/coverage.svg)](./.github/go-test-report.md) [![Go Report Card](./.github/goreportcard.svg)](./.github/goreportcard-report.md)
-
-[![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Benchmarks](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml)
+[![Go Test Coverage](./.github/coverage.svg)](./.github/go-test-report.md) [![Go Report Card](./.github/goreportcard.svg)](./.github/goreportcard-report.md) [![Release](https://github.com/soulteary/webhook/actions/workflows/build.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/build.yml) [![CodeQL](https://github.com/soulteary/webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/codeql.yml) [![Security Scan](https://github.com/soulteary/webhook/actions/workflows/scan.yml/badge.svg)](https://github.com/soulteary/webhook/actions/workflows/scan.yml) [![Benchmarks](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/soulteary/webhook/actions/workflows/benchmark.yml)
 
 
  <img src="./docs/logo/logo-600x600.jpg" alt="Webhook" align="left" width="180" />
