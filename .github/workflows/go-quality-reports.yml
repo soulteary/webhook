@@ -13,14 +13,14 @@ on:
         required: false
         default: ''
       reuse_existing_tag_report:
-        description: Skip tests if a successful or active tag report already covers this source
+        description: Skip tests if a successful tag report already covers this source
         type: boolean
         required: false
         default: false
 permissions:
   contents: read
 concurrency:
-  group: go-quality-${{ github.ref }}
+  group: go-quality-${{ inputs.source_ref || github.ref }}
   cancel-in-progress: false
 jobs:
   release_gate:
@@ -58,7 +58,6 @@ jobs:
               query = urllib.parse.urlencode({"event": "push", "head_sha": sha, "per_page": 100})
               base = os.environ["GITHUB_API_URL"].rstrip("/")
               url = f"{base}/repos/{os.environ['REPOSITORY']}/actions/workflows/go-quality-reports.yml/runs?{query}"
-              active = {"queued", "in_progress", "waiting", "pending", "requested"}
               while url:
                   request = urllib.request.Request(url, headers={
                       "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
@@ -70,7 +69,7 @@ jobs:
                       link = response.headers.get("Link", "")
                   for run in data.get("workflow_runs", []):
                       if run.get("event") == "push" and run.get("head_sha") == sha:
-                          if run.get("status") in active or run.get("conclusion") == "success":
+                          if run.get("status") == "completed" and run.get("conclusion") == "success":
                               enabled = False
                               break
                   if not enabled:
@@ -87,7 +86,7 @@ jobs:
               output.write(f"enabled={str(enabled).lower()}\n")
           if not enabled:
               with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
-                  summary.write("Existing successful or active tag-push reports cover this source; skipping duplicate release tests.\n")
+                  summary.write("Existing successful tag-push reports cover this source; skipping duplicate release tests.\n")
           PYTHON
   reports:
     needs: release_gate

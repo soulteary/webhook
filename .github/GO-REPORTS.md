@@ -20,6 +20,6 @@ Per-package floor: `0%`.
 Quality-score floor: `0%`.
 Raw profiles/test logs are artifacts, never committed.
 
-Published releases query actual tag-push report runs for the tested commit. A successful or active tag run prevents duplicate tests; missing, failed, cancelled, or skipped runs allow the release event to generate reports. This covers skipped commits and releases whose tag push produced no workflow event. API lookup errors fail the gate rather than silently assume a report exists. Stable report-only artifacts explicitly restore `.github` on download; mixed report/document artifacts retain repository hierarchy.
+Published releases query actual tag-push report runs for the tested commit. A successful tag run prevents duplicate tests; missing, active, failed, cancelled, or skipped runs allow the release event to generate reports. This covers skipped commits and releases whose tag push produced no workflow event. API lookup errors fail the gate rather than silently assume a report exists. Stable report-only artifacts explicitly restore `.github` on download; mixed report/document artifacts retain repository hierarchy.
 
 Before generation the job removes only its known generated reports and raw result directory, so failed producers cannot upload stale checked-in evidence. Artifact names include the run attempt. The write token already prevents recursive workflow triggers, so report commits omit CI skip annotations that could suppress a later release tag.
