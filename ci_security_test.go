@@ -36,7 +36,7 @@ func TestSecurityWorkflowFailsClosed(t *testing.T) {
 	assert.NotContains(t, contents, "@master")
 	assert.NotContains(t, contents, "-no-fail")
 	assert.Contains(t, contents, "govulncheck@8fcedea455d953a0f8470e1f41420bb6f2e72665")
-	assert.Contains(t, contents, "gosec@v2.29.0")
+	assert.Contains(t, contents, "gosec@7b1b5cebe007d62fb58eacb90fc571112939ec30")
 }
 
 func TestPrimaryTestWorkflowUsesRaceDetector(t *testing.T) {
