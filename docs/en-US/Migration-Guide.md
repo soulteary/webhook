@@ -57,7 +57,7 @@ Hook JSON/YAML compatibility is tested and regressions are treated as bugs. Runt
 2. **Download New Version:**
    ```bash
    # Download a versioned release archive
-   VERSION=7.3.1
+   VERSION=7.3.2
    wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
    tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    
