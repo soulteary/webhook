@@ -96,8 +96,8 @@ github.com/soulteary/metrics-kit/v3 v3.0.1 h1:Neu0DJX9SFLlgZSyVzrjX+nG470kqtV31E
 github.com/soulteary/metrics-kit/v3 v3.0.1/go.mod h1:jZGuNPknSXl41D7SEHrSsNrOZAs9hoQ7j61PIADJmPQ=
 github.com/soulteary/middleware-kit/v3 v3.0.1 h1:DzSzNwm4DZdXNsujQFGiSIKZ/jEk/zsVrZUYPI+aeIc=
 github.com/soulteary/middleware-kit/v3 v3.0.1/go.mod h1:HH29gvA8wC71X8lAeSArfliNPIpX+5vaDVSSBZjqaCU=
-github.com/soulteary/redis-kit v1.7.1 h1:5oYbmJQ9tZtXtIDV0RpV0aWifAXjO6HkXla8MtmDfTI=
-github.com/soulteary/redis-kit v1.7.1/go.mod h1:imHfOsWRH7lYg6PPXuXCK0GMGXVQTqV9GkFZ8xizZdA=
+github.com/soulteary/redis-kit v1.7.2 h1:kknavT4HYvGRMFpqHXZ15IaSNkbrTWqoa/Y38eMelvY=
+github.com/soulteary/redis-kit v1.7.2/go.mod h1:imHfOsWRH7lYg6PPXuXCK0GMGXVQTqV9GkFZ8xizZdA=
 github.com/soulteary/secure-kit/v2 v2.1.1 h1:Fp1ArxoySEWM26UKlympIlcA/6doupqej3F3BZ3ELpI=
 github.com/soulteary/secure-kit/v2 v2.1.1/go.mod h1:kdi6fJf1RLxRpZ5jhkoqrvq8XSf2UZ1YcthLLjZHrdw=
 github.com/soulteary/tracing-kit/v2 v2.0.1 h1:MDA8HWrpS5uRuY0yI/oVwwZPazHkPSvLUSMNQrSkQAo=
