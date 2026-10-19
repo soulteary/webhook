@@ -14,7 +14,7 @@ require (
 	github.com/soulteary/cli-kit v1.9.1
 	github.com/soulteary/health-kit/v4 v4.0.1
 	github.com/soulteary/i18n-kit/v4 v4.0.2
-	github.com/soulteary/logger-kit/v3 v3.0.1
+	github.com/soulteary/logger-kit/v3 v3.0.2
 	github.com/soulteary/metrics-kit/v3 v3.0.1
 	github.com/soulteary/middleware-kit/v3 v3.0.1
 	github.com/soulteary/redis-kit v1.7.1
