@@ -22,48 +22,48 @@
 
 ### gocyclo
 
-- `internal/monitor/dirwatch.go`
-  - Line 27: cyclomatic complexity 32 for function WatchDir
-- `internal/configui/configui.go`
-  - Line 282: cyclomatic complexity 31 for function runSave
-  - Line 177: cyclomatic complexity 17 for function requestToHook
-- `internal/i18n/i18n.go`
-  - Line 22: cyclomatic complexity 21 for function InitLocaleByFiles
-- `internal/middleware/dumper.go`
-  - Line 42: cyclomatic complexity 16 for function DumperWithConfig
+- `webhook.go`
+  - Line 119: cyclomatic complexity 34 for function main
+- `example/owlmail/example_test.go`
+  - Line 66: cyclomatic complexity 18 for function TestOwlMailConfigAndDocumentation
+  - Line 13: cyclomatic complexity 16 for function TestHookTemplateRendersValidJSON
+- `internal/hook/template_secret.go`
+  - Line 30: cyclomatic complexity 16 for function getSecret
 - `internal/flags/validate.go`
   - Line 58: cyclomatic complexity 40 for function Validate
   - Line 630: cyclomatic complexity 28 for function validateRuleContent
   - Line 263: cyclomatic complexity 20 for function validateHookFiles
   - Line 349: cyclomatic complexity 17 for function validateHookContent
-- `webhook.go`
-  - Line 119: cyclomatic complexity 34 for function main
+- `internal/server/server.go`
+  - Line 983: cyclomatic complexity 34 for function handleHook
+  - Line 248: cyclomatic complexity 24 for function handleMultipartForm
+- `internal/configui/configui.go`
+  - Line 282: cyclomatic complexity 31 for function runSave
+  - Line 177: cyclomatic complexity 17 for function requestToHook
 - `internal/monitor/monitor.go`
   - Line 84: cyclomatic complexity 26 for function handleEvent
-- `webhook_test.go`
-  - Line 23: cyclomatic complexity 19 for function TestWebhook
+- `internal/middleware/sanitizer.go`
+  - Line 230: cyclomatic complexity 23 for function SanitizeDumpRequest
+- `internal/i18n/i18n.go`
+  - Line 22: cyclomatic complexity 21 for function InitLocaleByFiles
 - `internal/hook/hook.go`
   - Line 399: cyclomatic complexity 19 for function GetParameter
   - Line 498: cyclomatic complexity 18 for function (*Argument).Get
   - Line 808: cyclomatic complexity 17 for function (*Hooks).loadFromFileWithOptions
-- `internal/flags/config.go`
-  - Line 19: cyclomatic complexity 19 for function ParseConfig
-- `internal/middleware/sanitizer.go`
-  - Line 230: cyclomatic complexity 23 for function SanitizeDumpRequest
-- `internal/hook/template_secret.go`
-  - Line 30: cyclomatic complexity 16 for function getSecret
 - `internal/server/web.go`
   - Line 56: cyclomatic complexity 41 for function Launch
 - `internal/doctor/doctor.go`
   - Line 32: cyclomatic complexity 39 for function Run
   - Line 406: cyclomatic complexity 20 for function checkWritableFilePathWithParentCreation
   - Line 217: cyclomatic complexity 19 for function checkCommand
-- `internal/server/server.go`
-  - Line 983: cyclomatic complexity 34 for function handleHook
-  - Line 248: cyclomatic complexity 24 for function handleMultipartForm
-- `example/owlmail/example_test.go`
-  - Line 66: cyclomatic complexity 18 for function TestOwlMailConfigAndDocumentation
-  - Line 13: cyclomatic complexity 16 for function TestHookTemplateRendersValidJSON
+- `internal/monitor/dirwatch.go`
+  - Line 27: cyclomatic complexity 32 for function WatchDir
+- `webhook_test.go`
+  - Line 23: cyclomatic complexity 19 for function TestWebhook
+- `internal/flags/config.go`
+  - Line 19: cyclomatic complexity 19 for function ParseConfig
+- `internal/middleware/dumper.go`
+  - Line 42: cyclomatic complexity 16 for function DumperWithConfig
 
 ---
 

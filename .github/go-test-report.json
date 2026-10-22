@@ -7,9 +7,9 @@
     "skipped": 5
   },
   "coverage": {
-    "covered_statements": 3349,
+    "covered_statements": 3350,
     "total_statements": 4393,
-    "percentage": 76.23,
+    "percentage": 76.26,
     "threshold": 0
   },
   "packages": [
@@ -123,7 +123,7 @@
       "status": "pass",
       "tests": 20,
       "failed": 0,
-      "coverage": 45.08
+      "coverage": 45.42
     },
     {
       "name": "internal/openapi",

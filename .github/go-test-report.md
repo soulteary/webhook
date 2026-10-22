@@ -8,7 +8,7 @@
 | Passed | 596 |
 | Failed | 0 |
 | Skipped | 5 |
-| Coverage | 76.23% |
+| Coverage | 76.26% |
 | Threshold | 0.00% |
 
 ### Packages
@@ -30,7 +30,7 @@
 | internal/logger | pass | 20 | 0 | 90.32% |
 | internal/metrics | pass | 9 | 0 | 69.88% |
 | internal/middleware | pass | 66 | 0 | 82.62% |
-| internal/monitor | pass | 20 | 0 | 45.08% |
+| internal/monitor | pass | 20 | 0 | 45.42% |
 | internal/openapi | pass | 7 | 0 | 92.68% |
 | internal/pidfile | pass | 7 | 0 | 88.89% |
 | internal/platform | pass | 16 | 0 | 66.67% |
