@@ -4,10 +4,10 @@
 
 | Metric | Value |
 | --- | --- |
-| Total | 601 |
+| Total | 602 |
 | Passed | 596 |
 | Failed | 0 |
-| Skipped | 5 |
+| Skipped | 6 |
 | Coverage | 76.26% |
 | Threshold | 0.00% |
 
@@ -29,7 +29,7 @@
 | internal/link | pass | 3 | 0 | 100.00% |
 | internal/logger | pass | 20 | 0 | 90.32% |
 | internal/metrics | pass | 9 | 0 | 69.88% |
-| internal/middleware | pass | 66 | 0 | 82.62% |
+| internal/middleware | pass | 67 | 0 | 82.62% |
 | internal/monitor | pass | 20 | 0 | 45.42% |
 | internal/openapi | pass | 7 | 0 | 92.68% |
 | internal/pidfile | pass | 7 | 0 | 88.89% |
