@@ -7,7 +7,7 @@ Actions page.
 
 ## 7.3.4 scope
 
-This maintenance release refreshes soulteary kits and compatible transitive dependencies, retains Go 1.27.3, and rebuilds the versioned binaries and all three container variants. Hook configuration and runtime APIs remain compatible with 7.3.3. See the [changelog](../../CHANGELOG.md) for the release scope.
+This maintenance release refreshes soulteary kits and compatible transitive dependencies, retains Go 1.27.3, and rebuilds the versioned binaries and all three container variants. Hook configuration and runtime APIs remain compatible with 7.3.3. See the [changelog](https://github.com/soulteary/webhook/blob/7.3.4/CHANGELOG.md) for the release scope.
 
 ## Release invariants
 

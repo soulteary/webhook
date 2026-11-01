@@ -6,7 +6,7 @@
 
 ## 7.3.4 发布范围
 
-此维护版本更新 soulteary kit 及兼容的间接依赖，Go 保持 1.27.3，并重新构建版本化二进制及三种容器变体。Hook 配置和运行时 API 兼容 7.3.3。发布范围见 [CHANGELOG](../../CHANGELOG.md)。
+此维护版本更新 soulteary kit 及兼容的间接依赖，Go 保持 1.27.3，并重新构建版本化二进制及三种容器变体。Hook 配置和运行时 API 兼容 7.3.3。发布范围见 [CHANGELOG](https://github.com/soulteary/webhook/blob/7.3.4/CHANGELOG.md)。
 
 ## 发布不变量
 
