@@ -1,5 +1,10 @@
 # 迁移指南
 
+## 从 7.3.3 升级到 7.3.4
+
+本次是依赖维护版本，无需迁移 Hook 或配置。保留原有容器变体和持久化挂载，仅将版本后缀更新为 `7.3.4`。切换生产流量前验证 Hook 并测试代表性的签名请求；使用 Redis 分布式限流的部署还应检查共享配额。
+
+
 本指南帮助您从 Webhook 的先前版本或原始 webhook 项目迁移到此 fork。
 
 ## 目录
@@ -57,7 +62,7 @@
 2. **下载新版本:**
    ```bash
    # 下载带版本号的 Release 压缩包
-   VERSION=7.3.2
+   VERSION=7.3.4
    wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
    tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    

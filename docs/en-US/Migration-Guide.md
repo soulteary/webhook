@@ -1,5 +1,10 @@
 # Migration Guide
 
+## Upgrade from 7.3.3 to 7.3.4
+
+This is a dependency maintenance release with no hook or configuration migration. Keep the existing runtime variant and persistent mounts, update its version suffix to `7.3.4`, validate your hooks, and test a representative signed request. Redis-backed deployments should also verify shared rate-limit behavior.
+
+
 This guide helps you migrate from previous versions of Webhook or from the original webhook project to this fork.
 
 ## Table of Contents
@@ -57,7 +62,7 @@ Hook JSON/YAML compatibility is tested and regressions are treated as bugs. Runt
 2. **Download New Version:**
    ```bash
    # Download a versioned release archive
-   VERSION=7.3.2
+   VERSION=7.3.4
    wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
    tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    
