@@ -5,9 +5,9 @@ release is created only by pushing one immutable semantic-version tag. Do not
 create a GitHub Release manually and do not run the Release workflow from the
 Actions page.
 
-## 7.3.2 scope
+## 7.3.4 scope
 
-This maintenance release updates Go to 1.27.2, soulteary kits, OpenTelemetry and other dependencies, and rebuilds the versioned binaries and all three container variants. Hook configuration and runtime APIs remain compatible with 7.3.1.
+This maintenance release refreshes soulteary kits and compatible transitive dependencies, retains Go 1.27.3, and rebuilds the versioned binaries and all three container variants. Hook configuration and runtime APIs remain compatible with 7.3.3. See the [changelog](../../CHANGELOG.md) for the release scope.
 
 ## Release invariants
 
@@ -38,16 +38,16 @@ All dependency/toolchain upgrades and the version preparation PR must be present
 From an up-to-date, clean `main` checkout, run one command:
 
 ```bash
-./scripts/release.sh 7.3.2
+./scripts/release.sh 7.3.4
 ```
 
 The command runs a fast Git-only preflight, displays the exact commit, and asks
-you to type `7.3.2` before it creates and pushes one annotated tag. It refuses a
+you to type `7.3.4` before it creates and pushes one annotated tag. It refuses a
 dirty checkout, a non-`main` branch, a checkout that differs from `origin/main`,
 an invalid version, stale version references, or an existing local/remote tag.
 
 Do not create a draft or empty GitHub Release first; GoReleaser owns that
-operation. The script pushes only `refs/tags/7.3.2`, never all local tags.
+operation. The script pushes only `refs/tags/7.3.4`, never all local tags.
 
 The tag push starts these paths:
 
@@ -57,13 +57,13 @@ The tag push starts these paths:
 | 2 | Release / `publish` | Builds the GitHub Release, archives, SBOMs, and signed container manifests | Run once only |
 | 3 | Release / `attest` | Downloads published assets and creates GitHub provenance | Retry this job only |
 | 4 | Release / `verify` | Verifies assets, Sigstore bundle, provenance, image UID, and image signatures | Retry this job only |
-| 5 | Release / `documentation` | Builds `7.3.2`, updates `latest`, and sets the documentation default | Retry this job only |
+| 5 | Release / `documentation` | Builds `7.3.4`, updates `latest`, and sets the documentation default | Retry this job only |
 
 Wait for the Release workflow; a visible GitHub Release is not completion by
 itself.
 
 ```bash
-RELEASE_VERSION=7.3.2
+RELEASE_VERSION=7.3.4
 RELEASE_RUN_ID="$(gh run list --workflow build.yml --branch "$RELEASE_VERSION" --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh run watch "$RELEASE_RUN_ID" --exit-status
 ```
@@ -92,7 +92,7 @@ done
 ```
 
 Also confirm that both
-`https://soulteary.github.io/webhook/7.3.2/` and the `latest` documentation URL
+`https://soulteary.github.io/webhook/7.3.4/` and the `latest` documentation URL
 resolve correctly. The Release workflow already verifies the checksum Sigstore
 bundle, GitHub attestation, image signatures, and all three runtime variants.
 
@@ -112,9 +112,9 @@ Do not immediately press **Re-run all jobs**.
 
 If GoReleaser started and any versioned release asset or image exists, do not
 delete the tag and reuse the version. Preserve the evidence, fix the cause on
-`main`, and publish the next patch version (for example, 7.3.2). This avoids
+`main`, and publish the next patch version (for example, 7.3.5). This avoids
 serving different bytes under the same immutable version.
 
 If the local tag was created but the push failed, inspect it with
-`git show 7.3.2`, then retry only `git push origin refs/tags/7.3.2`. Do not rerun
+`git show 7.3.4`, then retry only `git push origin refs/tags/7.3.4`. Do not rerun
 `release.sh`, because its duplicate-tag guard will stop.
