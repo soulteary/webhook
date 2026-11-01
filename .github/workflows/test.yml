@@ -162,3 +162,31 @@ jobs:
             -H 'Content-Type: application/json' \
             -H 'X-Webhook-Signature: sha256=fc2f94757ec900bc605b39b984b3431fa13f3ea2eb7881f2861c1c747d9ffdbd' \
             --data-binary '{"message":"hello from webhook"}')" = accepted
+
+  redis-compatibility:
+    name: Real Redis kit compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      redis:
+        image: redis@sha256:6a12a187547eb2eac4da4528f9d9787d69f3848e513480baedfd75e3b2ac393e
+        ports:
+          - '127.0.0.1:6379:6379'
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - name: Check shared quotas and legacy connection configuration
+        env:
+          GOTOOLCHAIN: local
+          WEBHOOK_REDIS_TEST_ADDR: 127.0.0.1:6379
+          WEBHOOK_REDIS_TEST_REQUIRED: '1'
+        run: go test -mod=readonly -race -count=1 -run '^TestRedisRateLimitCompatibility$' ./internal/middleware
