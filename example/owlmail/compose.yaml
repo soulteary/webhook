@@ -1,6 +1,6 @@
 services:
   webhook:
-    image: soulteary/webhook:runner-7.3.2
+    image: soulteary/webhook:runner-7.3.4
     ports:
       - "127.0.0.1:9000:9000"
     environment:
@@ -30,7 +30,7 @@ services:
       retries: 15
 
   owlmail:
-    image: ghcr.io/soulteary/owlmail:0.9.0
+    image: ghcr.io/soulteary/owlmail:0.13.0
     depends_on:
       webhook:
         condition: service_healthy
@@ -46,3 +46,9 @@ services:
       OWLMAIL_WEBHOOK_SECRET: "${OWLMAIL_WEBHOOK_SECRET:?set OWLMAIL_WEBHOOK_SECRET}"
     volumes:
       - ./owlmail.json:/app/config/owlmail.json:ro
+    healthcheck:
+      test: ["CMD", "/app/owlmail", "healthcheck", "--container"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s

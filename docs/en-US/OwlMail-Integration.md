@@ -5,17 +5,17 @@ to WebHook. WebHook authenticates the exact request body, maps selected JSON
 fields to environment variables, and runs a controlled local command.
 
 ```text
-SMTP client -> OwlMail v0.9.0 -> signed HTTP POST -> WebHook -> command/script
+SMTP client -> OwlMail v0.13.0 -> signed HTTP POST -> WebHook -> command/script
 ```
 
 A runnable example is available in [`example/owlmail`](../../example/owlmail/).
 OwlMail also maintains the sender-side example in
-[`examples/webhooks/soulteary-webhook`](https://github.com/soulteary/owlmail/tree/v0.9.0/examples/webhooks/soulteary-webhook).
+[`examples/webhooks/soulteary-webhook`](https://github.com/soulteary/owlmail/tree/v0.13.0/examples/webhooks/soulteary-webhook).
 
 ## Requirements
 
-- WebHook 7.2.0 or later.
-- OwlMail v0.9.0 (the version pinned by this example) or later.
+- WebHook 7.3.4 (the Compose example uses its shell-capable `runner` image).
+- OwlMail v0.13.0 (the version pinned by this example) or later.
 - A random shared secret of at least 32 bytes.
 - Network reachability from OwlMail to the WebHook endpoint.
 
@@ -44,7 +44,7 @@ The example waits for command completion, so failures return non-2xx responses
 and OwlMail can retry. Keep handlers idempotent and avoid printing secrets or
 unnecessary full message bodies.
 
-## Configure OwlMail v0.9.0
+## Configure OwlMail v0.13.0
 
 Open `/webhooks` to create, import, validate, copy, and download a version 1
 configuration. Editing happens locally in the browser. Downloading does not
@@ -55,7 +55,7 @@ The runnable demo uses the released image directly:
 
 ```yaml
 owlmail:
-  image: ghcr.io/soulteary/owlmail:0.9.0
+  image: ghcr.io/soulteary/owlmail:0.13.0
   environment:
     OWLMAIL_WEBHOOK_CONFIG: /app/config/owlmail.json
     OWLMAIL_WEBHOOK_MAX_CONCURRENCY: "8"
@@ -79,7 +79,7 @@ runtime values fail startup instead of silently disabling delivery.
 
 ## Signatures and delivery identity
 
-OwlMail 0.9.0 sends both signature formats when a target has a `secret`:
+OwlMail 0.13.0 sends both signature formats when a target has a `secret`:
 
 | Header | Meaning |
 |---|---|
@@ -107,7 +107,7 @@ an authenticated copy in the signed body through a trusted adapter.
 ## Delivery timing and durability
 
 OwlMail accepts and stores SMTP mail independently from the eventual HTTP
-result. In 0.9.0, each event is first synced to
+result. In 0.13.0, each event is first synced to
 `.owlmail-webhook-outbox` under the mail directory; HTTP delivery then happens
 asynchronously and with at-least-once semantics. A failed WebHook command causes
 a non-2xx delivery result and retry, but it does not reject or delete the
@@ -128,6 +128,31 @@ it; accepted in-memory jobs and exhausted deliveries are not replayed after a
 restart. With Redis, pending jobs can be reclaimed and exhausted deliveries are
 moved to a dead-letter Stream. Use one active OwlMail instance per Redis prefix.
 
+The default receiver treats an invalid HMAC as a trigger-rule evaluation error
+(currently HTTP 500) and does not execute the command. This legacy status is
+not an acceptance result: OwlMail treats it as a failure and applies its bounded
+retry policy. Fix mismatched secrets rather than enabling signature soft failures.
+
+## Upgrading an existing deployment
+
+The version 1 webhook JSON, exact-body HMAC, environment-variable expansion,
+field mappings and concurrency limit remain compatible. Keep the same shared
+secret and the `runner` image variant; the core image cannot run `print-email.sh`.
+The example explicitly probes `/app/owlmail healthcheck --container`; do not
+assume the published image supplies a Docker HEALTHCHECK or puts `/app` in PATH.
+
+Stop incoming SMTP traffic and the old process before backing up the complete
+mail directory, webhook outbox and any configured Redis/S3 state. Rehearse
+0.13.0 against an isolated copy with real outbound destinations disabled, then
+check readiness, retained mail/attachments, a new SMTP receipt and its signed
+webhook command before reopening traffic. Recovery may resume pending work,
+and delivery remains at least once. If Relay is configured, review its
+[0.13.0 recovery changes](https://github.com/soulteary/owlmail/blob/v0.13.0/docs/en/Release-0.13.0.md).
+Rollback requires stopping the new process and restoring the pre-upgrade backup
+with the old image and configuration; do not share writable state between
+versions. Reconcile downstream receipts before resuming pending deliveries.
+The demo itself remains ephemeral and does not configure Redis or persistent mail.
+
 ## One-command demo
 
 ```bash
@@ -138,7 +163,7 @@ docker compose up
 
 Send a test message to `smtp://127.0.0.1:1025`. Open
 `http://127.0.0.1:1080` for the inbox and `http://127.0.0.1:1080/webhooks` for
-the v0.9.0 webhook configurator. The WebHook container logs the verified and
+the v0.13.0 webhook configurator. The WebHook container logs the verified and
 mapped demo event.
 
 ## Production checklist
@@ -154,7 +179,7 @@ mapped demo event.
 
 ## Filtering and multiple workflows
 
-OwlMail v0.9.0 supports case-insensitive wildcard filters for sender, recipient,
+OwlMail v0.13.0 supports case-insensitive wildcard filters for sender, recipient,
 subject, and plain-text body. Multiple targets can call separate hook IDs such as
 `/hooks/owlmail-archive`, `/hooks/owlmail-alert`, and `/hooks/owlmail-ticket`.
 Use separate commands and, where practical, separate secrets to isolate permissions.
