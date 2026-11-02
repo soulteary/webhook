@@ -189,7 +189,7 @@ Use separate commands and, where practical, separate secrets to isolate permissi
 | Symptom | Check |
 |---|---|
 | OwlMail fails at startup | Config path, expanded URL/secret, duration, template, and JSON syntax. |
-| WebHook returns 401/403 | Both services use the same secret and no proxy changes the body or signature header. |
+| WebHook reports HTTP 500 while evaluating the signature | Both services use the same secret and no proxy changes the body or signature header; the default receiver rejects invalid signatures without execution. |
 | WebHook returns 404 | The target URL ends in `/hooks/owlmail` and the hook ID is `owlmail`. |
 | OwlMail retries after 5xx | Inspect command exit status and WebHook timeout/concurrency logs. |
 | Duplicate processing | Delivery is at least once; deduplicate this fixed payload with the signed `(event, emailId)` tuple and use the unsigned delivery ID only for correlation. |
