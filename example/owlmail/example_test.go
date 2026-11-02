@@ -90,8 +90,9 @@ func TestOwlMailConfigAndDocumentation(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, required := range []string{
-		"soulteary/webhook:runner-7.3.2",
-		"ghcr.io/soulteary/owlmail:0.9.0",
+		"soulteary/webhook:runner-7.3.4",
+		"ghcr.io/soulteary/owlmail:0.13.0",
+		`test: ["CMD", "/app/owlmail", "healthcheck", "--container"]`,
 		"127.0.0.1:9000:9000",
 		"127.0.0.1:1025:1025",
 		"127.0.0.1:1080:1080",
@@ -134,7 +135,7 @@ func TestOwlMailConfigAndDocumentation(t *testing.T) {
 		if strings.Contains(string(document), "v0.5.0") || strings.Contains(string(document), "owlmail:0.5.0") {
 			t.Errorf("linked documentation %q still references obsolete OwlMail 0.5.0", path)
 		}
-		if !strings.Contains(string(document), "0.9.0") {
+		if !strings.Contains(string(document), "0.13.0") {
 			t.Errorf("linked documentation %q does not identify the tested OwlMail release", path)
 		}
 	}

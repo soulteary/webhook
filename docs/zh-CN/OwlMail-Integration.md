@@ -5,16 +5,16 @@ WebHook。WebHook 对完整请求体进行鉴权，将指定 JSON 字段映射�
 受控的本地命令。
 
 ```text
-SMTP 客户端 -> OwlMail v0.9.0 -> 带签名的 HTTP POST -> WebHook -> 命令/脚本
+SMTP 客户端 -> OwlMail v0.13.0 -> 带签名的 HTTP POST -> WebHook -> 命令/脚本
 ```
 
 可运行示例位于 [`example/owlmail`](../../example/owlmail/)。OwlMail 仓库也维护了
-发送端示例：[`examples/webhooks/soulteary-webhook`](https://github.com/soulteary/owlmail/tree/v0.9.0/examples/webhooks/soulteary-webhook)。
+发送端示例：[`examples/webhooks/soulteary-webhook`](https://github.com/soulteary/owlmail/tree/v0.13.0/examples/webhooks/soulteary-webhook)。
 
 ## 使用要求
 
-- WebHook 7.2.0 或更高版本。
-- OwlMail v0.9.0（本示例固定使用的版本）或更高版本。
+- WebHook 7.3.4（Compose 示例使用包含 shell 的 `runner` 镜像）。
+- OwlMail v0.13.0（本示例固定使用的版本）或更高版本。
 - 至少 32 字节的随机共享密钥。
 - OwlMail 能够访问 WebHook 端点。
 
@@ -41,7 +41,7 @@ webhook \
 示例启用了 `include-command-output-in-response`，命令失败会返回非 2xx，使 OwlMail
 按策略重试。处理脚本应保持幂等，并避免输出密钥或不必要的完整邮件正文。
 
-## 2. 配置 OwlMail v0.9.0
+## 2. 配置 OwlMail v0.13.0
 
 打开 OwlMail 的 `/webhooks` 页面，可以创建、导入、校验、复制和下载 version 1
 配置。编辑过程发生在浏览器本地；下载配置并不会自动激活它，需要把 JSON 文件挂载
@@ -51,7 +51,7 @@ Compose 示例直接使用发布镜像：
 
 ```yaml
 owlmail:
-  image: ghcr.io/soulteary/owlmail:0.9.0
+  image: ghcr.io/soulteary/owlmail:0.13.0
   environment:
     OWLMAIL_WEBHOOK_CONFIG: /app/config/owlmail.json
     OWLMAIL_WEBHOOK_MAX_CONCURRENCY: "8"
@@ -77,7 +77,7 @@ OwlMail 会先展开环境变量，再验证配置；缺少变量或数值无效
 
 ## 签名与投递标识
 
-目标配置了 `secret` 时，OwlMail 0.9.0 会同时发送两种签名：
+目标配置了 `secret` 时，OwlMail 0.13.0 会同时发送两种签名：
 
 | 请求头 | 含义 |
 |---|---|
@@ -100,7 +100,7 @@ OwlMail 会先展开环境变量，再验证配置；缺少变量或数值无效
 
 ## 投递时序与持久性
 
-OwlMail 的 SMTP 接收与最终 HTTP 结果相互独立。0.9.0 会先把每个事件同步写入
+OwlMail 的 SMTP 接收与最终 HTTP 结果相互独立。0.13.0 会先把每个事件同步写入
 邮件目录下的 `.owlmail-webhook-outbox`，随后异步执行 HTTP 投递，并采用
 “至少一次”语义。WebHook 命令失败会让本次投递返回非 2xx 并触发重试，但不会
 拒收或删除已经保存的邮件。
@@ -118,6 +118,24 @@ export OWLMAIL_WEBHOOK_SHUTDOWN_TIMEOUT=15s
 以及重试耗尽的投递不会在重启后重放。配置 Redis 后，可以重新认领 pending 任务，
 重试耗尽的投递会进入死信 Stream。每个 Redis 前缀应只运行一个活动 OwlMail 实例。
 
+接收端默认把无效 HMAC 作为触发规则求值错误（当前返回 HTTP 500），不会执行命令。
+这个历史状态码不代表接收成功：OwlMail 会把它视为失败并按有界策略重试。应修正不一致的
+密钥，而不是开启签名软失败。
+
+## 升级既有部署
+
+version 1 Webhook JSON、原始正文 HMAC、环境变量展开、字段映射和并发限制保持兼容。
+保留原共享密钥和 `runner` 镜像变体，core 镜像无法运行 `print-email.sh`。
+示例显式调用 `/app/owlmail healthcheck --container`；不要假设正式镜像内置了
+Docker HEALTHCHECK，或 `/app` 已加入 PATH。
+
+停止新 SMTP 流量及旧进程，备份完整邮件目录、Webhook outbox 和已配置的 Redis/S3 状态。
+先使用隔离副本并禁用真实出站地址演练 0.13.0，再检查就绪状态、历史邮件和附件、
+新 SMTP 接收及对应签名 Webhook 命令后恢复流量。恢复可能继续待投递任务，仍采用至少一次
+投递语义。若使用 Relay，请阅读 [0.13.0 恢复变更](https://github.com/soulteary/owlmail/blob/v0.13.0/docs/zh-CN/Release-0.13.0.md)。
+回退时停止新版，使用旧镜像、旧配置和升级前完整备份，不要让两个版本共用可写数据；
+恢复待投递任务前先核对下游接收记录。本 Demo 仍为临时部署，不配置 Redis 或持久化邮件。
+
 ## 一键 Demo
 
 ```bash
@@ -127,7 +145,7 @@ docker compose up
 ```
 
 随后通过 `curl smtp://127.0.0.1:1025` 发送测试邮件。访问 `http://127.0.0.1:1080`
-查看邮件，访问 `http://127.0.0.1:1080/webhooks` 查看 v0.9.0 的 Webhook 配置生成器，
+查看邮件，访问 `http://127.0.0.1:1080/webhooks` 查看 v0.13.0 的 Webhook 配置生成器，
 WebHook 容器日志中可以看到经过签名校验和字段映射后的 Demo 输出。
 
 ## 生产环境检查清单
@@ -143,7 +161,7 @@ WebHook 容器日志中可以看到经过签名校验和字段映射后的 Demo 
 
 ## 过滤与多工作流
 
-OwlMail v0.9.0 支持按发件人、收件人、主题和纯文本正文进行大小写不敏感的通配符过滤。多个目标可
+OwlMail v0.13.0 支持按发件人、收件人、主题和纯文本正文进行大小写不敏感的通配符过滤。多个目标可
 分别调用 `/hooks/owlmail-archive`、`/hooks/owlmail-alert`、`/hooks/owlmail-ticket`
 等 Hook，并使用独立命令和密钥隔离权限与失败处理。
 
@@ -152,7 +170,7 @@ OwlMail v0.9.0 支持按发件人、收件人、主题和纯文本正文进行�
 | 现象 | 检查内容 |
 |---|---|
 | OwlMail 启动失败 | 配置路径、展开后的 URL/密钥、时长、模板和 JSON 语法。 |
-| WebHook 返回 401/403 | 两边密钥是否一致，代理是否修改请求体或签名头。 |
+| WebHook 在签名求值时返回 HTTP 500 | 两边密钥是否一致，代理是否修改请求体或签名头；默认接收端拒绝无效签名且不执行命令。 |
 | WebHook 返回 404 | 目标 URL 是否以 `/hooks/owlmail` 结尾，Hook ID 是否为 `owlmail`。 |
 | OwlMail 遇到 5xx 后重试 | 检查命令退出状态、WebHook 超时及并发日志。 |
 | 同一事件重复处理 | 投递语义是“至少一次”；当前固定请求体使用已签名的 `(event, emailId)` 组合去重，未签名的投递 ID 仅用于关联。 |
