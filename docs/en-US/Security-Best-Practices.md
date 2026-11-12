@@ -145,7 +145,7 @@ webhook \
 
 ### 4. Optional Web Endpoints (OpenAPI, Config UI)
 
-The `-openapi` and `-config-ui` flags expose additional HTTP endpoints (OpenAPI spec and config generator Web UI). These endpoints do not require authentication and are intended for debugging or intranet use only.
+The `-openapi` and `-config-ui` flags expose additional HTTP endpoints (OpenAPI spec and config generator Web UI). These endpoints do not require authentication and are intended for debugging or intranet use only. The Config UI "Save to directory" API is the exception: it is disabled by default and only works when `-config-ui-token` is set and sent with the request.
 
 - **Do not** enable `-openapi` or `-config-ui` on servers reachable from the public internet unless protected by network restrictions or a reverse proxy with access control.
 - Prefer enabling them only in development, CI, or trusted internal networks.

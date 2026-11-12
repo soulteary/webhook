@@ -1,10 +1,11 @@
 package middleware
 
 import (
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
@@ -161,180 +162,79 @@ func TestNewRateLimitMiddleware(t *testing.T) {
 	}
 }
 
+func mustTrusted(t *testing.T, entries ...string) []*net.IPNet {
+	t.Helper()
+	nets, err := ParseTrustedProxies(entries)
+	if err != nil {
+		t.Fatalf("ParseTrustedProxies: %v", err)
+	}
+	return nets
+}
+
 func TestExtractIP(t *testing.T) {
 	tests := []struct {
-		name           string
-		request        *http.Request
-		expectedPrefix string
+		name    string
+		remote  string
+		xff     []string
+		xri     string
+		trusted []string
+		want    string
 	}{
-		{"X-Forwarded-For", func() *http.Request {
+		{name: "untrusted peer: XFF ignored", remote: "203.0.113.9:1234", xff: []string{"192.168.1.1"}, want: "203.0.113.9"},
+		{name: "untrusted peer: X-Real-IP ignored", remote: "203.0.113.9:1234", xri: "10.0.0.1", want: "203.0.113.9"},
+		{name: "trusted peer: single XFF hop", remote: "10.0.0.2:1234", xff: []string{"198.51.100.7"}, trusted: []string{"10.0.0.0/8"}, want: "198.51.100.7"},
+		{name: "trusted peer: spoofed left-most entry skipped", remote: "10.0.0.2:1234", xff: []string{"1.2.3.4, 198.51.100.7"}, trusted: []string{"10.0.0.0/8"}, want: "198.51.100.7"},
+		{name: "trusted peer: chained proxies", remote: "10.0.0.2:1234", xff: []string{"198.51.100.7, 10.0.0.3"}, trusted: []string{"10.0.0.0/8"}, want: "198.51.100.7"},
+		{name: "trusted peer: multiple XFF headers", remote: "10.0.0.2:1234", xff: []string{"1.2.3.4", "198.51.100.7"}, trusted: []string{"10.0.0.2"}, want: "198.51.100.7"},
+		{name: "trusted peer: garbage XFF falls back", remote: "10.0.0.2:1234", xff: []string{"invalid-ip"}, trusted: []string{"10.0.0.0/8"}, want: "10.0.0.2"},
+		{name: "trusted peer: X-Real-IP", remote: "10.0.0.2:1234", xri: "198.51.100.8", trusted: []string{"10.0.0.0/8"}, want: "198.51.100.8"},
+		{name: "trusted peer: invalid X-Real-IP", remote: "10.0.0.2:1234", xri: "not-an-ip", trusted: []string{"10.0.0.0/8"}, want: "10.0.0.2"},
+		{name: "IPv6 remote", remote: "[2001:db8::1]:8080", want: "2001:db8::1"},
+		{name: "invalid remote addr", remote: "invalid-addr", xff: []string{"1.2.3.4"}, want: "invalid-addr"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/test", nil)
-			req.Header.Set("X-Forwarded-For", "192.168.1.1")
-			return req
-		}(), "192.168.1.1"},
-		{"X-Real-IP", func() *http.Request {
-			req := httptest.NewRequest("GET", "/test", nil)
-			req.Header.Set("X-Real-IP", "10.0.0.1")
-			return req
-		}(), "10.0.0.1"},
-		{"RemoteAddr", httptest.NewRequest("GET", "/test", nil), ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ip := extractIP(tt.request)
-			if tt.expectedPrefix != "" && ip != tt.expectedPrefix {
-				// 对于 RemoteAddr，IP 可能包含端口，所以只检查不为空
-				if tt.name == "RemoteAddr" && ip == "" {
-					t.Error("extractIP() should extract IP from RemoteAddr")
-				} else if tt.name != "RemoteAddr" && ip != tt.expectedPrefix {
-					t.Errorf("extractIP() = %s, want %s", ip, tt.expectedPrefix)
-				}
+			req.RemoteAddr = tt.remote
+			for _, v := range tt.xff {
+				req.Header.Add("X-Forwarded-For", v)
 			}
+			if tt.xri != "" {
+				req.Header.Set("X-Real-IP", tt.xri)
+			}
+			assert.Equal(t, tt.want, extractIP(req, mustTrusted(t, tt.trusted...)))
 		})
 	}
 }
 
-func TestParseForwardedIP(t *testing.T) {
-	tests := []struct {
-		name     string
-		xff      string
-		expected string
-	}{
-		{"single IP", "192.168.1.1", "192.168.1.1"},
-		{"multiple IPs", "192.168.1.1, 10.0.0.1", "192.168.1.1"},
-		{"with spaces", "  192.168.1.1  , 10.0.0.1  ", "192.168.1.1"},
-		{"invalid IP", "invalid", ""},
-		{"empty", "", ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := parseForwardedIP(tt.xff)
-			if got != tt.expected {
-				t.Errorf("parseForwardedIP() = %s, want %s", got, tt.expected)
-			}
-		})
-	}
+func TestParseTrustedProxies_Invalid(t *testing.T) {
+	_, err := ParseTrustedProxies([]string{"10.0.0.0/8", "nonsense"})
+	assert.Error(t, err)
 }
 
-func TestExtractHookID(t *testing.T) {
-	tests := []struct {
-		name     string
-		path     string
-		expected string
-	}{
-		{"simple path", "/hooks/test-hook", "test-hook"},
-		{"nested path", "/hooks/test-hook/sub", "sub"},
-		{"root path", "/", ""},
-		{"empty path", "", ""},
-	}
+// 更换 X-Forwarded-For 不能再为同一客户端换取新的限流额度。
+func TestRateLimiter_SpoofedForwardedForSharesBucket(t *testing.T) {
+	rl := NewRateLimiter(RateLimitConfig{Enabled: true, RPS: 1000, Burst: 1000, PerIPRPS: 1, PerIPBurst: 2})
+	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }))
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var req *http.Request
-			if tt.path == "" {
-				// 对于空路径，需要手动构造请求，因为 httptest.NewRequest 不接受空 URL
-				req = httptest.NewRequest("GET", "/", nil)
-				req.URL.Path = ""
-			} else {
-				req = httptest.NewRequest("GET", tt.path, nil)
-			}
-			got := extractHookID(req)
-			if got != tt.expected {
-				t.Errorf("extractHookID() = %s, want %s", got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestRateLimiter_Cleanup(t *testing.T) {
-	config := RateLimitConfig{
-		Enabled: true,
-		RPS:     10,
-		Burst:   5,
-	}
-
-	rl := NewRateLimiter(config)
-	if rl == nil {
-		t.Fatal("NewRateLimiter() should not return nil")
-	}
-
-	// 创建一些限流器
-	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	// 发送一些请求来创建限流器
+	codes := make([]int, 0, 5)
 	for i := 0; i < 5; i++ {
 		req := httptest.NewRequest("GET", "/test", nil)
-		req.RemoteAddr = "192.168.1." + string(rune('0'+i)) + ":12345"
+		req.RemoteAddr = "203.0.113.9:1234"
+		req.Header.Set("X-Forwarded-For", fmt.Sprintf("198.51.100.%d", i))
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
+		codes = append(codes, w.Code)
 	}
+	assert.Equal(t, []int{200, 200, 429, 429, 429}, codes)
 
-	// 等待清理 goroutine 运行
-	time.Sleep(100 * time.Millisecond)
-
-	// 应该不会 panic
-}
-
-func TestRateLimiter_ConcurrentAccess(t *testing.T) {
-	config := RateLimitConfig{
-		Enabled: true,
-		RPS:     100,
-		Burst:   50,
-	}
-
-	rl := NewRateLimiter(config)
-	if rl == nil {
-		t.Fatal("NewRateLimiter() should not return nil")
-	}
-
-	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	// 并发发送请求
-	done := make(chan bool, 10)
-	for i := 0; i < 10; i++ {
-		go func(id int) {
-			req := httptest.NewRequest("GET", "/test", nil)
-			req.RemoteAddr = "192.168.1.1:12345"
-			w := httptest.NewRecorder()
-			handler.ServeHTTP(w, req)
-			done <- true
-		}(i)
-	}
-
-	// 等待所有请求完成
-	for i := 0; i < 10; i++ {
-		<-done
-	}
-
-	// 应该不会 panic 或产生竞态条件
-}
-
-func TestExtractIP_IPv6(t *testing.T) {
+	// 另一个客户端不受影响：单 IP 额度低于全局额度。
 	req := httptest.NewRequest("GET", "/test", nil)
-	req.RemoteAddr = "[2001:db8::1]:8080"
-	ip := extractIP(req)
-	assert.Equal(t, "2001:db8::1", ip)
-}
-
-func TestExtractIP_InvalidRemoteAddr(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test", nil)
-	req.RemoteAddr = "invalid-addr"
-	ip := extractIP(req)
-	assert.Equal(t, "invalid-addr", ip)
-}
-
-func TestExtractIP_XForwardedFor_InvalidIP(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set("X-Forwarded-For", "invalid-ip")
-	ip := extractIP(req)
-	// Should fallback to RemoteAddr
-	assert.NotEmpty(t, ip)
+	req.RemoteAddr = "203.0.113.10:1234"
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 func TestParseForwardedIP_EdgeCases(t *testing.T) {

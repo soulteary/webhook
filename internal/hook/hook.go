@@ -250,10 +250,11 @@ func CheckMSTeamsSignature(r *Request, signingKey string) (bool, error) {
 	}
 
 	// Check if a valid HMAC header was provided
-	if _, ok := r.Headers["Authorization"]; !ok {
+	authorization, ok := r.Headers["Authorization"].(string)
+	if !ok {
 		return false, nil
 	}
-	headerParts := strings.SplitN(r.Headers["Authorization"].(string), " ", 2)
+	headerParts := strings.SplitN(authorization, " ", 2)
 	if len(headerParts) != 2 || headerParts[0] != "HMAC" {
 		return false, errors.New("malformed 'Authorization' header")
 	}
@@ -275,21 +276,23 @@ func CheckScalrSignature(r *Request, signingKey string, checkDate bool) (bool, e
 	}
 
 	// Check for the signature and date headers
-	if _, ok := r.Headers["X-Signature"]; !ok {
+	providedSignature, ok := r.Headers["X-Signature"].(string)
+	if !ok {
 		return false, nil
 	}
-	if _, ok := r.Headers["Date"]; !ok {
+	dateHeader, ok := r.Headers["Date"].(string)
+	if !ok {
 		return false, nil
 	}
 	if signingKey == "" {
 		return false, errors.New("signature validation signing key can not be empty")
 	}
 
-	providedSignature := r.Headers["X-Signature"].(string)
-	dateHeader := r.Headers["Date"].(string)
-
-	// Scalr combines body + date for signature, use secure-kit for HMAC
-	combinedPayload := append(r.Body, []byte(dateHeader)...)
+	// Scalr combines body + date for signature, use secure-kit for HMAC.
+	// Build a fresh slice: appending to r.Body could write into its spare capacity.
+	combinedPayload := make([]byte, 0, len(r.Body)+len(dateHeader))
+	combinedPayload = append(combinedPayload, r.Body...)
+	combinedPayload = append(combinedPayload, dateHeader...)
 	expectedSignature := secure.ComputeHMACSHA1(combinedPayload, signingKey)
 
 	// Use constant-time comparison from secure-kit
@@ -336,8 +339,13 @@ func CheckIPWhitelist(remoteAddr, ipRange string) (bool, error) {
 	for _, r := range strings.Fields(ipRange) {
 		// Extract IP range in CIDR form. If a single IP address is provided, turn it into CIDR form.
 		if !strings.Contains(r, "/") {
-			// Determine prefix length based on IP version
-			if parsedIP.To4() != nil {
+			// The prefix length follows the entry's own address family, so a
+			// list mixing IPv4 and IPv6 entries works for clients of either.
+			entryIP := net.ParseIP(r)
+			if entryIP == nil {
+				return false, fmt.Errorf("invalid IP address '%s' in ip-whitelist", r)
+			}
+			if entryIP.To4() != nil {
 				r += "/32" // IPv4
 			} else {
 				r += "/128" // IPv6
@@ -361,34 +369,39 @@ func CheckIPWhitelist(remoteAddr, ipRange string) (bool, error) {
 // (please note you should pass pointer to the map, because we're modifying it)
 // based on the passed string
 func ReplaceParameter(s string, params, value interface{}) bool {
-	if params == nil {
-		return false
+	if mapPtr, ok := params.(*map[string]interface{}); ok {
+		if mapPtr == nil {
+			return false
+		}
+		params = *mapPtr
 	}
 
-	if paramsValue := reflect.ValueOf(params); paramsValue.Kind() == reflect.Slice {
-		if paramsValueSliceLength := paramsValue.Len(); paramsValueSliceLength > 0 {
-			if p := strings.SplitN(s, ".", 2); len(p) > 1 {
-				index, err := strconv.ParseUint(p[0], 10, 64)
-
-				if err != nil || uint64(paramsValueSliceLength) <= index {
-					return false
-				}
-
-				return ReplaceParameter(p[1], params.([]interface{})[index], value)
-			}
+	switch node := params.(type) {
+	case []interface{}:
+		p := strings.SplitN(s, ".", 2)
+		index, err := strconv.ParseUint(p[0], 10, 64)
+		if err != nil || index >= uint64(len(node)) {
+			return false
 		}
-
-		return false
-	}
-
-	if p := strings.SplitN(s, ".", 2); len(p) > 1 {
-		if pValue, ok := params.(map[string]interface{})[p[0]]; ok {
-			return ReplaceParameter(p[1], pValue, value)
-		}
-	} else {
-		if _, ok := (*params.(*map[string]interface{}))[p[0]]; ok {
-			(*params.(*map[string]interface{}))[p[0]] = value
+		if len(p) == 1 {
+			node[index] = value
 			return true
+		}
+		return ReplaceParameter(p[1], node[index], value)
+
+	case map[string]interface{}:
+		if node == nil {
+			return false
+		}
+		// Raw key first, so keys that contain dots keep working.
+		if _, ok := node[s]; ok {
+			node[s] = value
+			return true
+		}
+		if p := strings.SplitN(s, ".", 2); len(p) > 1 {
+			if pValue, ok := node[p[0]]; ok {
+				return ReplaceParameter(p[1], pValue, value)
+			}
 		}
 	}
 
@@ -416,7 +429,11 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 			if err != nil || index > math.MaxInt || int(index) >= paramsValueSliceLength {
 				return nil, &ParameterNodeError{s}
 			}
-			return GetParameter(p[1], params.([]interface{})[index])
+			items, ok := params.([]interface{})
+			if !ok {
+				return nil, &ParameterNodeError{s}
+			}
+			return GetParameter(p[1], items[index])
 		}
 
 		// Direct index access
@@ -424,11 +441,19 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 		if err != nil || index > math.MaxInt || int(index) >= paramsValueSliceLength {
 			return nil, &ParameterNodeError{s}
 		}
-		return params.([]interface{})[index], nil
+		items, ok := params.([]interface{})
+		if !ok {
+			return nil, &ParameterNodeError{s}
+		}
+		return items[index], nil
 
 	case reflect.Map:
+		paramsMap, ok := params.(map[string]interface{})
+		if !ok {
+			return nil, &ParameterNodeError{s}
+		}
 		// Check for raw key
-		if v, ok := params.(map[string]interface{})[s]; ok {
+		if v, ok := paramsMap[s]; ok {
 			return v, nil
 		}
 
@@ -441,7 +466,7 @@ func GetParameter(s string, params interface{}) (interface{}, error) {
 			}
 			refBuilder.WriteString(p[i])
 			ref := refBuilder.String()
-			if pValue, ok := params.(map[string]interface{})[ref]; ok {
+			if pValue, ok := paramsMap[ref]; ok {
 				if i == len(p)-1 {
 					return pValue, nil
 				}
@@ -753,8 +778,8 @@ func (h *Hook) ExtractCommandArgumentsForFile(r *Request) ([]FileParameter, []er
 		envName := h.PassFileToCommand[i].EnvName
 		if envName == "" {
 			envName = EnvNamespace + strings.ToUpper(h.PassFileToCommand[i].Name)
-			logger.Warnf("no ENVVAR name specified, falling back to [%s]", envName)
-			h.PassFileToCommand[i].EnvName = envName
+			// 不回写 h：Hook 被并发请求共享，写入会造成数据竞争
+			logger.Debugf("no ENVVAR name specified, falling back to [%s]", envName)
 		}
 
 		var fileContent []byte
@@ -1103,6 +1128,12 @@ func (r MatchRule) Evaluate(req *Request) (bool, error) {
 	if err == nil {
 		switch r.Type {
 		case MatchValue:
+			// 空的期望值几乎总是配置错误（例如模板里的 getenv 读到未设置的环境变量）。
+			// 若放行，任何人提交空参数即可通过校验，因此一律视为不匹配。
+			if r.Value == "" {
+				logger.Warn(`warn: match rule of type "value" has an empty value and never matches; check the hook configuration (use getenvRequired for secrets from the environment)`)
+				return false, nil
+			}
 			return compare(arg, r.Value), nil
 		case MatchRegex:
 			re, err := getCompiledRegex(r.Regex)

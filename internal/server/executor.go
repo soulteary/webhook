@@ -48,24 +48,40 @@ func NewHookExecutorWithFunc(maxConcurrent int, defaultTimeout time.Duration, ex
 	}
 }
 
-// Execute 执行 hook，带并发控制和超时
-func (he *HookExecutor) Execute(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter, acquireTimeout time.Duration) (string, error) {
-	// 尝试获取 semaphore，带超时
+// ErrTooManyConcurrentHooks 表示在等待时限内没有拿到执行槽位
+var ErrTooManyConcurrentHooks = errors.New("too many concurrent hooks, execution timeout")
+
+// Acquire 获取一个执行槽位，返回的 release 必须且只能调用一次。
+func (he *HookExecutor) Acquire(ctx context.Context, acquireTimeout time.Duration) (func(), error) {
+	timer := time.NewTimer(acquireTimeout)
+	defer timer.Stop()
 	select {
 	case he.sem <- struct{}{}:
-		defer func() { <-he.sem }()
-	case <-time.After(acquireTimeout):
-		return "", errors.New("too many concurrent hooks, execution timeout")
+		return func() { <-he.sem }, nil
+	case <-timer.C:
+		return nil, ErrTooManyConcurrentHooks
 	case <-ctx.Done():
-		return "", ctx.Err()
+		return nil, ctx.Err()
 	}
+}
 
-	// 创建带超时的 context
-	timeout := he.defaultTimeout
-	execCtx, cancel := context.WithTimeout(ctx, timeout)
+// ExecuteAcquired 在调用方已持有执行槽位的前提下执行 hook（带超时）。
+func (he *HookExecutor) ExecuteAcquired(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter) (string, error) {
+	execCtx, cancel := context.WithTimeout(ctx, he.defaultTimeout)
 	defer cancel()
 
 	return he.executorFunc(execCtx, h, r, w)
+}
+
+// Execute 执行 hook，带并发控制和超时
+func (he *HookExecutor) Execute(ctx context.Context, h *hook.Hook, r *hook.Request, w http.ResponseWriter, acquireTimeout time.Duration) (string, error) {
+	release, err := he.Acquire(ctx, acquireTimeout)
+	if err != nil {
+		return "", err
+	}
+	defer release()
+
+	return he.ExecuteAcquired(ctx, h, r, w)
 }
 
 // GetMaxConcurrent 获取最大并发数（用于测试）

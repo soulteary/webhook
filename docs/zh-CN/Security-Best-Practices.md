@@ -145,7 +145,7 @@ webhook \
 
 ### 4. 可选 Web 端点（OpenAPI、Config UI）
 
-`-openapi` 与 `-config-ui` 会暴露额外 HTTP 端点（OpenAPI 规范与配置生成 Web UI）。这些端点无需认证，仅建议在调试或内网使用。
+`-openapi` 与 `-config-ui` 会暴露额外 HTTP 端点（OpenAPI 规范与配置生成 Web UI）。这些端点无需认证，仅建议在调试或内网使用。Config UI 的「保存到目录」接口例外：它默认禁用，只有设置 `-config-ui-token` 后才可用，并要求请求携带该令牌。
 
 - **请勿**在可从公网访问的服务上启用 `-openapi` 或 `-config-ui`，除非通过网络限制或带访问控制的反向代理保护。
 - 建议仅在开发、CI 或可信内网环境中启用。

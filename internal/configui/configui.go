@@ -4,6 +4,8 @@
 package configui
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -11,6 +13,7 @@ import (
 	"io/fs"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -279,7 +282,54 @@ type saveRequest struct {
 	Format   string `json:"format"`
 }
 
-func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
+// SaveTokenHeader is the request header carrying the save token.
+const SaveTokenHeader = "X-Config-UI-Token"
+
+// saveTokenMatches compares tokens in constant time (hashing first so length is not leaked).
+func saveTokenMatches(got, want string) bool {
+	g := sha256.Sum256([]byte(got))
+	w := sha256.Sum256([]byte(want))
+	return subtle.ConstantTimeCompare(g[:], w[:]) == 1
+}
+
+// sameOrigin reports whether the Origin header (when present) targets this server.
+// Browsers always send Origin on cross-site POST, so a mismatch means a cross-site request.
+func sameOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	return strings.EqualFold(u.Host, r.Host)
+}
+
+// authorizeSave enforces the save API access rules. Saving a hook file is equivalent to
+// granting command execution, so it is refused unless a token is configured and presented.
+func authorizeSave(w http.ResponseWriter, r *http.Request, saveToken string) bool {
+	if saveToken == "" {
+		writeJSONError(w, http.StatusForbidden, "save to directory is disabled: start webhook with -config-ui-token to enable it")
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || mediaType != "application/json" {
+		writeJSONError(w, http.StatusUnsupportedMediaType, "Content-Type must be application/json")
+		return false
+	}
+	if !sameOrigin(r) {
+		writeJSONError(w, http.StatusForbidden, "cross-origin request rejected")
+		return false
+	}
+	if !saveTokenMatches(r.Header.Get(SaveTokenHeader), saveToken) {
+		writeJSONError(w, http.StatusUnauthorized, "missing or invalid "+SaveTokenHeader+" header")
+		return false
+	}
+	return true
+}
+
+func runSave(w http.ResponseWriter, r *http.Request, writeDir string, saveToken string) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -287,6 +337,9 @@ func runSave(w http.ResponseWriter, r *http.Request, writeDir string) {
 	}
 	if writeDir == "" {
 		writeJSONError(w, http.StatusNotImplemented, "save to directory is not enabled in single-file mode")
+		return
+	}
+	if !authorizeSave(w, r, saveToken) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxSaveBytes)
@@ -426,8 +479,16 @@ func normalizeBasePath(raw string) (normalized string, forTemplate string) {
 // basePath may be "/", "/config-ui", or "/config-ui/" (trailing slash is normalized). webhookBaseURL is used when
 // the client does not provide a base URL (e.g. "http://localhost:9000").
 // hooksURLPrefix is the URL path prefix for hooks (e.g. "/hooks" or "/events"); used when generating callUrl; if empty, "/hooks" is used.
-// When writeDir is non-empty (e.g. -hooks-dir), the save API is enabled and configs can be written to that directory.
+// The save API is disabled; use HandlerWithSaveToken to enable it.
 func Handler(basePath string, webhookBaseURL string, writeDir string, hooksURLPrefix string) (http.Handler, error) {
+	return HandlerWithSaveToken(basePath, webhookBaseURL, writeDir, hooksURLPrefix, "")
+}
+
+// HandlerWithSaveToken is like Handler, and additionally enables the save API when both writeDir
+// (e.g. -hooks-dir) and saveToken (-config-ui-token) are non-empty. Callers must send the token in
+// the X-Config-UI-Token header; without a configured token the save API always refuses.
+func HandlerWithSaveToken(basePath string, webhookBaseURL string, writeDir string, hooksURLPrefix string, saveToken string) (http.Handler, error) {
+	saveToken = strings.TrimSpace(saveToken)
 	basePath, baseForTemplate := normalizeBasePath(basePath)
 
 	page, err := loadPageData(configFS, pageYAMLPath)
@@ -479,7 +540,7 @@ func Handler(basePath string, webhookBaseURL string, writeDir string, hooksURLPr
 
 	// API: basePath/api/save — write generated config to writeDir (when -hooks-dir is set)
 	mux.HandleFunc(pathPrefix+"/api/save", func(w http.ResponseWriter, r *http.Request) {
-		runSave(w, r, writeDir)
+		runSave(w, r, writeDir, saveToken)
 	})
 
 	// API: basePath/api/capabilities — whether save-to-dir is available
@@ -490,7 +551,7 @@ func Handler(basePath string, webhookBaseURL string, writeDir string, hooksURLPr
 			return
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		_ = json.NewEncoder(w).Encode(map[string]bool{"saveToDir": writeDir != ""})
+		_ = json.NewEncoder(w).Encode(map[string]bool{"saveToDir": writeDir != "" && saveToken != ""})
 	})
 
 	// Index: exact basePath or basePath/

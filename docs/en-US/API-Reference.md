@@ -163,8 +163,8 @@ You can also print the spec to stdout at startup with `-openapi-print` (e.g. `./
 - **GET** `{config-ui-path}` or `{config-ui-path}/`: Returns the config generator HTML page.
 - **GET** `{config-ui-path}/static/*`: Static assets (CSS, JS).
 - **POST** `{config-ui-path}/api/generate`: Accepts JSON body with form fields (e.g. `id`, `execute-command`, `response-message`, `trigger-rule`). Returns `{ "yaml", "json", "callUrl", "curlExample" }` on success, or `{ "error": "..." }` with 4xx on validation error.
-- **GET** `{config-ui-path}/api/capabilities`: Returns `{ "saveToDir": true|false }`. When `true`, the UI shows a "Save to directory" option (directory mode: default `./hooks` or explicit `-hooks-dir`).
-- **POST** `{config-ui-path}/api/save`: Writes generated config to hooks directory. Body: `{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }`. Returns `{ "ok": "<absolute-path>" }` on success, or `{ "error": "..." }` with 4xx when disabled or invalid (e.g. path traversal, format mismatch, invalid hook config). Filename must have extension `.json`, `.yaml`, or `.yml`.
+- **GET** `{config-ui-path}/api/capabilities`: Returns `{ "saveToDir": true|false }`. When `true`, the UI shows a "Save to directory" option (requires both directory mode, i.e. default `./hooks` or explicit `-hooks-dir`, and `-config-ui-token`).
+- **POST** `{config-ui-path}/api/save`: Writes generated config to hooks directory. Body: `{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }`. Returns `{ "ok": "<absolute-path>" }` on success, or `{ "error": "..." }` with 4xx when disabled or invalid (e.g. path traversal, format mismatch, invalid hook config). Filename must have extension `.json`, `.yaml`, or `.yml`. **Authorization**: the endpoint is only enabled when `-config-ui-token` (or `CONFIG_UI_TOKEN`) is set, otherwise it returns 403. Requests must send `X-Config-UI-Token: <token>` (401 when missing or wrong) and `Content-Type: application/json` (415 otherwise); cross-origin requests are rejected with 403.
 
 **Example:**
 ```bash

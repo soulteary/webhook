@@ -69,10 +69,10 @@
 ### 请求 ID
 
 - `-x-request-id`
-  如果存在，使用 `X-Request-Id` 请求头作为请求 ID
+  如果存在，使用 `X-Request-Id` 请求头作为请求 ID。未启用时客户端传入的 `X-Request-Id` 会被丢弃，请求 ID 由服务端生成
 
 - `-x-request-id-limit int`
-  截断 `X-Request-Id` 请求头的长度限制；默认无限制
+  截断 `X-Request-Id` 请求头的长度限制；默认无限制（仅在启用 `-x-request-id` 时有意义）
 
   **说明**：长度限制当前仅能通过 `-x-request-id-limit` 配置；当前实现未提供单独的环境变量。
 
@@ -135,6 +135,15 @@
 - `-rate-limit-burst int`
   设置突发请求的最大数量（默认值：`10`）
 
+- `-rate-limit-per-ip-rps int`
+  单个客户端 IP 的每秒请求数限制；`0` 表示沿用 `-rate-limit-rps`（默认值：`0`）。建议设为低于全局额度，避免单个客户端耗尽全局额度。
+
+- `-rate-limit-per-ip-burst int`
+  单个客户端 IP 的突发请求数；`0` 表示沿用 `-rate-limit-burst`（默认值：`0`）
+
+- `-trusted-proxies string`
+  可信反向代理的 IP 或 CIDR，逗号分隔（默认值：空）。限流默认按 TCP 对端地址识别客户端；只有请求来自这些地址时，才会解析 `X-Forwarded-For`（取最右侧的非可信地址）和 `X-Real-IP`。部署在反向代理之后时必须设置，否则所有请求会共用代理的 IP 额度。
+
 ### Redis 分布式限流
 
 以下参数用于配置基于 Redis 的分布式限流，适用于多实例部署：
@@ -162,7 +171,7 @@
 以下参数用于配置 HTTP 服务器的各种超时时间：
 
 - `-read-header-timeout-seconds int`
-  设置读取请求头的超时时间（秒，默认值：`5`）
+  保留参数，当前不生效：底层 HTTP 服务不区分请求头与请求体的读取超时，两者都受 `-read-timeout-seconds` 约束。设置为非默认值时启动日志会给出提示
 
 - `-read-timeout-seconds int`
   设置读取请求体的超时时间（秒，默认值：`10`）
@@ -174,7 +183,7 @@
   设置空闲连接的超时时间（秒，默认值：`90`）
 
 - `-max-header-bytes int`
-  设置请求头的最大大小（字节，默认值：`1048576`，即 1MB）
+  设置请求头的最大大小（字节）。保持默认值 `1048576` 时实际使用底层 HTTP 服务的 4KB 读缓冲；显式设置为其他值后按该值生效（同时也是每个连接的读缓冲大小）
 
 ### 安全配置
 
@@ -291,6 +300,9 @@ Config UI 是**配置生成器**：用于在浏览器中生成单条 hook 的 YA
 - `-config-ui-path string`
   在 webhook 主服务上启用 config-ui 时，Config UI 的 HTTP 路径（默认值：`/config-ui`）。尾斜杠会被归一化（如 `/config-ui/` 等同于 `/config-ui`）。
 
+- `-config-ui-token string`
+  Config UI「保存到目录」接口所需的令牌（默认值：空；建议通过环境变量 `CONFIG_UI_TOKEN` 提供）。为空时保存接口被禁用，UI 仍可生成与下载配置。保存一个 hook 文件等同于授予命令执行权限，请使用足够长的随机值。
+
   请勿设置为与现有端点冲突的路径（如 `/`、`/health`、`/hooks`、`/openapi` 等）。Config UI 生成的调用 URL 和 curl 示例使用 `-urlprefix`（例如 `-urlprefix=events` 时生成 `/events/:id`）。目录模式（默认 `./hooks` 或显式 `-hooks-dir`）下，UI 会提供「保存到目录」选项，保存后可通过生成 URL 直接验证；显式 `-hooks` 单文件模式下不提供该选项。
 
 ### 其他
@@ -373,6 +385,9 @@ Config UI 是**配置生成器**：用于在浏览器中生成单条 hook 的 YA
 | `RATE_LIMIT_ENABLED` | `-rate-limit-enabled` | 启用限流 | `false` |
 | `RATE_LIMIT_RPS` | `-rate-limit-rps` | 每秒请求数限制 | `100` |
 | `RATE_LIMIT_BURST` | `-rate-limit-burst` | 突发请求数限制 | `10` |
+| `RATE_LIMIT_PER_IP_RPS` | `-rate-limit-per-ip-rps` | 单 IP 每秒请求数限制（`0` 沿用全局值） | `0` |
+| `RATE_LIMIT_PER_IP_BURST` | `-rate-limit-per-ip-burst` | 单 IP 突发请求数限制（`0` 沿用全局值） | `0` |
+| `TRUSTED_PROXIES` | `-trusted-proxies` | 可信反向代理 IP/CIDR（逗号分隔） | 空 |
 
 ### Redis 分布式限流
 
