@@ -283,7 +283,7 @@ type saveRequest struct {
 }
 
 // SaveTokenHeader is the request header carrying the save token.
-const SaveTokenHeader = "X-Config-UI-Token"
+const SaveTokenHeader = "X-Config-UI-Token" // #nosec G101 -- HTTP header name, not a credential
 
 // saveTokenMatches compares tokens in constant time (hashing first so length is not leaked).
 func saveTokenMatches(got, want string) bool {

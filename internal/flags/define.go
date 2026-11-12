@@ -175,7 +175,7 @@ const (
 	// Config UI environment keys
 	ENV_KEY_CONFIG_UI_ENABLED = "CONFIG_UI_ENABLED"
 	ENV_KEY_CONFIG_UI_PATH    = "CONFIG_UI_PATH"
-	ENV_KEY_CONFIG_UI_TOKEN   = "CONFIG_UI_TOKEN"
+	ENV_KEY_CONFIG_UI_TOKEN   = "CONFIG_UI_TOKEN" // #nosec G101 -- environment variable name, not a credential
 
 	// Hooks directory
 	ENV_KEY_HOOKS_DIR = "HOOKS_DIR"
