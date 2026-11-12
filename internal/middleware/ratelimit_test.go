@@ -605,3 +605,26 @@ func TestFallbackRedisLimit_ScalesWithWindow(t *testing.T) {
 		})
 	}
 }
+
+// 被单 IP 额度拒绝的请求不能消耗全局额度：一个超限客户端发完一轮请求后，
+// 其他客户端仍应拿到全局额度。
+func TestRateLimiter_PerIPRejectionsKeepGlobalQuota(t *testing.T) {
+	rl := NewRateLimiter(RateLimitConfig{Enabled: true, RPS: 1, Burst: 10, PerIPRPS: 1, PerIPBurst: 1})
+	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }))
+
+	send := func(remote string) int {
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.RemoteAddr = remote
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		return w.Code
+	}
+
+	assert.Equal(t, http.StatusOK, send("203.0.113.9:1234"))
+	for i := 0; i < 20; i++ {
+		assert.Equal(t, http.StatusTooManyRequests, send("203.0.113.9:1234"))
+	}
+	for i := 0; i < 5; i++ {
+		assert.Equal(t, http.StatusOK, send(fmt.Sprintf("203.0.113.%d:1234", 20+i)))
+	}
+}

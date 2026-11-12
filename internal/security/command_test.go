@@ -86,8 +86,9 @@ func TestValidateCommandPath(t *testing.T) {
 	})
 
 	t.Run("with whitelist - not allowed", func(t *testing.T) {
+		// 不用 /bin/sh：在 /bin 是 /usr/bin 符号链接的系统上，它的真实位置就在白名单内
 		cv.AllowedPaths = []string{"/usr/bin"}
-		err := cv.ValidateCommandPath("/bin/sh")
+		err := cv.ValidateCommandPath(filepath.Join(t.TempDir(), "sh"))
 		if err == nil {
 			t.Error("ValidateCommandPath() should reject path not in whitelist")
 		}
@@ -324,7 +325,7 @@ func TestValidateCommand(t *testing.T) {
 
 	t.Run("invalid path", func(t *testing.T) {
 		cv.AllowedPaths = []string{"/usr/bin"}
-		err := cv.ValidateCommand("/bin/sh", []string{"-c", "echo test"})
+		err := cv.ValidateCommand(filepath.Join(t.TempDir(), "sh"), []string{"-c", "echo test"})
 		if err == nil {
 			t.Error("ValidateCommand() should return error when path is not in whitelist")
 		}

@@ -405,22 +405,8 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 
 		if rl.useRedis {
 			// 使用 Redis 分布式限流
-			// 先检查全局限流
-			globalKey := "global"
-			globalLimit := rl.config.RPS * rl.config.WindowSeconds
-			if globalLimit <= 0 {
-				globalLimit = rl.fallbackRedisLimit()
-			}
-
-			allowed, _, retryAfter := rl.checkRedisLimit(r.Context(), globalKey, globalLimit)
-			if !allowed {
-				logger.Warnf("[%s] global rate limit exceeded (Redis)", requestID)
-				w.Header().Set("Retry-After", fmt.Sprintf("%.0f", retryAfter.Seconds()))
-				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
-				return
-			}
-
-			// 检查基于 IP 的限流
+			// 先检查单 IP 限流：被单 IP 额度拒绝的请求不应消耗全局额度，
+			// 否则一个超限的客户端仍能把全局额度耗尽。
 			ipKey := "ip:" + ip
 			ipLimit := rl.perIPRPS() * rl.config.WindowSeconds
 			if ipLimit <= 0 {
@@ -436,22 +422,37 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 				return
 			}
 
+			// 再检查全局限流
+			globalKey := "global"
+			globalLimit := rl.config.RPS * rl.config.WindowSeconds
+			if globalLimit <= 0 {
+				globalLimit = rl.fallbackRedisLimit()
+			}
+
+			allowed, _, retryAfter = rl.checkRedisLimit(r.Context(), globalKey, globalLimit)
+			if !allowed {
+				logger.Warnf("[%s] global rate limit exceeded (Redis)", requestID)
+				w.Header().Set("Retry-After", fmt.Sprintf("%.0f", retryAfter.Seconds()))
+				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+				return
+			}
+
 			// 设置剩余请求数响应头
 			w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 		} else {
 			// 使用内存限流
-			// 先检查全局限流
-			if !rl.globalLimiter.Allow() {
-				logger.Warnf("[%s] global rate limit exceeded from %s", requestID, ip)
+			// 先检查单 IP 限流，原因同上
+			ipLimiter := rl.getIPLimiter(ip, rl.perIPRPS(), rl.perIPBurst())
+			if !ipLimiter.Allow() {
+				logger.Warnf("[%s] IP rate limit exceeded for %s", requestID, ip)
 				w.Header().Set("Retry-After", "1")
 				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 				return
 			}
 
-			// 检查基于 IP 的限流
-			ipLimiter := rl.getIPLimiter(ip, rl.perIPRPS(), rl.perIPBurst())
-			if !ipLimiter.Allow() {
-				logger.Warnf("[%s] IP rate limit exceeded for %s", requestID, ip)
+			// 再检查全局限流
+			if !rl.globalLimiter.Allow() {
+				logger.Warnf("[%s] global rate limit exceeded from %s", requestID, ip)
 				w.Header().Set("Retry-After", "1")
 				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 				return

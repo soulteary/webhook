@@ -14,7 +14,7 @@
 
 ### Added
 
-- `-rate-limit-per-ip-rps` and `-rate-limit-per-ip-burst` set a per-client quota separate from the global one (default `0`: same as the global values).
+- `-rate-limit-per-ip-rps` and `-rate-limit-per-ip-burst` set a per-client quota separate from the global one (default `0`: same as the global values). The per-client quota is checked first, so requests rejected by it do not consume the global quota.
 
 ### Changed
 
