@@ -56,6 +56,25 @@ type RateLimiter struct {
 
 	// 配置
 	config RateLimitConfig
+
+	// 解析后的可信代理网段
+	trustedProxies []*net.IPNet
+}
+
+// perIPRPS 返回单 IP 的每秒额度（未配置时沿用全局值）。
+func (rl *RateLimiter) perIPRPS() int {
+	if rl.config.PerIPRPS > 0 {
+		return rl.config.PerIPRPS
+	}
+	return rl.config.RPS
+}
+
+// perIPBurst 返回单 IP 的突发额度（未配置时沿用全局值）。
+func (rl *RateLimiter) perIPBurst() int {
+	if rl.config.PerIPBurst > 0 {
+		return rl.config.PerIPBurst
+	}
+	return rl.config.Burst
 }
 
 // RateLimitConfig 限流配置
@@ -71,6 +90,14 @@ type RateLimitConfig struct {
 	RedisDB        int    // Redis 数据库索引
 	RedisKeyPrefix string // Redis 键前缀
 	WindowSeconds  int    // 限流时间窗口（秒）
+
+	// PerIPRPS / PerIPBurst 为单个客户端 IP 的额度；<=0 时沿用全局 RPS / Burst（兼容旧行为）。
+	// 建议设为低于全局额度，避免单个客户端耗尽全局额度。
+	PerIPRPS   int
+	PerIPBurst int
+
+	// TrustedProxies 为可信反向代理的 IP 或 CIDR；仅当请求来自这些地址时才解析转发头。
+	TrustedProxies []string
 }
 
 // NewRateLimiter 创建新的限流器
@@ -86,6 +113,12 @@ func NewRateLimiter(config RateLimitConfig) *RateLimiter {
 		cleanupInterval: 5 * time.Minute,
 		limiterTTL:      10 * time.Minute,
 		config:          config,
+	}
+
+	if nets, err := ParseTrustedProxies(config.TrustedProxies); err != nil {
+		logger.Warnf("ignoring trusted proxies, forwarded headers will not be used: %v", err)
+	} else {
+		rl.trustedProxies = nets
 	}
 
 	// 尝试初始化 Redis 限流
@@ -244,27 +277,75 @@ func (rl *RateLimiter) checkRedisLimit(ctx context.Context, key string, limit in
 	return allowed, remaining, retryAfter
 }
 
-// extractIP 从请求中提取客户端 IP
-func extractIP(r *http.Request) string {
-	// 优先检查 X-Forwarded-For 头（适用于反向代理场景）
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// X-Forwarded-For 可能包含多个 IP，取第一个
-		if ip := parseForwardedIP(xff); ip != "" {
-			return ip
+// ParseTrustedProxies 解析可信代理列表（IP 或 CIDR）。无法解析的条目会返回错误。
+func ParseTrustedProxies(entries []string) ([]*net.IPNet, error) {
+	var nets []*net.IPNet
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if !strings.Contains(entry, "/") {
+			ip := net.ParseIP(entry)
+			if ip == nil {
+				return nil, fmt.Errorf("invalid trusted proxy %q", entry)
+			}
+			if ip.To4() != nil {
+				entry += "/32"
+			} else {
+				entry += "/128"
+			}
+		}
+		_, ipNet, err := net.ParseCIDR(entry)
+		if err != nil {
+			return nil, fmt.Errorf("invalid trusted proxy %q: %w", entry, err)
+		}
+		nets = append(nets, ipNet)
+	}
+	return nets, nil
+}
+
+func isTrustedProxy(ip net.IP, trusted []*net.IPNet) bool {
+	for _, n := range trusted {
+		if n.Contains(ip) {
+			return true
 		}
 	}
+	return false
+}
 
-	// 检查 X-Real-IP 头
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-
-	// 使用 RemoteAddr
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+// extractIP 从请求中提取客户端 IP。
+//
+// 默认只使用 TCP 对端地址（RemoteAddr）：X-Forwarded-For / X-Real-IP 由客户端任意填写，
+// 直接信任会让任何人通过更换头部绕过按 IP 限流。只有当对端地址属于 trusted（可信代理）时，
+// 才从右向左遍历 X-Forwarded-For，取第一个不属于可信代理的地址。
+func extractIP(r *http.Request, trusted []*net.IPNet) string {
+	remote, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		remote = r.RemoteAddr
 	}
-	return ip
+	remoteIP := net.ParseIP(remote)
+	if remoteIP == nil || !isTrustedProxy(remoteIP, trusted) {
+		return remote
+	}
+
+	if xff := strings.Join(r.Header.Values("X-Forwarded-For"), ","); xff != "" {
+		hops := strings.Split(xff, ",")
+		for i := len(hops) - 1; i >= 0; i-- {
+			hop := net.ParseIP(strings.TrimSpace(hops[i]))
+			if hop == nil {
+				// 链路中出现非法条目，其左侧内容不可信
+				break
+			}
+			if !isTrustedProxy(hop, trusted) {
+				return hop.String()
+			}
+		}
+	}
+	if xri := net.ParseIP(strings.TrimSpace(r.Header.Get("X-Real-IP"))); xri != nil {
+		return xri.String()
+	}
+	return remote
 }
 
 // parseForwardedIP 解析 X-Forwarded-For 头中的 IP
@@ -319,29 +400,15 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := extractIP(r)
+		ip := extractIP(r, rl.trustedProxies)
 		requestID := loggerkit.RequestIDFromRequest(r)
 
 		if rl.useRedis {
 			// 使用 Redis 分布式限流
-			// 先检查全局限流
-			globalKey := "global"
-			globalLimit := rl.config.RPS * rl.config.WindowSeconds
-			if globalLimit <= 0 {
-				globalLimit = rl.fallbackRedisLimit()
-			}
-
-			allowed, _, retryAfter := rl.checkRedisLimit(r.Context(), globalKey, globalLimit)
-			if !allowed {
-				logger.Warnf("[%s] global rate limit exceeded (Redis)", requestID)
-				w.Header().Set("Retry-After", fmt.Sprintf("%.0f", retryAfter.Seconds()))
-				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
-				return
-			}
-
-			// 检查基于 IP 的限流
+			// 先检查单 IP 限流：被单 IP 额度拒绝的请求不应消耗全局额度，
+			// 否则一个超限的客户端仍能把全局额度耗尽。
 			ipKey := "ip:" + ip
-			ipLimit := rl.config.RPS * rl.config.WindowSeconds
+			ipLimit := rl.perIPRPS() * rl.config.WindowSeconds
 			if ipLimit <= 0 {
 				ipLimit = rl.fallbackRedisLimit()
 			}
@@ -355,24 +422,37 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 				return
 			}
 
+			// 再检查全局限流
+			globalKey := "global"
+			globalLimit := rl.config.RPS * rl.config.WindowSeconds
+			if globalLimit <= 0 {
+				globalLimit = rl.fallbackRedisLimit()
+			}
+
+			allowed, _, retryAfter = rl.checkRedisLimit(r.Context(), globalKey, globalLimit)
+			if !allowed {
+				logger.Warnf("[%s] global rate limit exceeded (Redis)", requestID)
+				w.Header().Set("Retry-After", fmt.Sprintf("%.0f", retryAfter.Seconds()))
+				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+				return
+			}
+
 			// 设置剩余请求数响应头
 			w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 		} else {
 			// 使用内存限流
-			// 先检查全局限流
-			if !rl.globalLimiter.Allow() {
-				logger.Warnf("[%s] global rate limit exceeded from %s", requestID, ip)
+			// 先检查单 IP 限流，原因同上
+			ipLimiter := rl.getIPLimiter(ip, rl.perIPRPS(), rl.perIPBurst())
+			if !ipLimiter.Allow() {
+				logger.Warnf("[%s] IP rate limit exceeded for %s", requestID, ip)
 				w.Header().Set("Retry-After", "1")
 				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 				return
 			}
 
-			// 检查基于 IP 的限流
-			globalLimit := rl.globalLimiter.Limit()
-			globalBurst := rl.globalLimiter.Burst()
-			ipLimiter := rl.getIPLimiter(ip, int(globalLimit), globalBurst)
-			if !ipLimiter.Allow() {
-				logger.Warnf("[%s] IP rate limit exceeded for %s", requestID, ip)
+			// 再检查全局限流
+			if !rl.globalLimiter.Allow() {
+				logger.Warnf("[%s] global rate limit exceeded from %s", requestID, ip)
 				w.Header().Set("Retry-After", "1")
 				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 				return

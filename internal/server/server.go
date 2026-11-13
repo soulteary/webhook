@@ -23,6 +23,7 @@ import (
 	"github.com/soulteary/webhook/internal/link"
 	"github.com/soulteary/webhook/internal/logger"
 	"github.com/soulteary/webhook/internal/metrics"
+	"github.com/soulteary/webhook/internal/platform"
 	"github.com/soulteary/webhook/internal/rules"
 	"github.com/soulteary/webhook/internal/security"
 )
@@ -35,17 +36,22 @@ func GetAsyncHookWaitGroup() *sync.WaitGroup {
 	return &asyncHookWaitGroup
 }
 
+// commandWaitDelay 是命令被取消后等待其输出管道关闭的最长时间。
+const commandWaitDelay = 5 * time.Second
+
 // safeRemove 仅在 path 位于 baseDir 之下时删除文件，防止路径遍历。
 // 用于删除本进程创建的临时文件，满足 gosec 污点分析要求。
 func safeRemove(path, baseDir string) error {
 	cleaned := filepath.Clean(path)
+	// os.CreateTemp("", ...) 会写入 os.TempDir()；必须在 Clean 之前判断空值，
+	// 因为 filepath.Clean("") 返回 "."，会把基准目录误判为进程工作目录。
+	if baseDir == "" {
+		baseDir = os.TempDir()
+	}
 	baseCleaned := filepath.Clean(baseDir)
 	absPath, err := filepath.Abs(cleaned)
 	if err != nil {
 		return err
-	}
-	if baseCleaned == "" {
-		baseCleaned = os.TempDir()
 	}
 	absBase, err := filepath.Abs(baseCleaned)
 	if err != nil {
@@ -251,9 +257,15 @@ func handleMultipartForm(w http.ResponseWriter, r *http.Request, req *hook.Reque
 	if maxBodySize <= 0 {
 		maxBodySize = flags.DEFAULT_MAX_REQUEST_BODY_SIZE
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
-
-	err := r.ParseMultipartForm(appFlags.MaxMultipartMem)
+	// 先完整读取原始请求体并保存到 req.Body，再交给 multipart 解析。
+	// 否则签名规则（payload-hmac-* 等）会对空 body 计算签名：攻击者只要持有任意一个
+	// 合法的空 body 签名，就能附带任意 multipart 参数重放。
+	rawBody, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodySize))
+	if err == nil {
+		req.Body = rawBody
+		r.Body = io.NopCloser(bytes.NewReader(rawBody))
+		err = r.ParseMultipartForm(appFlags.MaxMultipartMem)
+	}
 	if err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
@@ -553,7 +565,7 @@ func executeCapturingHook(w http.ResponseWriter, ctx context.Context, matchedHoo
 }
 
 // executeAsyncHook 执行异步 hook
-func executeAsyncHook(w http.ResponseWriter, _ context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, acquireTimeout time.Duration, requestID, hookID string, startTime time.Time) {
+func executeAsyncHook(w http.ResponseWriter, ctx context.Context, matchedHook *hook.Hook, req *hook.Request, executor *HookExecutor, acquireTimeout time.Duration, requestID, hookID string, startTime time.Time) {
 	// Fiber/fasthttp reuses its request buffers as soon as the handler returns.
 	// Detach every value consumed by the background command before starting it.
 	asyncRequest := cloneRequestForAsync(req)
@@ -566,12 +578,28 @@ func executeAsyncHook(w http.ResponseWriter, _ context.Context, matchedHook *hoo
 		userAgent = asyncRequest.RawRequest.UserAgent()
 	}
 
-	// 异步执行，但仍需要并发控制和超时
+	// 先拿到执行槽位再应答：拿不到就明确返回 503，让调用方重试，
+	// 而不是先回 200 再在后台悄悄丢弃这次触发。
+	release, acquireErr := executor.Acquire(ctx, acquireTimeout)
+	if acquireErr != nil {
+		duration := time.Since(startTime)
+		logger.Warnf("[%s] async hook %s rejected, no execution slot available: %v", requestID, hookID, acquireErr)
+		metrics.RecordHookExecution(hookID, "rejected", duration)
+		audit.LogHookFailed(requestID, hookID, ip, userAgent, acquireErr.Error(), duration.Milliseconds())
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Retry-After", "5")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = fmt.Fprint(w, "Too many hooks are running. Please retry later.")
+		return
+	}
+
+	// 异步执行，槽位由后台 goroutine 持有到命令结束
 	// 使用 WaitGroup 跟踪 goroutine，防止泄漏
 	asyncHookWaitGroup.Add(1)
 	go func() {
 		defer asyncHookWaitGroup.Done()
-		_, err := executor.Execute(asyncContext, matchedHook, asyncRequest, nil, acquireTimeout)
+		defer release()
+		_, err := executor.ExecuteAcquired(asyncContext, matchedHook, asyncRequest, nil)
 		duration := time.Since(startTime)
 		durationMS := duration.Milliseconds()
 
@@ -1002,6 +1030,10 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 	// #nosec G204 G702 -- cmdPath 来自 makeSureCallable：经 exec.LookPath 解析，且已通过 validator.ValidateCommandPath 白名单校验
 	cmd := exec.CommandContext(ctx, cmdPath)
 	cmd.Dir = h.CommandWorkingDirectory
+	// 超时或取消时终止整个进程组；WaitDelay 保证即使有残留进程仍持有输出管道，
+	// Wait 也会在限定时间内返回，执行槽位不会被永久占用。
+	platform.ConfigureProcessGroup(cmd)
+	cmd.WaitDelay = commandWaitDelay
 
 	cmd.Args, errs = h.ExtractCommandArguments(r)
 	for _, err := range errs {
@@ -1126,6 +1158,12 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		logger.Info(fn.RemoveNewlinesAndTabs(logsContent))
 	}
 
+	// 错误日志里的参数同样走脱敏，避免把请求里的密钥原样写进日志
+	logArgs := cmd.Args
+	if validator != nil {
+		_, logArgs = validator.SanitizeForLog(cmdPath, cmd.Args)
+	}
+
 	var out []byte
 	if w != nil {
 		logger.Debugf("[%s] command output will be streamed to response", r.ID)
@@ -1142,13 +1180,13 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		if err := cmd.Run(); err != nil {
 			// 检查是否是超时错误
 			if ctx.Err() == context.DeadlineExceeded {
-				logger.Errorf("[%s] command execution timeout for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, err)
+				logger.Errorf("[%s] command execution timeout for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, logArgs, err)
 				return "", context.DeadlineExceeded
 			} else if ctx.Err() == context.Canceled {
-				logger.Warnf("[%s] command execution canceled for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, err)
+				logger.Warnf("[%s] command execution canceled for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, logArgs, err)
 				return "", context.Canceled
 			}
-			logger.Errorf("[%s] error executing command for hook %s (command: %s, path: %s, args: %v, working_dir: %s): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, cmd.Dir, err)
+			logger.Errorf("[%s] error executing command for hook %s (command: %s, path: %s, args: %v, working_dir: %s): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, logArgs, cmd.Dir, err)
 		}
 	} else {
 		out, err = cmd.CombinedOutput()
@@ -1158,13 +1196,13 @@ func handleHook(ctx context.Context, h *hook.Hook, r *hook.Request, w http.Respo
 		if err != nil {
 			// 检查是否是超时错误
 			if ctx.Err() == context.DeadlineExceeded {
-				logger.Errorf("[%s] command execution timeout for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, err)
+				logger.Errorf("[%s] command execution timeout for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, logArgs, err)
 				return string(out), context.DeadlineExceeded
 			} else if ctx.Err() == context.Canceled {
-				logger.Warnf("[%s] command execution canceled for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, err)
+				logger.Warnf("[%s] command execution canceled for hook %s (command: %s, path: %s, args: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, logArgs, err)
 				return string(out), context.Canceled
 			}
-			logger.Errorf("[%s] error executing command for hook %s (command: %s, path: %s, args: %v, working_dir: %s, exit_code: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, cmd.Args, cmd.Dir, err, err)
+			logger.Errorf("[%s] error executing command for hook %s (command: %s, path: %s, args: %v, working_dir: %s, exit_code: %v): %v", r.ID, h.ID, h.ExecuteCommand, cmdPath, logArgs, cmd.Dir, err, err)
 		}
 	}
 

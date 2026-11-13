@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+	rediskit "github.com/soulteary/redis-kit/client"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofiber/fiber/v3/middleware/recover"
@@ -52,6 +55,49 @@ func registerReadOnlyRoute(app *fiber.App, path string, handler fiber.Handler) {
 	})
 }
 
+// requestIDPolicy 在日志中间件之前约束客户端传入的 X-Request-Id：
+// 未启用 -x-request-id 时丢弃客户端的值（由服务端生成），启用时按 limit 截断。
+func requestIDPolicy(useHeader bool, limit int) fiber.Handler {
+	const header = "X-Request-Id"
+	return func(c fiber.Ctx) error {
+		if !useHeader {
+			c.Request().Header.Del(header)
+			return c.Next()
+		}
+		if id := c.Get(header); limit > 0 && len(id) > limit {
+			c.Request().Header.Set(header, id[:limit])
+		}
+		return c.Next()
+	}
+}
+
+// newRedisHealthCheck 返回真正向 Redis 发 PING 的健康检查；连接按需建立并复用。
+func newRedisHealthCheck(appFlags flags.AppFlags) func(ctx context.Context) error {
+	var (
+		mu     sync.Mutex
+		client *redis.Client
+	)
+	return func(ctx context.Context) error {
+		mu.Lock()
+		defer mu.Unlock()
+		if client == nil {
+			cfg := rediskit.DefaultConfig().
+				WithAddr(appFlags.RedisAddr).
+				WithPassword(appFlags.RedisPassword).
+				WithDB(appFlags.RedisDB)
+			c, err := rediskit.NewClient(cfg)
+			if err != nil {
+				return fmt.Errorf("redis unavailable: %w", err)
+			}
+			client = c
+		}
+		if err := client.Ping(ctx).Err(); err != nil {
+			return fmt.Errorf("redis ping failed: %w", err)
+		}
+		return nil
+	}
+}
+
 // Launch 启动 HTTP 服务器并返回 Server 实例（基于 fiber.App）
 func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	// Clean up input
@@ -65,7 +111,11 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	if readHeaderTimeout == 0 {
 		readHeaderTimeout = 5 * time.Second
 	}
-	_ = readHeaderTimeout // Fiber does not expose ReadHeaderTimeout in Config; reserved for future use
+	// fasthttp 没有单独的请求头读取超时，请求头与请求体共用 ReadTimeout。
+	// 用户显式改过这个参数时明确告知，而不是静默忽略。
+	if appFlags.ReadHeaderTimeoutSeconds != flags.DEFAULT_READ_HEADER_TIMEOUT_SECONDS && readHeaderTimeout < time.Duration(appFlags.ReadTimeoutSeconds)*time.Second {
+		logger.Warnf("-read-header-timeout-seconds=%d has no effect: request headers are bounded by -read-timeout-seconds", appFlags.ReadHeaderTimeoutSeconds)
+	}
 	readTimeout := time.Duration(appFlags.ReadTimeoutSeconds) * time.Second
 	if readTimeout == 0 {
 		readTimeout = 10 * time.Second
@@ -79,12 +129,19 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		idleTimeout = 90 * time.Second
 	}
 
+	// fasthttp 用读缓冲区大小限制请求头。默认值（1MB）时保留 fasthttp 的 4KB 缓冲，
+	// 避免每个连接都分配 1MB；只有显式配置了其他值才生效。
+	readBufferSize := 0
+	if appFlags.MaxHeaderBytes > 0 && appFlags.MaxHeaderBytes != flags.DEFAULT_MAX_HEADER_BYTES {
+		readBufferSize = appFlags.MaxHeaderBytes
+	}
+
 	app := fiber.New(fiber.Config{
 		BodyLimit:       bodyLimit,
 		ReadTimeout:     readTimeout,
 		WriteTimeout:    writeTimeout,
 		IdleTimeout:     idleTimeout,
-		ReadBufferSize:  0,
+		ReadBufferSize:  readBufferSize,
 		WriteBufferSize: 0,
 	})
 
@@ -108,6 +165,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	if appFlags.UseXRequestID {
 		loggerCfg.GenerateRequestID = nil
 	}
+	app.Use(requestIDPolicy(appFlags.UseXRequestID, appFlags.XRequestIDLimit))
 	app.Use(loggerfiber.Middleware(loggerfiber.Config{MiddlewareConfig: loggerCfg}))
 	app.Use(recover.New())
 
@@ -123,6 +181,9 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 			RedisDB:        appFlags.RedisDB,
 			RedisKeyPrefix: appFlags.RedisKeyPrefix,
 			WindowSeconds:  appFlags.RateLimitWindowSec,
+			PerIPRPS:       appFlags.RateLimitPerIPRPS,
+			PerIPBurst:     appFlags.RateLimitPerIPBurst,
+			TrustedProxies: strings.Split(appFlags.TrustedProxies, ","),
 		}
 		app.Use(adaptor.HTTPMiddleware(middleware.NewRateLimitMiddleware(rateLimitConfig)))
 		if appFlags.RedisEnabled {
@@ -160,9 +221,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 	}))
 
 	if appFlags.RedisEnabled {
-		healthAggregator.AddChecker(healthkit.NewCustomChecker("redis", func(ctx context.Context) error {
-			return nil
-		}).WithMetadata(map[string]any{
+		healthAggregator.AddChecker(healthkit.NewCustomChecker("redis", newRedisHealthCheck(appFlags)).WithMetadata(map[string]any{
 			"addr": appFlags.RedisAddr,
 		}))
 	}
@@ -297,7 +356,7 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		if isReserved {
 			logger.Warnf("config-ui-path %q conflicts with reserved path; skipping Config UI route", configUIPath)
 		} else {
-			configUIHandler, err := configui.Handler(configUIPath, "http://"+addr, appFlags.HooksDir, hookBaseForReserved)
+			configUIHandler, err := configui.HandlerWithSaveToken(configUIPath, "http://"+addr, appFlags.HooksDir, hookBaseForReserved, appFlags.ConfigUIToken)
 			if err != nil {
 				logger.Warnf("config-ui handler init failed: %v", err)
 			} else {
@@ -335,6 +394,9 @@ func Launch(appFlags flags.AppFlags, addr string, ln net.Listener) *Server {
 		}
 		if configUIPathLogged != "" {
 			logger.Infof("config UI: http://%s%s", addr, configUIPathLogged)
+			if strings.TrimSpace(appFlags.ConfigUIToken) == "" {
+				logger.Infof("config UI: save-to-directory API is disabled (set -config-ui-token or CONFIG_UI_TOKEN to enable it)")
+			}
 		}
 		if err := app.Listener(ln, fiber.ListenConfig{DisableStartupMessage: true}); err != nil {
 			logger.Error(fmt.Sprintf("server error: %v", err))

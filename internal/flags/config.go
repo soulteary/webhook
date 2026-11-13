@@ -58,6 +58,9 @@ func ParseConfig() AppFlags {
 	fs.Bool("rate-limit-enabled", DEFAULT_RATE_LIMIT_ENABLED, "enable rate limiting (default false)")
 	fs.Int("rate-limit-rps", DEFAULT_RATE_LIMIT_RPS, "rate limit requests per second (default 100)")
 	fs.Int("rate-limit-burst", DEFAULT_RATE_LIMIT_BURST, "rate limit burst size (default 10)")
+	fs.Int("rate-limit-per-ip-rps", 0, "per-client-IP rate limit in requests per second; 0 uses rate-limit-rps (set lower than the global limit so one client cannot exhaust it)")
+	fs.Int("rate-limit-per-ip-burst", 0, "per-client-IP burst size; 0 uses rate-limit-burst")
+	fs.String("trusted-proxies", "", "comma separated IPs/CIDRs of trusted reverse proxies; X-Forwarded-For / X-Real-IP are only honored for rate limiting when the request comes from one of them (default empty: use the TCP peer address)")
 
 	// Redis rate limiting flags (分布式限流)
 	fs.Bool("redis-enabled", DEFAULT_REDIS_ENABLED, "enable Redis for distributed rate limiting (default false)")
@@ -98,6 +101,7 @@ func ParseConfig() AppFlags {
 	// Config UI flags (config generator Web UI)
 	fs.Bool("config-ui", DEFAULT_CONFIG_UI_ENABLED, "enable config generator Web UI at config-ui-path (default false)")
 	fs.String("config-ui-path", DEFAULT_CONFIG_UI_PATH, "HTTP path for config UI when config-ui is enabled (default /config-ui)")
+	fs.String("config-ui-token", "", "token required (X-Config-UI-Token header) by the config UI save API; when empty the save API is disabled (prefer the CONFIG_UI_TOKEN env var)")
 
 	// Hooks directory: scan for *.json, *.yaml; when empty, watch for new files (use with or without -hotreload)
 	fs.String("hooks-dir", DEFAULT_HOOKS_DIR, "directory to scan for hook config files (*.json, *.yaml); if empty, watch for new files")
@@ -173,6 +177,9 @@ func ParseConfig() AppFlags {
 	flags.RateLimitEnabled = configutil.ResolveBool(fs, "rate-limit-enabled", ENV_KEY_RATE_LIMIT_ENABLED, DEFAULT_RATE_LIMIT_ENABLED)
 	flags.RateLimitRPS = configutil.ResolveInt(fs, "rate-limit-rps", ENV_KEY_RATE_LIMIT_RPS, DEFAULT_RATE_LIMIT_RPS, false)
 	flags.RateLimitBurst = configutil.ResolveInt(fs, "rate-limit-burst", ENV_KEY_RATE_LIMIT_BURST, DEFAULT_RATE_LIMIT_BURST, false)
+	flags.RateLimitPerIPRPS = configutil.ResolveInt(fs, "rate-limit-per-ip-rps", ENV_KEY_RATE_LIMIT_PER_IP_RPS, 0, true)
+	flags.RateLimitPerIPBurst = configutil.ResolveInt(fs, "rate-limit-per-ip-burst", ENV_KEY_RATE_LIMIT_PER_IP_BURST, 0, true)
+	flags.TrustedProxies = configutil.ResolveString(fs, "trusted-proxies", ENV_KEY_TRUSTED_PROXIES, "", true)
 
 	// Redis rate limiting settings (分布式限流)
 	flags.RedisEnabled = configutil.ResolveBool(fs, "redis-enabled", ENV_KEY_REDIS_ENABLED, DEFAULT_REDIS_ENABLED)
@@ -213,6 +220,7 @@ func ParseConfig() AppFlags {
 	// Config UI settings
 	flags.ConfigUIEnabled = configutil.ResolveBool(fs, "config-ui", ENV_KEY_CONFIG_UI_ENABLED, DEFAULT_CONFIG_UI_ENABLED)
 	flags.ConfigUIPath = configutil.ResolveString(fs, "config-ui-path", ENV_KEY_CONFIG_UI_PATH, DEFAULT_CONFIG_UI_PATH, true)
+	flags.ConfigUIToken = configutil.ResolveString(fs, "config-ui-token", ENV_KEY_CONFIG_UI_TOKEN, "", true)
 
 	applyProfileDefaults(&flags, visited)
 

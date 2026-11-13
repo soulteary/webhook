@@ -353,7 +353,7 @@ func TestHandlerAPICapabilitiesMethodNotAllowed(t *testing.T) {
 
 func TestHandlerAPISaveMethodNotAllowed(t *testing.T) {
 	tmp := t.TempDir()
-	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
+	h, err := HandlerWithSaveToken("/", "http://localhost:9000", tmp, "/hooks", testSaveToken)
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -417,6 +417,7 @@ func TestHandlerAPISaveNoWriteDir(t *testing.T) {
 	body := `{"filename":"hook.yaml","content":"- id: x\n  execute-command: /bin/true"}`
 	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(SaveTokenHeader, testSaveToken)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusNotImplemented {
@@ -433,13 +434,14 @@ func TestHandlerAPISaveNoWriteDir(t *testing.T) {
 
 func TestHandlerAPISaveBadExtension(t *testing.T) {
 	tmp := t.TempDir()
-	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
+	h, err := HandlerWithSaveToken("/", "http://localhost:9000", tmp, "/hooks", testSaveToken)
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
 	body := `{"filename":"hook.txt","content":"x"}`
 	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(SaveTokenHeader, testSaveToken)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -449,7 +451,7 @@ func TestHandlerAPISaveBadExtension(t *testing.T) {
 
 func TestHandlerAPISavePathTraversal(t *testing.T) {
 	tmp := t.TempDir()
-	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
+	h, err := HandlerWithSaveToken("/", "http://localhost:9000", tmp, "/hooks", testSaveToken)
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -458,6 +460,7 @@ func TestHandlerAPISavePathTraversal(t *testing.T) {
 	body := `{"filename":"../../../etc/` + traversalName + `","content":"x"}`
 	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(SaveTokenHeader, testSaveToken)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -472,7 +475,7 @@ func TestHandlerAPISavePathTraversal(t *testing.T) {
 
 func TestHandlerAPISaveSuccess(t *testing.T) {
 	tmp := t.TempDir()
-	h, err := Handler("/config-ui", "http://localhost:9000", tmp, "/hooks")
+	h, err := HandlerWithSaveToken("/config-ui", "http://localhost:9000", tmp, "/hooks", testSaveToken)
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
@@ -482,6 +485,7 @@ func TestHandlerAPISaveSuccess(t *testing.T) {
 	body := `{"filename":"my-hook.yaml","content":` + jsonEscape(content) + `}`
 	req := httptest.NewRequest(http.MethodPost, "http://test/config-ui/api/save", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(SaveTokenHeader, testSaveToken)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -507,13 +511,14 @@ func TestHandlerAPISaveSuccess(t *testing.T) {
 
 func TestHandlerAPISaveFormatMismatch(t *testing.T) {
 	tmp := t.TempDir()
-	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
+	h, err := HandlerWithSaveToken("/", "http://localhost:9000", tmp, "/hooks", testSaveToken)
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
 	body := `{"filename":"my-hook.json","format":"yaml","content":"- id: saved-hook\n  execute-command: /bin/true\n"}`
 	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(SaveTokenHeader, testSaveToken)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -523,13 +528,14 @@ func TestHandlerAPISaveFormatMismatch(t *testing.T) {
 
 func TestHandlerAPISaveInvalidJSONContent(t *testing.T) {
 	tmp := t.TempDir()
-	h, err := Handler("/", "http://localhost:9000", tmp, "/hooks")
+	h, err := HandlerWithSaveToken("/", "http://localhost:9000", tmp, "/hooks", testSaveToken)
 	if err != nil {
 		t.Fatalf("Handler: %v", err)
 	}
 	body := `{"filename":"my-hook.json","format":"json","content":"not-json"}`
 	req := httptest.NewRequest(http.MethodPost, "http://test/api/save", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(SaveTokenHeader, testSaveToken)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -540,4 +546,76 @@ func TestHandlerAPISaveInvalidJSONContent(t *testing.T) {
 func jsonEscape(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
+}
+
+const testSaveToken = "test-save-token"
+
+func newSaveRequest(target string) *http.Request {
+	body := `{"filename":"auth.yaml","content":"- id: x\n  execute-command: /bin/true\n"}`
+	req := httptest.NewRequest(http.MethodPost, target, bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func TestHandlerAPISaveAuthorization(t *testing.T) {
+	cases := []struct {
+		name   string
+		token  string // token configured on the server
+		mutate func(*http.Request)
+		want   int
+	}{
+		{"no token configured", "", func(r *http.Request) { r.Header.Set(SaveTokenHeader, "anything") }, http.StatusForbidden},
+		{"missing token", testSaveToken, func(r *http.Request) {}, http.StatusUnauthorized},
+		{"wrong token", testSaveToken, func(r *http.Request) { r.Header.Set(SaveTokenHeader, "nope") }, http.StatusUnauthorized},
+		{"text/plain body", testSaveToken, func(r *http.Request) {
+			r.Header.Set(SaveTokenHeader, testSaveToken)
+			r.Header.Set("Content-Type", "text/plain")
+		}, http.StatusUnsupportedMediaType},
+		{"cross-origin", testSaveToken, func(r *http.Request) {
+			r.Header.Set(SaveTokenHeader, testSaveToken)
+			r.Header.Set("Origin", "http://evil.example")
+		}, http.StatusForbidden},
+		{"same origin", testSaveToken, func(r *http.Request) {
+			r.Header.Set(SaveTokenHeader, testSaveToken)
+			r.Header.Set("Origin", "http://test")
+		}, http.StatusOK},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			h, err := HandlerWithSaveToken("/", "http://localhost:9000", tmp, "/hooks", tc.token)
+			if err != nil {
+				t.Fatalf("Handler: %v", err)
+			}
+			req := newSaveRequest("http://test/api/save")
+			tc.mutate(req)
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, req)
+			if w.Code != tc.want {
+				t.Fatalf("status %d, want %d, body: %s", w.Code, tc.want, w.Body.Bytes())
+			}
+			entries, _ := os.ReadDir(tmp)
+			if tc.want != http.StatusOK && len(entries) != 0 {
+				t.Fatalf("rejected request must not write files, found %d", len(entries))
+			}
+		})
+	}
+}
+
+func TestHandlerCapabilitiesRequiresSaveToken(t *testing.T) {
+	for token, want := range map[string]bool{"": false, testSaveToken: true} {
+		h, err := HandlerWithSaveToken("/", "http://localhost:9000", t.TempDir(), "/hooks", token)
+		if err != nil {
+			t.Fatalf("Handler: %v", err)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://test/api/capabilities", nil))
+		var body map[string]bool
+		if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+			t.Fatalf("Decode: %v", err)
+		}
+		if body["saveToDir"] != want {
+			t.Errorf("token %q: saveToDir = %v, want %v", token, body["saveToDir"], want)
+		}
+	}
 }

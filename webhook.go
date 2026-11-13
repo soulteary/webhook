@@ -254,6 +254,16 @@ func main() {
 
 	// 设置优雅关闭回调
 	shutdownFn := func() {
+		// 先停 HTTP 服务并等待异步 hook 结束，它们收尾时还要写审计和追踪
+		if httpServer != nil {
+			// 设置最大等待时间为 30 秒
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := httpServer.Shutdown(ctx); err != nil {
+				logger.Errorf("error during graceful shutdown: %v", err)
+			}
+		}
+
 		// 关闭审计日志系统
 		if audit.IsEnabled() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -271,15 +281,6 @@ func main() {
 				logger.Warnf("error shutting down tracing: %v", err)
 			} else {
 				logger.Info("tracing shutdown completed")
-			}
-		}
-
-		if httpServer != nil {
-			// 设置最大等待时间为 30 秒
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			if err := httpServer.Shutdown(ctx); err != nil {
-				logger.Errorf("error during graceful shutdown: %v", err)
 			}
 		}
 	}

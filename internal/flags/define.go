@@ -129,9 +129,12 @@ const (
 	ENV_KEY_STRICT_MODE           = "STRICT_MODE"
 
 	// Rate limiting environment keys
-	ENV_KEY_RATE_LIMIT_ENABLED = "RATE_LIMIT_ENABLED"
-	ENV_KEY_RATE_LIMIT_RPS     = "RATE_LIMIT_RPS"
-	ENV_KEY_RATE_LIMIT_BURST   = "RATE_LIMIT_BURST"
+	ENV_KEY_RATE_LIMIT_ENABLED      = "RATE_LIMIT_ENABLED"
+	ENV_KEY_RATE_LIMIT_RPS          = "RATE_LIMIT_RPS"
+	ENV_KEY_RATE_LIMIT_BURST        = "RATE_LIMIT_BURST"
+	ENV_KEY_RATE_LIMIT_PER_IP_RPS   = "RATE_LIMIT_PER_IP_RPS"
+	ENV_KEY_RATE_LIMIT_PER_IP_BURST = "RATE_LIMIT_PER_IP_BURST"
+	ENV_KEY_TRUSTED_PROXIES         = "TRUSTED_PROXIES"
 
 	// Redis rate limiting environment keys
 	ENV_KEY_REDIS_ENABLED     = "REDIS_ENABLED"
@@ -172,6 +175,7 @@ const (
 	// Config UI environment keys
 	ENV_KEY_CONFIG_UI_ENABLED = "CONFIG_UI_ENABLED"
 	ENV_KEY_CONFIG_UI_PATH    = "CONFIG_UI_PATH"
+	ENV_KEY_CONFIG_UI_TOKEN   = "CONFIG_UI_TOKEN" // #nosec G101 -- environment variable name, not a credential
 
 	// Hooks directory
 	ENV_KEY_HOOKS_DIR = "HOOKS_DIR"
@@ -220,9 +224,12 @@ type AppFlags struct {
 	StrictMode          bool   // 严格模式：禁止危险字符
 
 	// Rate limiting settings
-	RateLimitEnabled bool // 是否启用限流
-	RateLimitRPS     int  // 每秒请求数限制
-	RateLimitBurst   int  // 突发请求数限制
+	RateLimitEnabled    bool   // 是否启用限流
+	RateLimitRPS        int    // 每秒请求数限制
+	RateLimitBurst      int    // 突发请求数限制
+	RateLimitPerIPRPS   int    // 单 IP 每秒请求数限制（0 表示沿用全局值）
+	RateLimitPerIPBurst int    // 单 IP 突发请求数限制（0 表示沿用全局值）
+	TrustedProxies      string // 可信反向代理 IP/CIDR，逗号分隔；仅来自这些地址的请求才解析转发头
 
 	// Redis rate limiting settings (分布式限流)
 	RedisEnabled       bool   // 是否启用 Redis 分布式限流
@@ -263,6 +270,7 @@ type AppFlags struct {
 	// Config UI settings (config generator Web UI)
 	ConfigUIEnabled bool   // 是否启用配置生成 Web UI
 	ConfigUIPath    string // Config UI 的 HTTP 路径（默认 /config-ui）
+	ConfigUIToken   string // Config UI 保存接口令牌；为空时禁用保存接口
 
 	// Hooks directory: when set, scan for hook config files (*.json, *.yaml); if empty, watch for new files
 	HooksDir string

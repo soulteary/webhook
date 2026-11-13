@@ -86,34 +86,63 @@ func (cv *CommandValidator) ValidateCommandPath(cmdPath string) error {
 		return nil
 	}
 
-	// 将路径转换为绝对路径
-	absPath, err := filepath.Abs(cmdPath)
+	// 解析为绝对路径并展开符号链接，白名单比较的是真正会被执行的文件
+	absPath, err := resolveRealPath(cmdPath)
 	if err != nil {
 		return fmt.Errorf("failed to resolve absolute path for %s: %w", cmdPath, err)
 	}
 
 	// 检查是否匹配白名单中的任何路径
 	for _, allowedPath := range cv.AllowedPaths {
-		allowedAbs, err := filepath.Abs(allowedPath)
+		isDirEntry := strings.HasSuffix(allowedPath, string(filepath.Separator))
+		allowedAbs, err := resolveRealPath(allowedPath)
 		if err != nil {
 			logger.Warnf("WARNING: invalid allowed path in whitelist: %s", allowedPath)
 			continue
 		}
 
-		// 如果是目录，检查命令是否在该目录下
-		if strings.HasSuffix(allowedAbs, string(filepath.Separator)) || isDirectory(allowedAbs) {
-			if strings.HasPrefix(absPath, allowedAbs) {
+		if isDirEntry || isDirectory(allowedAbs) {
+			// 目录：按路径分量判断包含关系，/opt/hooks 不会放行 /opt/hooks-evil
+			if pathWithinDir(absPath, allowedAbs) {
 				return nil
 			}
-		} else {
-			// 如果是文件路径，精确匹配
-			if absPath == allowedAbs {
-				return nil
-			}
+		} else if absPath == allowedAbs {
+			// 文件路径：精确匹配
+			return nil
 		}
 	}
 
 	return fmt.Errorf("command path %s is not in the allowed whitelist", cmdPath)
+}
+
+// resolveRealPath 返回绝对且已展开符号链接的路径。路径本身不存在时，
+// 展开其最近的已存在上级目录，保证与白名单目录的比较口径一致。
+func resolveRealPath(path string) (string, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	current, rest := absPath, ""
+	for {
+		if realPath, err := filepath.EvalSymlinks(current); err == nil {
+			return filepath.Join(realPath, rest), nil
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return absPath, nil
+		}
+		rest = filepath.Join(filepath.Base(current), rest)
+		current = parent
+	}
+}
+
+// pathWithinDir 判断 path 是否位于 dir 之内（不含 dir 本身）。
+func pathWithinDir(path, dir string) bool {
+	rel, err := filepath.Rel(dir, path)
+	if err != nil || rel == "." || rel == ".." || filepath.IsAbs(rel) {
+		return false
+	}
+	return !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // ValidateArgs 验证命令参数

@@ -163,8 +163,8 @@ curl http://localhost:9000/openapi
 - **GET** `{config-ui-path}` 或 `{config-ui-path}/`：返回配置生成器 HTML 页面。
 - **GET** `{config-ui-path}/static/*`：静态资源（CSS、JS）。
 - **POST** `{config-ui-path}/api/generate`：请求体为 JSON（字段如 `id`、`execute-command`、`response-message`、`trigger-rule`）。成功返回 `{ "yaml", "json", "callUrl", "curlExample" }`，校验失败返回 4xx 及 `{ "error": "..." }`。
-- **GET** `{config-ui-path}/api/capabilities`：返回 `{ "saveToDir": true|false }`。为 `true` 时 UI 显示「保存到目录」选项（目录模式：默认 `./hooks` 或显式 `-hooks-dir`）。
-- **POST** `{config-ui-path}/api/save`：将生成的配置写入 hooks 目录。请求体：`{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }`。成功返回 `{ "ok": "<绝对路径>" }`，未启用或非法请求（如路径穿越、格式不匹配、配置内容非法）返回 4xx 及 `{ "error": "..." }`。文件名须为 `.json`、`.yaml` 或 `.yml` 后缀。
+- **GET** `{config-ui-path}/api/capabilities`：返回 `{ "saveToDir": true|false }`。为 `true` 时 UI 显示「保存到目录」选项（需同时满足：目录模式，即默认 `./hooks` 或显式 `-hooks-dir`；且已设置 `-config-ui-token`）。
+- **POST** `{config-ui-path}/api/save`：将生成的配置写入 hooks 目录。请求体：`{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }`。成功返回 `{ "ok": "<绝对路径>" }`，未启用或非法请求（如路径穿越、格式不匹配、配置内容非法）返回 4xx 及 `{ "error": "..." }`。文件名须为 `.json`、`.yaml` 或 `.yml` 后缀。**鉴权**：仅当启动时设置了 `-config-ui-token`（或 `CONFIG_UI_TOKEN`）才启用，否则返回 403；请求须带 `X-Config-UI-Token: <令牌>` 头（缺失或错误返回 401）、`Content-Type: application/json`（否则 415），且跨源请求会被拒绝（403）。
 
 **示例:**
 ```bash

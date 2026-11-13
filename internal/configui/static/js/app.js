@@ -421,13 +421,21 @@
 						}
 						btnSave.disabled = true;
 						if (saveMsg) { saveMsg.textContent = t.saveSaving || (lang === 'zh' ? '保存中…' : 'Saving…'); saveMsg.style.color = ''; }
+						var saveToken = '';
+						try { saveToken = window.sessionStorage.getItem('configUISaveToken') || ''; } catch (e) { /* storage unavailable */ }
+						if (!saveToken) {
+							saveToken = (window.prompt(t.saveTokenPrompt || (lang === 'zh' ? '请输入保存令牌（启动参数 -config-ui-token 的值）' : 'Enter the save token (value of -config-ui-token)')) || '').trim();
+							if (!saveToken) { btnSave.disabled = false; if (saveMsg) { saveMsg.textContent = ''; } return; }
+						}
 						fetch('api/save', {
 							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
+							headers: { 'Content-Type': 'application/json', 'X-Config-UI-Token': saveToken },
 							body: JSON.stringify({ filename: filename, content: content, format: format })
 						}).then(function (r) {
 							return r.json().then(function (body) {
+								if (r.status === 401) { try { window.sessionStorage.removeItem('configUISaveToken'); } catch (e) { /* ignore */ } }
 								if (!r.ok) throw new Error(body.error || r.statusText);
+								try { window.sessionStorage.setItem('configUISaveToken', saveToken); } catch (e) { /* ignore */ }
 								if (saveMsg) { saveMsg.textContent = (t.saveSuccess || (lang === 'zh' ? '已保存: ' : 'Saved: ')) + (body.ok || filename); saveMsg.style.color = ''; }
 							});
 						}).catch(function (err) {

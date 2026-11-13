@@ -1,6 +1,9 @@
 package rules
 
-import "github.com/soulteary/webhook/internal/hook"
+import (
+	"github.com/soulteary/webhook/internal/hook"
+	"github.com/soulteary/webhook/internal/logger"
+)
 
 // LoadOptions keeps reload parsing and validation aligned with startup.
 type LoadOptions struct {
@@ -26,12 +29,27 @@ func loadHooksFile(hooksFilePath string, asTemplate bool, options LoadOptions) (
 	if err != nil {
 		return nil, err
 	}
+	if !options.Strict {
+		warnUnknownHookFields(hooksFilePath, asTemplate)
+	}
 	if options.Validate != nil {
 		if err := options.Validate(hooksFilePath, hooks); err != nil {
 			return nil, err
 		}
 	}
 	return hooks, nil
+}
+
+// warnUnknownHookFields re-parses a file that loaded successfully in the
+// compatible mode with the strict decoder. A misspelled key (for example
+// "trigger-rules") is silently dropped by the compatible loader, which can
+// leave a hook without its trigger rule; surface that as a warning instead of
+// failing, so existing deployments keep starting.
+func warnUnknownHookFields(hooksFilePath string, asTemplate bool) {
+	strictHooks := hook.Hooks{}
+	if err := strictHooks.LoadFromFileStrict(hooksFilePath, asTemplate); err != nil {
+		logger.Warnf("hooks file %s loaded, but would fail strict validation; the reported settings are being ignored (use -validate-strict to reject them): %v", hooksFilePath, err)
+	}
 }
 
 func prospectiveHookCountLocked(hooksFilePath string, candidate hook.Hooks) int {

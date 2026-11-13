@@ -732,6 +732,7 @@ func TestLaunch_ConfigUICapabilities(t *testing.T) {
 		ResponseHeaders: hook.ResponseHeaders{},
 		ConfigUIEnabled: true,
 		ConfigUIPath:    "/config-ui",
+		ConfigUIToken:   "test-token",
 		HooksDir:        t.TempDir(),
 	}
 
@@ -759,5 +760,5 @@ func TestLaunch_ConfigUICapabilities(t *testing.T) {
 	var cap map[string]bool
 	err = json.NewDecoder(resp.Body).Decode(&cap)
 	require.NoError(t, err)
-	assert.True(t, cap["saveToDir"], "with HooksDir set, saveToDir should be true")
+	assert.True(t, cap["saveToDir"], "with HooksDir and ConfigUIToken set, saveToDir should be true")
 }
