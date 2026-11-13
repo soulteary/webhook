@@ -1892,8 +1892,8 @@
 <li><strong>GET</strong> <code>{config-ui-path}</code> 或 <code>{config-ui-path}/</code>：返回配置生成器 HTML 页面。</li>
 <li><strong>GET</strong> <code>{config-ui-path}/static/*</code>：静态资源（CSS、JS）。</li>
 <li><strong>POST</strong> <code>{config-ui-path}/api/generate</code>：请求体为 JSON（字段如 <code>id</code>、<code>execute-command</code>、<code>response-message</code>、<code>trigger-rule</code>）。成功返回 <code>{ "yaml", "json", "callUrl", "curlExample" }</code>，校验失败返回 4xx 及 <code>{ "error": "..." }</code>。</li>
-<li><strong>GET</strong> <code>{config-ui-path}/api/capabilities</code>：返回 <code>{ "saveToDir": true|false }</code>。为 <code>true</code> 时 UI 显示「保存到目录」选项（目录模式：默认 <code>./hooks</code> 或显式 <code>-hooks-dir</code>）。</li>
-<li><strong>POST</strong> <code>{config-ui-path}/api/save</code>：将生成的配置写入 hooks 目录。请求体：<code>{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }</code>。成功返回 <code>{ "ok": "&lt;绝对路径&gt;" }</code>，未启用或非法请求（如路径穿越、格式不匹配、配置内容非法）返回 4xx 及 <code>{ "error": "..." }</code>。文件名须为 <code>.json</code>、<code>.yaml</code> 或 <code>.yml</code> 后缀。</li>
+<li><strong>GET</strong> <code>{config-ui-path}/api/capabilities</code>：返回 <code>{ "saveToDir": true|false }</code>。为 <code>true</code> 时 UI 显示「保存到目录」选项（需同时满足：目录模式，即默认 <code>./hooks</code> 或显式 <code>-hooks-dir</code>；且已设置 <code>-config-ui-token</code>）。</li>
+<li><strong>POST</strong> <code>{config-ui-path}/api/save</code>：将生成的配置写入 hooks 目录。请求体：<code>{ "filename": "name.yaml", "content": "...", "format": "yaml|json" }</code>。成功返回 <code>{ "ok": "&lt;绝对路径&gt;" }</code>，未启用或非法请求（如路径穿越、格式不匹配、配置内容非法）返回 4xx 及 <code>{ "error": "..." }</code>。文件名须为 <code>.json</code>、<code>.yaml</code> 或 <code>.yml</code> 后缀。<strong>鉴权</strong>：仅当启动时设置了 <code>-config-ui-token</code>（或 <code>CONFIG_UI_TOKEN</code>）才启用，否则返回 403；请求须带 <code>X-Config-UI-Token: &lt;令牌&gt;</code> 头（缺失或错误返回 401）、<code>Content-Type: application/json</code>（否则 415），且跨源请求会被拒绝（403）。</li>
 </ul>
 <p><strong>示例:</strong>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 在 webhook 主服务上启用 Config UI（默认端口 9000）</span>

@@ -2383,7 +2383,7 @@
 - <code>rate-limit-rps</code>: 10-50 requests per second (adjust based on your needs)
 - <code>rate-limit-burst</code>: 2x the RPS value</p>
 <h3 id="4-optional-web-endpoints-openapi-config-ui">4. Optional Web Endpoints (OpenAPI, Config UI)</h3>
-<p>The <code>-openapi</code> and <code>-config-ui</code> flags expose additional HTTP endpoints (OpenAPI spec and config generator Web UI). These endpoints do not require authentication and are intended for debugging or intranet use only.</p>
+<p>The <code>-openapi</code> and <code>-config-ui</code> flags expose additional HTTP endpoints (OpenAPI spec and config generator Web UI). These endpoints do not require authentication and are intended for debugging or intranet use only. The Config UI "Save to directory" API is the exception: it is disabled by default and only works when <code>-config-ui-token</code> is set and sent with the request.</p>
 <ul>
 <li><strong>Do not</strong> enable <code>-openapi</code> or <code>-config-ui</code> on servers reachable from the public internet unless protected by network restrictions or a reverse proxy with access control.</li>
 <li>Prefer enabling them only in development, CI, or trusted internal networks.</li>

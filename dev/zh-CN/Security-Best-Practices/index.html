@@ -2383,7 +2383,7 @@
 - <code>rate-limit-rps</code>: 每秒 10-50 个请求（根据您的需求调整）
 - <code>rate-limit-burst</code>: RPS 值的 2 倍</p>
 <h3 id="4-web-openapiconfig-ui">4. 可选 Web 端点（OpenAPI、Config UI）</h3>
-<p><code>-openapi</code> 与 <code>-config-ui</code> 会暴露额外 HTTP 端点（OpenAPI 规范与配置生成 Web UI）。这些端点无需认证，仅建议在调试或内网使用。</p>
+<p><code>-openapi</code> 与 <code>-config-ui</code> 会暴露额外 HTTP 端点（OpenAPI 规范与配置生成 Web UI）。这些端点无需认证，仅建议在调试或内网使用。Config UI 的「保存到目录」接口例外：它默认禁用，只有设置 <code>-config-ui-token</code> 后才可用，并要求请求携带该令牌。</p>
 <ul>
 <li><strong>请勿</strong>在可从公网访问的服务上启用 <code>-openapi</code> 或 <code>-config-ui</code>，除非通过网络限制或带访问控制的反向代理保护。</li>
 <li>建议仅在开发、CI 或可信内网环境中启用。</li>

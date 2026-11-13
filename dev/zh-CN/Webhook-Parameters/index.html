@@ -2223,11 +2223,11 @@
 <ul>
 <li>
 <p><code>-x-request-id</code>
-  如果存在，使用 <code>X-Request-Id</code> 请求头作为请求 ID</p>
+  如果存在，使用 <code>X-Request-Id</code> 请求头作为请求 ID。未启用时客户端传入的 <code>X-Request-Id</code> 会被丢弃，请求 ID 由服务端生成</p>
 </li>
 <li>
 <p><code>-x-request-id-limit int</code>
-  截断 <code>X-Request-Id</code> 请求头的长度限制；默认无限制</p>
+  截断 <code>X-Request-Id</code> 请求头的长度限制；默认无限制（仅在启用 <code>-x-request-id</code> 时有意义）</p>
 </li>
 </ul>
 <p><strong>说明</strong>：长度限制当前仅能通过 <code>-x-request-id-limit</code> 配置；当前实现未提供单独的环境变量。</p>
@@ -2298,6 +2298,18 @@
 <p><code>-rate-limit-burst int</code>
   设置突发请求的最大数量（默认值：<code>10</code>）</p>
 </li>
+<li>
+<p><code>-rate-limit-per-ip-rps int</code>
+  单个客户端 IP 的每秒请求数限制；<code>0</code> 表示沿用 <code>-rate-limit-rps</code>（默认值：<code>0</code>）。建议设为低于全局额度，避免单个客户端耗尽全局额度。</p>
+</li>
+<li>
+<p><code>-rate-limit-per-ip-burst int</code>
+  单个客户端 IP 的突发请求数；<code>0</code> 表示沿用 <code>-rate-limit-burst</code>（默认值：<code>0</code>）</p>
+</li>
+<li>
+<p><code>-trusted-proxies string</code>
+  可信反向代理的 IP 或 CIDR，逗号分隔（默认值：空）。限流默认按 TCP 对端地址识别客户端；只有请求来自这些地址时，才会解析 <code>X-Forwarded-For</code>（取最右侧的非可信地址）和 <code>X-Real-IP</code>。部署在反向代理之后时必须设置，否则所有请求会共用代理的 IP 额度。</p>
+</li>
 </ul>
 <h3 id="redis">Redis 分布式限流</h3>
 <p>以下参数用于配置基于 Redis 的分布式限流，适用于多实例部署：</p>
@@ -2332,7 +2344,7 @@
 <ul>
 <li>
 <p><code>-read-header-timeout-seconds int</code>
-  设置读取请求头的超时时间（秒，默认值：<code>5</code>）</p>
+  保留参数，当前不生效：底层 HTTP 服务不区分请求头与请求体的读取超时，两者都受 <code>-read-timeout-seconds</code> 约束。设置为非默认值时启动日志会给出提示</p>
 </li>
 <li>
 <p><code>-read-timeout-seconds int</code>
@@ -2348,7 +2360,7 @@
 </li>
 <li>
 <p><code>-max-header-bytes int</code>
-  设置请求头的最大大小（字节，默认值：<code>1048576</code>，即 1MB）</p>
+  设置请求头的最大大小（字节）。保持默认值 <code>1048576</code> 时实际使用底层 HTTP 服务的 4KB 读缓冲；显式设置为其他值后按该值生效（同时也是每个连接的读缓冲大小）</p>
 </li>
 </ul>
 <h3 id="_10">安全配置</h3>
@@ -2468,6 +2480,10 @@
 <li>
 <p><code>-config-ui-path string</code>
   在 webhook 主服务上启用 config-ui 时，Config UI 的 HTTP 路径（默认值：<code>/config-ui</code>）。尾斜杠会被归一化（如 <code>/config-ui/</code> 等同于 <code>/config-ui</code>）。</p>
+</li>
+<li>
+<p><code>-config-ui-token string</code>
+  Config UI「保存到目录」接口所需的令牌（默认值：空；建议通过环境变量 <code>CONFIG_UI_TOKEN</code> 提供）。为空时保存接口被禁用，UI 仍可生成与下载配置。保存一个 hook 文件等同于授予命令执行权限，请使用足够长的随机值。</p>
 </li>
 </ul>
 <p>请勿设置为与现有端点冲突的路径（如 <code>/</code>、<code>/health</code>、<code>/hooks</code>、<code>/openapi</code> 等）。Config UI 生成的调用 URL 和 curl 示例使用 <code>-urlprefix</code>（例如 <code>-urlprefix=events</code> 时生成 <code>/events/:id</code>）。目录模式（默认 <code>./hooks</code> 或显式 <code>-hooks-dir</code>）下，UI 会提供「保存到目录」选项，保存后可通过生成 URL 直接验证；显式 <code>-hooks</code> 单文件模式下不提供该选项。</p>
@@ -2754,6 +2770,24 @@
 <td><code>-rate-limit-burst</code></td>
 <td>突发请求数限制</td>
 <td><code>10</code></td>
+</tr>
+<tr>
+<td><code>RATE_LIMIT_PER_IP_RPS</code></td>
+<td><code>-rate-limit-per-ip-rps</code></td>
+<td>单 IP 每秒请求数限制（<code>0</code> 沿用全局值）</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>RATE_LIMIT_PER_IP_BURST</code></td>
+<td><code>-rate-limit-per-ip-burst</code></td>
+<td>单 IP 突发请求数限制（<code>0</code> 沿用全局值）</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>TRUSTED_PROXIES</code></td>
+<td><code>-trusted-proxies</code></td>
+<td>可信反向代理 IP/CIDR（逗号分隔）</td>
+<td>空</td>
 </tr>
 </tbody>
 </table>
