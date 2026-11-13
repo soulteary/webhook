@@ -1,10 +1,10 @@
 # Go Report Card
 
-**Grade: A+** (98.3%)
+**Grade: A+** (98.5%)
 
 | Metric | Value |
 | ------ | ----- |
-| Files | 113 |
+| Files | 123 |
 | Issues | 16 |
 
 ## Checks
@@ -14,7 +14,7 @@
 | gofmt | 100% |
 | go_vet | 100% |
 | ineffassign | 100% |
-| gocyclo | 85% |
+| gocyclo | 86% |
 | license | 100% |
 | misspell | 100% |
 
@@ -22,48 +22,48 @@
 
 ### gocyclo
 
+- `internal/configui/configui.go`
+  - Line 332: cyclomatic complexity 32 for function runSave
+  - Line 180: cyclomatic complexity 17 for function requestToHook
+- `internal/middleware/sanitizer.go`
+  - Line 230: cyclomatic complexity 23 for function SanitizeDumpRequest
 - `internal/hook/hook.go`
-  - Line 399: cyclomatic complexity 19 for function GetParameter
-  - Line 498: cyclomatic complexity 18 for function (*Argument).Get
-  - Line 808: cyclomatic complexity 17 for function (*Hooks).loadFromFileWithOptions
+  - Line 412: cyclomatic complexity 22 for function GetParameter
+  - Line 523: cyclomatic complexity 18 for function (*Argument).Get
+  - Line 833: cyclomatic complexity 17 for function (*Hooks).loadFromFileWithOptions
+- `webhook_test.go`
+  - Line 23: cyclomatic complexity 19 for function TestWebhook
+- `internal/server/server.go`
+  - Line 1011: cyclomatic complexity 35 for function handleHook
+  - Line 254: cyclomatic complexity 25 for function handleMultipartForm
+- `webhook.go`
+  - Line 119: cyclomatic complexity 34 for function main
+- `internal/monitor/dirwatch.go`
+  - Line 27: cyclomatic complexity 32 for function WatchDir
+- `internal/monitor/monitor.go`
+  - Line 84: cyclomatic complexity 26 for function handleEvent
 - `example/owlmail/example_test.go`
   - Line 66: cyclomatic complexity 18 for function TestOwlMailConfigAndDocumentation
   - Line 13: cyclomatic complexity 16 for function TestHookTemplateRendersValidJSON
-- `internal/monitor/dirwatch.go`
-  - Line 27: cyclomatic complexity 32 for function WatchDir
-- `internal/configui/configui.go`
-  - Line 282: cyclomatic complexity 31 for function runSave
-  - Line 177: cyclomatic complexity 17 for function requestToHook
-- `webhook_test.go`
-  - Line 23: cyclomatic complexity 19 for function TestWebhook
+- `internal/middleware/dumper.go`
+  - Line 42: cyclomatic complexity 16 for function DumperWithConfig
+- `internal/flags/config.go`
+  - Line 19: cyclomatic complexity 19 for function ParseConfig
 - `internal/flags/validate.go`
   - Line 58: cyclomatic complexity 40 for function Validate
   - Line 630: cyclomatic complexity 28 for function validateRuleContent
   - Line 263: cyclomatic complexity 20 for function validateHookFiles
   - Line 349: cyclomatic complexity 17 for function validateHookContent
-- `internal/middleware/sanitizer.go`
-  - Line 230: cyclomatic complexity 23 for function SanitizeDumpRequest
-- `internal/flags/config.go`
-  - Line 19: cyclomatic complexity 19 for function ParseConfig
-- `internal/server/web.go`
-  - Line 56: cyclomatic complexity 41 for function Launch
-- `webhook.go`
-  - Line 119: cyclomatic complexity 34 for function main
-- `internal/server/server.go`
-  - Line 983: cyclomatic complexity 34 for function handleHook
-  - Line 248: cyclomatic complexity 24 for function handleMultipartForm
-- `internal/monitor/monitor.go`
-  - Line 84: cyclomatic complexity 26 for function handleEvent
-- `internal/i18n/i18n.go`
-  - Line 22: cyclomatic complexity 21 for function InitLocaleByFiles
-- `internal/middleware/dumper.go`
-  - Line 42: cyclomatic complexity 16 for function DumperWithConfig
-- `internal/hook/template_secret.go`
-  - Line 30: cyclomatic complexity 16 for function getSecret
 - `internal/doctor/doctor.go`
   - Line 32: cyclomatic complexity 39 for function Run
   - Line 406: cyclomatic complexity 20 for function checkWritableFilePathWithParentCreation
   - Line 217: cyclomatic complexity 19 for function checkCommand
+- `internal/i18n/i18n.go`
+  - Line 22: cyclomatic complexity 21 for function InitLocaleByFiles
+- `internal/hook/template_secret.go`
+  - Line 30: cyclomatic complexity 16 for function getSecret
+- `internal/server/web.go`
+  - Line 102: cyclomatic complexity 46 for function Launch
 
 ---
 

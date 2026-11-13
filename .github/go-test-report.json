@@ -1,15 +1,15 @@
 {
   "schema_version": "1.0",
   "tests": {
-    "total": 602,
-    "passed": 596,
+    "total": 615,
+    "passed": 609,
     "failed": 0,
     "skipped": 6
   },
   "coverage": {
-    "covered_statements": 3350,
-    "total_statements": 4393,
-    "percentage": 76.26,
+    "covered_statements": 3513,
+    "total_statements": 4571,
+    "percentage": 76.85,
     "threshold": 0
   },
   "packages": [
@@ -44,9 +44,9 @@
     {
       "name": "internal/configui",
       "status": "pass",
-      "tests": 22,
+      "tests": 24,
       "failed": 0,
-      "coverage": 74.34
+      "coverage": 76.45
     },
     {
       "name": "internal/doctor",
@@ -60,7 +60,7 @@
       "status": "pass",
       "tests": 67,
       "failed": 0,
-      "coverage": 93.74
+      "coverage": 93.83
     },
     {
       "name": "internal/fn",
@@ -72,9 +72,9 @@
     {
       "name": "internal/hook",
       "status": "pass",
-      "tests": 65,
+      "tests": 71,
       "failed": 0,
-      "coverage": 86.25
+      "coverage": 87.57
     },
     {
       "name": "internal/hooksdir",
@@ -114,16 +114,16 @@
     {
       "name": "internal/middleware",
       "status": "pass",
-      "tests": 67,
+      "tests": 63,
       "failed": 0,
-      "coverage": 82.62
+      "coverage": 83.07
     },
     {
       "name": "internal/monitor",
       "status": "pass",
       "tests": 20,
       "failed": 0,
-      "coverage": 45.42
+      "coverage": 45.08
     },
     {
       "name": "internal/openapi",
@@ -144,28 +144,28 @@
       "status": "pass",
       "tests": 16,
       "failed": 0,
-      "coverage": 66.67
+      "coverage": 61.4
     },
     {
       "name": "internal/rules",
       "status": "pass",
       "tests": 34,
       "failed": 0,
-      "coverage": 88.89
+      "coverage": 89.18
     },
     {
       "name": "internal/security",
       "status": "pass",
-      "tests": 10,
+      "tests": 12,
       "failed": 0,
-      "coverage": 91.01
+      "coverage": 89.62
     },
     {
       "name": "internal/server",
       "status": "pass",
-      "tests": 109,
+      "tests": 116,
       "failed": 0,
-      "coverage": 75.38
+      "coverage": 76.69
     },
     {
       "name": "internal/tracing",
