@@ -5,16 +5,16 @@ WebHook。WebHook 对完整请求体进行鉴权，将指定 JSON 字段映射�
 受控的本地命令。
 
 ```text
-SMTP 客户端 -> OwlMail v0.13.0 -> 带签名的 HTTP POST -> WebHook -> 命令/脚本
+SMTP 客户端 -> OwlMail v0.15.0 -> 带签名的 HTTP POST -> WebHook -> 命令/脚本
 ```
 
 可运行示例位于 [`example/owlmail`](../../example/owlmail/)。OwlMail 仓库也维护了
-发送端示例：[`examples/webhooks/soulteary-webhook`](https://github.com/soulteary/owlmail/tree/v0.13.0/examples/webhooks/soulteary-webhook)。
+发送端示例：[`examples/webhooks/soulteary-webhook`](https://github.com/soulteary/owlmail/tree/v0.15.0/examples/webhooks/soulteary-webhook)。
 
 ## 使用要求
 
 - WebHook 7.3.4（Compose 示例使用包含 shell 的 `runner` 镜像）。
-- OwlMail v0.13.0（本示例固定使用的版本）或更高版本。
+- OwlMail v0.15.0（本示例固定使用的版本）或更高版本。
 - 至少 32 字节的随机共享密钥。
 - OwlMail 能够访问 WebHook 端点。
 
@@ -41,7 +41,7 @@ webhook \
 示例启用了 `include-command-output-in-response`，命令失败会返回非 2xx，使 OwlMail
 按策略重试。处理脚本应保持幂等，并避免输出密钥或不必要的完整邮件正文。
 
-## 2. 配置 OwlMail v0.13.0
+## 2. 配置 OwlMail v0.15.0
 
 打开 OwlMail 的 `/webhooks` 页面，可以创建、导入、校验、复制和下载 version 1
 配置。编辑过程发生在浏览器本地；下载配置并不会自动激活它，需要把 JSON 文件挂载
@@ -51,7 +51,7 @@ Compose 示例直接使用发布镜像：
 
 ```yaml
 owlmail:
-  image: ghcr.io/soulteary/owlmail:0.13.0
+  image: ghcr.io/soulteary/owlmail:0.15.0
   environment:
     OWLMAIL_WEBHOOK_CONFIG: /app/config/owlmail.json
     OWLMAIL_WEBHOOK_MAX_CONCURRENCY: "8"
@@ -77,7 +77,7 @@ OwlMail 会先展开环境变量，再验证配置；缺少变量或数值无效
 
 ## 签名与投递标识
 
-目标配置了 `secret` 时，OwlMail 0.13.0 会同时发送两种签名：
+目标配置了 `secret` 时，OwlMail 0.15.0 会同时发送两种签名：
 
 | 请求头 | 含义 |
 |---|---|
@@ -100,7 +100,7 @@ OwlMail 会先展开环境变量，再验证配置；缺少变量或数值无效
 
 ## 投递时序与持久性
 
-OwlMail 的 SMTP 接收与最终 HTTP 结果相互独立。0.13.0 会先把每个事件同步写入
+OwlMail 的 SMTP 接收与最终 HTTP 结果相互独立。0.15.0 会先把每个事件同步写入
 邮件目录下的 `.owlmail-webhook-outbox`，随后异步执行 HTTP 投递，并采用
 “至少一次”语义。WebHook 命令失败会让本次投递返回非 2xx 并触发重试，但不会
 拒收或删除已经保存的邮件。
@@ -130,9 +130,9 @@ version 1 Webhook JSON、原始正文 HMAC、环境变量展开、字段映射�
 Docker HEALTHCHECK，或 `/app` 已加入 PATH。
 
 停止新 SMTP 流量及旧进程，备份完整邮件目录、Webhook outbox 和已配置的 Redis/S3 状态。
-先使用隔离副本并禁用真实出站地址演练 0.13.0，再检查就绪状态、历史邮件和附件、
+先使用隔离副本并禁用真实出站地址演练 0.15.0，再检查就绪状态、历史邮件和附件、
 新 SMTP 接收及对应签名 Webhook 命令后恢复流量。恢复可能继续待投递任务，仍采用至少一次
-投递语义。若使用 Relay，请阅读 [0.13.0 恢复变更](https://github.com/soulteary/owlmail/blob/v0.13.0/docs/zh-CN/Release-0.13.0.md)。
+投递语义。若使用 Relay，请阅读 [0.15.0 升级说明](https://github.com/soulteary/owlmail/blob/v0.15.0/docs/zh-CN/Release-0.15.0.md)。
 回退时停止新版，使用旧镜像、旧配置和升级前完整备份，不要让两个版本共用可写数据；
 恢复待投递任务前先核对下游接收记录。本 Demo 仍为临时部署，不配置 Redis 或持久化邮件。
 
@@ -145,7 +145,7 @@ docker compose up
 ```
 
 随后通过 `curl smtp://127.0.0.1:1025` 发送测试邮件。访问 `http://127.0.0.1:1080`
-查看邮件，访问 `http://127.0.0.1:1080/webhooks` 查看 v0.13.0 的 Webhook 配置生成器，
+查看邮件，访问 `http://127.0.0.1:1080/webhooks` 查看 v0.15.0 的 Webhook 配置生成器，
 WebHook 容器日志中可以看到经过签名校验和字段映射后的 Demo 输出。
 
 ## 生产环境检查清单
@@ -161,7 +161,7 @@ WebHook 容器日志中可以看到经过签名校验和字段映射后的 Demo 
 
 ## 过滤与多工作流
 
-OwlMail v0.13.0 支持按发件人、收件人、主题和纯文本正文进行大小写不敏感的通配符过滤。多个目标可
+OwlMail v0.15.0 支持按发件人、收件人、主题和纯文本正文进行大小写不敏感的通配符过滤。多个目标可
 分别调用 `/hooks/owlmail-archive`、`/hooks/owlmail-alert`、`/hooks/owlmail-ticket`
 等 Hook，并使用独立命令和密钥隔离权限与失败处理。
 

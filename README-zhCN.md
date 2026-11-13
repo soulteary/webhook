@@ -75,14 +75,14 @@ go install github.com/soulteary/webhook@latest
 # 最新稳定 Core 镜像
 docker pull soulteary/webhook:latest
 
-# 最小化 scratch 镜像（无前缀的 7.3.4 是它的别名）
-docker pull soulteary/webhook:core-7.3.4
+# 最小化 scratch 镜像（无前缀的 7.4.0 是它的别名）
+docker pull soulteary/webhook:core-7.4.0
 
 # Shell 脚本运行环境
-docker pull soulteary/webhook:runner-7.3.4
+docker pull soulteary/webhook:runner-7.4.0
 
 # 包含调试和网络工具的运行环境
-docker pull soulteary/webhook:extended-7.3.4
+docker pull soulteary/webhook:extended-7.4.0
 ```
 
 | 变体 | 内容 | 适用场景 |
@@ -243,18 +243,18 @@ http://yourserver:9000/hooks/redeploy-webhook
 Tag Release 会发布 SPDX SBOM、Checksum 文件的 Keyless Sigstore Bundle、已签名的多架构容器 Manifest，以及 GitHub 构建来源证明。验证示例：
 
 ```bash
-gh attestation verify webhook_7.3.4_linux_amd64.tar.gz -R soulteary/webhook
+gh attestation verify webhook_7.4.0_linux_amd64.tar.gz -R soulteary/webhook
 
 cosign verify-blob \
-  --bundle webhook_7.3.4_checksums.txt.sigstore.json \
+  --bundle webhook_7.4.0_checksums.txt.sigstore.json \
   --certificate-identity-regexp='^https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/.+$' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  webhook_7.3.4_checksums.txt
+  webhook_7.4.0_checksums.txt
 
 cosign verify \
-  --certificate-identity='https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/7.3.4' \
+  --certificate-identity='https://github.com/soulteary/webhook/.github/workflows/build.yml@refs/tags/7.4.0' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  ghcr.io/soulteary/webhook:runner-7.3.4
+  ghcr.io/soulteary/webhook:runner-7.4.0
 ```
 
 ## 关于此 Fork

@@ -30,7 +30,7 @@ services:
       retries: 15
 
   owlmail:
-    image: ghcr.io/soulteary/owlmail:0.13.0
+    image: ghcr.io/soulteary/owlmail:0.15.0
     depends_on:
       webhook:
         condition: service_healthy
