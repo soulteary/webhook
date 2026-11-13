@@ -727,6 +727,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#upgrade-from-734-to-740" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade from 7.3.4 to 7.4.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#upgrade-from-733-to-734" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1742,6 +1753,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#upgrade-from-734-to-740" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade from 7.3.4 to 7.4.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#upgrade-from-733-to-734" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2200,6 +2222,18 @@
 
 
 <h1 id="migration-guide">Migration Guide</h1>
+<h2 id="upgrade-from-734-to-740">Upgrade from 7.3.4 to 7.4.0</h2>
+<p>Hook definitions need no migration, but this release changes default behavior in the following places. Review them before switching production traffic:</p>
+<ul>
+<li>Config UI: "Save to directory" stops working until <code>-config-ui-token</code> / <code>CONFIG_UI_TOKEN</code> is configured. The save API then requires the token in the <code>X-Config-UI-Token</code> header.</li>
+<li>Rate limiting behind a reverse proxy: <code>X-Forwarded-For</code> / <code>X-Real-IP</code> are honored only when the request comes from an address listed in <code>-trusted-proxies</code> / <code>TRUSTED_PROXIES</code>. Without it, all requests share the proxy's per-IP quota.</li>
+<li>Asynchronous hooks: when all execution slots stay busy for the acquire timeout, the request receives <code>503</code> with <code>Retry-After</code> instead of a success response. Senders should retry.</li>
+<li>Trusted proxy list: one entry in <code>-trusted-proxies</code> / <code>TRUSTED_PROXIES</code> that is not an IP address or CIDR range causes the whole list to be ignored, with a startup warning. Forwarded headers are then not used.</li>
+<li>Multipart requests: a <code>multipart/form-data</code> body is read fully into memory, up to <code>-max-request-body-size</code>, before it is parsed, so that signature rules can cover the raw body. Size the limit and the memory of the process for the largest upload you accept.</li>
+<li>Health and readiness with Redis: when Redis is enabled, <code>/health</code> and <code>/readyz</code> report unhealthy while Redis does not answer <code>PING</code>. An orchestrator that acts on the readiness probe will take the instance out of rotation during a Redis outage.</li>
+</ul>
+<p>Also check configurations that depended on behavior this release closes: <code>-allowed-command-paths</code> directory entries that matched by string prefix or through a symlink leaving the directory, <code>value</code> match rules whose configured value is empty, signatures on <code>multipart/form-data</code> requests (now computed over the raw body), and a client-supplied <code>X-Request-Id</code> without <code>-x-request-id</code>.</p>
+<p>Keep the existing runtime variant and persistent mounts, update its version suffix to <code>7.4.0</code>, validate your hooks, and test a representative signed request. The <a href="https://github.com/soulteary/webhook/blob/7.4.0/CHANGELOG.md">changelog</a> lists every change.</p>
 <h2 id="upgrade-from-733-to-734">Upgrade from 7.3.3 to 7.3.4</h2>
 <p>This is a dependency maintenance release with no hook or configuration migration. Keep the existing runtime variant and persistent mounts, update its version suffix to <code>7.3.4</code>, validate your hooks, and test a representative signed request. Redis-backed deployments should also verify shared rate-limit behavior.</p>
 <p>This guide helps you migrate from previous versions of Webhook or from the original webhook project to this fork.</p>
@@ -2262,7 +2296,7 @@
 <li>
 <p><strong>Download New Version:</strong>
    <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Download a versioned release archive</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">VERSION</span><span class="o">=</span><span class="m">7</span>.3.4
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">VERSION</span><span class="o">=</span><span class="m">7</span>.4.0
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>wget<span class="w"> </span><span class="s2">"https://github.com/soulteary/webhook/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/webhook_</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">_linux_amd64.tar.gz"</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>tar<span class="w"> </span>-xzf<span class="w"> </span><span class="s2">"webhook_</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">_linux_amd64.tar.gz"</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
