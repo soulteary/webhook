@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Documentation
+
+- Extend three 7.4.0 entries below with details that the released changelog omitted: the delay of asynchronous responses under saturation, the per-connection read buffer set by a non-default `-max-header-bytes`, and hook commands running in their own process group on Unix.
+
 ## 7.4.0 - 2026-11-13
 
 ### Security
@@ -20,10 +24,10 @@
 
 ### Changed
 
-- Asynchronous hooks reserve an execution slot before responding. When all slots stay busy for the acquire timeout the request gets `503` with `Retry-After` instead of a success response followed by a silently dropped execution.
+- Asynchronous hooks reserve an execution slot before responding. When all slots stay busy for the acquire timeout the request gets `503` with `Retry-After` instead of a success response followed by a silently dropped execution. The response to an asynchronous hook is sent once a slot is obtained, so under saturation it is delayed by up to the acquire timeout (`-hook-execution-timeout`, 5 seconds by default).
 - Hook files that load in the default (compatible) mode but contain unknown keys now log a startup/reload warning naming the ignored key.
 - The Redis health check sends a real `PING` instead of always reporting healthy.
-- `-max-header-bytes` takes effect when set to a non-default value; `-read-header-timeout-seconds` logs a warning because it cannot be applied.
+- `-max-header-bytes` takes effect when set to a non-default value; `-read-header-timeout-seconds` logs a warning because it cannot be applied. A non-default value is used as the read buffer size of every connection, so a large value raises the memory used per connection.
 - On shutdown the HTTP server and running async hooks finish before audit logging and tracing are closed.
 - Require Go 1.27.4 and update Fiber to v3.7.0. Refresh first-party kit dependencies (audit-kit v2.1.6, cli-kit v1.9.4, health-kit v4.0.7, i18n-kit v4.0.6, logger-kit v3.0.6, metrics-kit v3.0.6, middleware-kit v3.0.6, redis-kit v1.8.2, secure-kit v2.1.5, tracing-kit v2.0.4, version-kit v4.0.5) and their compatible transitive requirements.
 - Synchronize container, verification and migration examples with this release.
@@ -34,7 +38,7 @@
 - `parse-parameters-as-json` works for nested keys and no longer panics when the path crosses a non-object value.
 - Signature helpers no longer panic on non-string header values, the Scalr check no longer appends to the request body buffer, and `pass-file-to-command` no longer writes to the shared hook definition under concurrent requests.
 - Temp files created for `pass-file-to-command` are now removed when `command-working-directory` is not set.
-- When a hook times out, the whole process group is killed (Unix) and the executor slot is released even if leftover processes keep the output pipes open.
+- When a hook times out, the whole process group is killed (Unix) and the executor slot is released even if leftover processes keep the output pipes open. On Unix every hook command now runs in its own process group, whether or not it times out, so a signal sent to the process group of `webhook` no longer reaches hook commands. After a timeout or cancellation `webhook` waits up to 5 seconds for the output pipes to close.
 
 ### Upgrade from 7.3.4
 
