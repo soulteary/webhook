@@ -1,5 +1,17 @@
 # 迁移指南
 
+## 从 7.3.4 升级到 7.4.0
+
+Hook 定义无需迁移，但本次版本有三处默认行为变化，切换生产流量前请逐项确认：
+
+- Config UI：在配置 `-config-ui-token` / `CONFIG_UI_TOKEN` 之前，“保存到目录”不可用。配置后，保存接口要求在 `X-Config-UI-Token` 请求头中携带该令牌。
+- 反向代理之后的限流：只有请求来自 `-trusted-proxies` / `TRUSTED_PROXIES` 列出的地址时，才会采用 `X-Forwarded-For` / `X-Real-IP`。未配置时，所有请求共用代理地址的单 IP 配额。
+- 异步 Hook：所有执行槽位在获取超时时间内持续占满时，请求会收到带 `Retry-After` 的 `503`，而不再返回成功。发送方应当重试。
+
+还需检查依赖了本次被收紧行为的配置：按字符串前缀匹配、或通过符号链接指向目录之外的 `-allowed-command-paths` 目录条目；配置值为空的 `value` 匹配规则；`multipart/form-data` 请求的签名（现在按原始请求体计算）；以及未启用 `-x-request-id` 时由客户端传入的 `X-Request-Id`。
+
+保留原有容器变体和持久化挂载，仅将版本后缀更新为 `7.4.0`，验证 Hook 并测试代表性的签名请求。完整变更见 [CHANGELOG](https://github.com/soulteary/webhook/blob/7.4.0/CHANGELOG.md)。
+
 ## 从 7.3.3 升级到 7.3.4
 
 本次是依赖维护版本，无需迁移 Hook 或配置。保留原有容器变体和持久化挂载，仅将版本后缀更新为 `7.3.4`。切换生产流量前验证 Hook 并测试代表性的签名请求；使用 Redis 分布式限流的部署还应检查共享配额。
@@ -62,7 +74,7 @@
 2. **下载新版本:**
    ```bash
    # 下载带版本号的 Release 压缩包
-   VERSION=7.3.4
+   VERSION=7.4.0
    wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
    tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    

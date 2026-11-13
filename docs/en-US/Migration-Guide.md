@@ -1,5 +1,17 @@
 # Migration Guide
 
+## Upgrade from 7.3.4 to 7.4.0
+
+Hook definitions need no migration, but this release changes default behavior in three places. Review them before switching production traffic:
+
+- Config UI: "Save to directory" stops working until `-config-ui-token` / `CONFIG_UI_TOKEN` is configured. The save API then requires the token in the `X-Config-UI-Token` header.
+- Rate limiting behind a reverse proxy: `X-Forwarded-For` / `X-Real-IP` are honored only when the request comes from an address listed in `-trusted-proxies` / `TRUSTED_PROXIES`. Without it, all requests share the proxy's per-IP quota.
+- Asynchronous hooks: when all execution slots stay busy for the acquire timeout, the request receives `503` with `Retry-After` instead of a success response. Senders should retry.
+
+Also check configurations that depended on behavior this release closes: `-allowed-command-paths` directory entries that matched by string prefix or through a symlink leaving the directory, `value` match rules whose configured value is empty, signatures on `multipart/form-data` requests (now computed over the raw body), and a client-supplied `X-Request-Id` without `-x-request-id`.
+
+Keep the existing runtime variant and persistent mounts, update its version suffix to `7.4.0`, validate your hooks, and test a representative signed request. The [changelog](https://github.com/soulteary/webhook/blob/7.4.0/CHANGELOG.md) lists every change.
+
 ## Upgrade from 7.3.3 to 7.3.4
 
 This is a dependency maintenance release with no hook or configuration migration. Keep the existing runtime variant and persistent mounts, update its version suffix to `7.3.4`, validate your hooks, and test a representative signed request. Redis-backed deployments should also verify shared rate-limit behavior.
@@ -62,7 +74,7 @@ Hook JSON/YAML compatibility is tested and regressions are treated as bugs. Runt
 2. **Download New Version:**
    ```bash
    # Download a versioned release archive
-   VERSION=7.3.4
+   VERSION=7.4.0
    wget "https://github.com/soulteary/webhook/releases/download/${VERSION}/webhook_${VERSION}_linux_amd64.tar.gz"
    tar -xzf "webhook_${VERSION}_linux_amd64.tar.gz"
    
