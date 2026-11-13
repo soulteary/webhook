@@ -1,13 +1,13 @@
 # OwlMail 联动示例
 
-该示例将 [OwlMail](https://github.com/soulteary/owlmail) `v0.13.0` 与
+该示例将 [OwlMail](https://github.com/soulteary/owlmail) `v0.15.0` 与
 `soulteary/webhook` 连接起来。每封接收的邮件都会被渲染为 JSON，由 OwlMail
 使用 HMAC-SHA256 签名；WebHook 验证签名后，再通过一组固定环境变量将字段传给
 演示命令。
 
-OwlMail `v0.13.0` 为 Webhook 链路保留持久本地 outbox、可选 Redis 恢复队列与
+OwlMail `v0.15.0` 为 Webhook 链路保留持久本地 outbox、可选 Redis 恢复队列与
 防重放签名元数据。Compose Demo 固定使用
-`ghcr.io/soulteary/owlmail:0.13.0` 和 `soulteary/webhook:runner-7.3.4`，并显式
+`ghcr.io/soulteary/owlmail:0.15.0` 和 `soulteary/webhook:runner-7.3.4`，并显式
 保留 OwlMail 的安全默认并发值 `8`。
 
 接收端默认把无效 HMAC 作为触发规则求值错误（当前返回 HTTP 500），不会执行命令。
@@ -22,9 +22,9 @@ version 1 Webhook JSON、原始正文 HMAC、环境变量展开、字段映射�
 Docker HEALTHCHECK，或 `/app` 已加入 PATH。
 
 停止新 SMTP 流量及旧进程，备份完整邮件目录、Webhook outbox 和已配置的 Redis/S3 状态。
-先使用隔离副本并禁用真实出站地址演练 0.13.0，再检查就绪状态、历史邮件和附件、
+先使用隔离副本并禁用真实出站地址演练 0.15.0，再检查就绪状态、历史邮件和附件、
 新 SMTP 接收及对应签名 Webhook 命令后恢复流量。恢复可能继续待投递任务，仍采用至少一次
-投递语义。若使用 Relay，请阅读 [0.13.0 恢复变更](https://github.com/soulteary/owlmail/blob/v0.13.0/docs/zh-CN/Release-0.13.0.md)。
+投递语义。若使用 Relay，请阅读 [0.15.0 升级说明](https://github.com/soulteary/owlmail/blob/v0.15.0/docs/zh-CN/Release-0.15.0.md)。
 回退时停止新版，使用旧镜像、旧配置和升级前完整备份，不要让两个版本共用可写数据；
 恢复待投递任务前先核对下游接收记录。本 Demo 仍为临时部署，不配置 Redis 或持久化邮件。
 
@@ -64,7 +64,7 @@ Webhook 投递相对于 SMTP 接收是异步的，并采用“至少一次”语
 这个请求头。在当前固定的 `email.received` 合约中，应使用已签名正文里的
 `OWLMAIL_EVENT` 与 `OWLMAIL_EMAIL_ID` 组合生成幂等键；跨越不可信链路时，不得
 把未签名的投递 ID 作为唯一幂等键。示例中的内置规则验证旧版、仅覆盖正文的
-`X-OwlMail-Signature`。OwlMail 0.13.0 还会发送带时间戳和 nonce 的
+`X-OwlMail-Signature`。OwlMail 0.15.0 还会发送带时间戳和 nonce 的
 `X-OwlMail-Signature-V2`，但本示例不校验这组 V2 数据。
 
 示例未设置持久化邮件数据卷或 Redis 队列。为了让演示命令输出可见，它开启了 WebHook 调试

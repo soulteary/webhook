@@ -1,13 +1,13 @@
 # OwlMail integration example
 
-This example connects [OwlMail](https://github.com/soulteary/owlmail) `v0.13.0` to
+This example connects [OwlMail](https://github.com/soulteary/owlmail) `v0.15.0` to
 `soulteary/webhook`. Every accepted email is rendered as JSON, signed with
 HMAC-SHA256, verified by WebHook, and passed to a demo command through a fixed
 set of environment variables.
 
-OwlMail `v0.13.0` retains the durable local outbox, optional Redis-backed recovery,
+OwlMail `v0.15.0` retains the durable local outbox, optional Redis-backed recovery,
 and replay-aware signature metadata to the webhook pipeline. The Compose demo
-pins `ghcr.io/soulteary/owlmail:0.13.0` and
+pins `ghcr.io/soulteary/owlmail:0.15.0` and
 `soulteary/webhook:runner-7.3.4`, and keeps OwlMail's safe default delivery
 concurrency of `8` explicit.
 
@@ -26,11 +26,11 @@ assume the published image supplies a Docker HEALTHCHECK or puts `/app` in PATH.
 
 Stop incoming SMTP traffic and the old process before backing up the complete
 mail directory, webhook outbox and any configured Redis/S3 state. Rehearse
-0.13.0 against an isolated copy with real outbound destinations disabled, then
+0.15.0 against an isolated copy with real outbound destinations disabled, then
 check readiness, retained mail/attachments, a new SMTP receipt and its signed
 webhook command before reopening traffic. Recovery may resume pending work,
 and delivery remains at least once. If Relay is configured, review its
-[0.13.0 recovery changes](https://github.com/soulteary/owlmail/blob/v0.13.0/docs/en/Release-0.13.0.md).
+[0.15.0 upgrade notes](https://github.com/soulteary/owlmail/blob/v0.15.0/docs/en/Release-0.15.0.md).
 Rollback requires stopping the new process and restoring the pre-upgrade backup
 with the old image and configuration; do not share writable state between
 versions. Reconcile downstream receipts before resuming pending deliveries.
@@ -73,7 +73,7 @@ useful for log correlation, but neither OwlMail signature covers that header.
 For idempotency in this fixed `email.received` contract, derive the key from
 the signed body fields `OWLMAIL_EVENT` and `OWLMAIL_EMAIL_ID`; do not use the
 unsigned delivery ID as the sole key across an untrusted path. The bundled rule
-validates the legacy body-only `X-OwlMail-Signature`. OwlMail 0.13.0 also sends
+validates the legacy body-only `X-OwlMail-Signature`. OwlMail 0.15.0 also sends
 the replay-aware `X-OwlMail-Signature-V2`, timestamp, and nonce, but this
 example does not validate that V2 tuple.
 
