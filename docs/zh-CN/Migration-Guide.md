@@ -2,11 +2,14 @@
 
 ## 从 7.3.4 升级到 7.4.0
 
-Hook 定义无需迁移，但本次版本有三处默认行为变化，切换生产流量前请逐项确认：
+Hook 定义无需迁移，但本次版本有以下默认行为变化，切换生产流量前请逐项确认：
 
 - Config UI：在配置 `-config-ui-token` / `CONFIG_UI_TOKEN` 之前，“保存到目录”不可用。配置后，保存接口要求在 `X-Config-UI-Token` 请求头中携带该令牌。
 - 反向代理之后的限流：只有请求来自 `-trusted-proxies` / `TRUSTED_PROXIES` 列出的地址时，才会采用 `X-Forwarded-For` / `X-Real-IP`。未配置时，所有请求共用代理地址的单 IP 配额。
 - 异步 Hook：所有执行槽位在获取超时时间内持续占满时，请求会收到带 `Retry-After` 的 `503`，而不再返回成功。发送方应当重试。
+- 可信代理列表：`-trusted-proxies` / `TRUSTED_PROXIES` 中只要有一项不是 IP 地址或 CIDR 网段，整个列表都会被忽略，并在启动时输出警告，此时不会采用转发请求头。
+- Multipart 请求：`multipart/form-data` 请求体在解析前会完整读入内存，上限为 `-max-request-body-size`，以便签名规则覆盖原始请求体。请按可接受的最大上传调整该上限和进程内存。
+- 启用 Redis 时的健康与就绪检查：Redis 不响应 `PING` 期间，`/health` 和 `/readyz` 会报告不健康。依据就绪探针调度的编排系统会在 Redis 故障期间将实例移出服务。
 
 还需检查依赖了本次被收紧行为的配置：按字符串前缀匹配、或通过符号链接指向目录之外的 `-allowed-command-paths` 目录条目；配置值为空的 `value` 匹配规则；`multipart/form-data` 请求的签名（现在按原始请求体计算）；以及未启用 `-x-request-id` 时由客户端传入的 `X-Request-Id`。
 

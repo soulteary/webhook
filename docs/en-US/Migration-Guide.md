@@ -2,11 +2,14 @@
 
 ## Upgrade from 7.3.4 to 7.4.0
 
-Hook definitions need no migration, but this release changes default behavior in three places. Review them before switching production traffic:
+Hook definitions need no migration, but this release changes default behavior in the following places. Review them before switching production traffic:
 
 - Config UI: "Save to directory" stops working until `-config-ui-token` / `CONFIG_UI_TOKEN` is configured. The save API then requires the token in the `X-Config-UI-Token` header.
 - Rate limiting behind a reverse proxy: `X-Forwarded-For` / `X-Real-IP` are honored only when the request comes from an address listed in `-trusted-proxies` / `TRUSTED_PROXIES`. Without it, all requests share the proxy's per-IP quota.
 - Asynchronous hooks: when all execution slots stay busy for the acquire timeout, the request receives `503` with `Retry-After` instead of a success response. Senders should retry.
+- Trusted proxy list: one entry in `-trusted-proxies` / `TRUSTED_PROXIES` that is not an IP address or CIDR range causes the whole list to be ignored, with a startup warning. Forwarded headers are then not used.
+- Multipart requests: a `multipart/form-data` body is read fully into memory, up to `-max-request-body-size`, before it is parsed, so that signature rules can cover the raw body. Size the limit and the memory of the process for the largest upload you accept.
+- Health and readiness with Redis: when Redis is enabled, `/health` and `/readyz` report unhealthy while Redis does not answer `PING`. An orchestrator that acts on the readiness probe will take the instance out of rotation during a Redis outage.
 
 Also check configurations that depended on behavior this release closes: `-allowed-command-paths` directory entries that matched by string prefix or through a symlink leaving the directory, `value` match rules whose configured value is empty, signatures on `multipart/form-data` requests (now computed over the raw body), and a client-supplied `X-Request-Id` without `-x-request-id`.
 

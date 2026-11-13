@@ -41,6 +41,9 @@
 - Config UI "Save to directory" stops working until `-config-ui-token` is configured.
 - Senders of asynchronous hooks may now receive `503` under saturation and should retry.
 - Deployments behind a reverse proxy that use rate limiting must set `-trusted-proxies`, otherwise all requests share the proxy's per-IP quota.
+- One entry in `-trusted-proxies` that is not an IP address or CIDR range causes the whole list to be ignored, with a startup warning; forwarded headers are then not used.
+- `multipart/form-data` request bodies are read fully into memory, up to `-max-request-body-size`, before they are parsed, so that signature rules can cover the raw body. Size the limit and the memory of the process for the largest upload you accept.
+- With Redis enabled, `/health` and `/readyz` report unhealthy while Redis does not answer `PING`. An orchestrator that acts on the readiness probe will take the instance out of rotation during a Redis outage.
 
 Hook files keep their format. Retain your hook files, configuration, credentials and mounted data. Keep the same runtime variant (`core`, `runner` or `extended`) and change only its version suffix to `7.4.0`. The unprefixed tag continues to select the core variant, which does not contain a shell.
 
