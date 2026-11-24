@@ -158,7 +158,7 @@ func TestReleaseDockerfilesPreserveRuntimeBoundaries(t *testing.T) {
 	assert.NotContains(t, coreRuntime, "apk add")
 
 	runner := read("docker/goreleaser/Dockerfile.runner")
-	assert.Contains(t, runner, "FROM alpine:3.24.1")
+	assert.Contains(t, runner, "FROM alpine:3.24.4")
 	assert.Contains(t, runner, "bash")
 	for _, tool := range []string{"curl", "jq", "yq"} {
 		assert.NotContains(t, runner, tool)

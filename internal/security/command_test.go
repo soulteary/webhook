@@ -53,41 +53,46 @@ func TestResolveCommandCandidate(t *testing.T) {
 
 func TestValidateCommandPath(t *testing.T) {
 	cv := NewCommandValidator()
+	commandDir := t.TempDir()
+	commandPath := filepath.Join(commandDir, "command")
+	if err := os.WriteFile(commandPath, []byte("#!/bin/sh\nexit 0\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	t.Run("no whitelist", func(t *testing.T) {
-		err := cv.ValidateCommandPath("/usr/bin/ls")
+		err := cv.ValidateCommandPath(commandPath)
 		if err != nil {
 			t.Errorf("ValidateCommandPath() with no whitelist should allow all paths, got error: %v", err)
 		}
 	})
 
 	t.Run("with whitelist - directory", func(t *testing.T) {
-		cv.AllowedPaths = []string{"/usr/bin"}
-		err := cv.ValidateCommandPath("/usr/bin/ls")
+		cv.AllowedPaths = []string{commandDir}
+		err := cv.ValidateCommandPath(commandPath)
 		if err != nil {
 			t.Errorf("ValidateCommandPath() should allow path in whitelist directory, got error: %v", err)
 		}
 	})
 
 	t.Run("with whitelist - directory with trailing separator", func(t *testing.T) {
-		cv.AllowedPaths = []string{"/usr/bin/"}
-		err := cv.ValidateCommandPath("/usr/bin/ls")
+		cv.AllowedPaths = []string{commandDir + string(filepath.Separator)}
+		err := cv.ValidateCommandPath(commandPath)
 		if err != nil {
 			t.Errorf("ValidateCommandPath() should allow path in whitelist directory with trailing separator, got error: %v", err)
 		}
 	})
 
 	t.Run("with whitelist - exact file", func(t *testing.T) {
-		cv.AllowedPaths = []string{"/usr/bin/ls"}
-		err := cv.ValidateCommandPath("/usr/bin/ls")
+		cv.AllowedPaths = []string{commandPath}
+		err := cv.ValidateCommandPath(commandPath)
 		if err != nil {
 			t.Errorf("ValidateCommandPath() should allow exact file path, got error: %v", err)
 		}
 	})
 
 	t.Run("with whitelist - not allowed", func(t *testing.T) {
-		// 不用 /bin/sh：在 /bin 是 /usr/bin 符号链接的系统上，它的真实位置就在白名单内
-		cv.AllowedPaths = []string{"/usr/bin"}
+		// 使用独立临时目录，确保路径位于白名单之外。
+		cv.AllowedPaths = []string{commandDir}
 		err := cv.ValidateCommandPath(filepath.Join(t.TempDir(), "sh"))
 		if err == nil {
 			t.Error("ValidateCommandPath() should reject path not in whitelist")
@@ -95,8 +100,8 @@ func TestValidateCommandPath(t *testing.T) {
 	})
 
 	t.Run("relative path", func(t *testing.T) {
-		cv.AllowedPaths = []string{"/usr/bin"}
-		err := cv.ValidateCommandPath("ls")
+		cv.AllowedPaths = []string{commandDir}
+		err := cv.ValidateCommandPath("command")
 		if err == nil {
 			t.Error("ValidateCommandPath() should reject relative path when whitelist is set")
 		}
@@ -105,14 +110,14 @@ func TestValidateCommandPath(t *testing.T) {
 	t.Run("with invalid whitelist path", func(t *testing.T) {
 		cv.AllowedPaths = []string{"/nonexistent/path/that/does/not/exist"}
 		// 应该允许，因为无效路径会被警告但继续处理
-		err := cv.ValidateCommandPath("/usr/bin/ls")
+		err := cv.ValidateCommandPath(commandPath)
 		// 由于无效路径会被跳过，这个测试主要确保不会 panic
 		_ = err
 	})
 
 	t.Run("with multiple whitelist paths", func(t *testing.T) {
-		cv.AllowedPaths = []string{"/usr/bin", "/bin"}
-		err := cv.ValidateCommandPath("/bin/sh")
+		cv.AllowedPaths = []string{t.TempDir(), commandDir}
+		err := cv.ValidateCommandPath(commandPath)
 		if err != nil {
 			t.Errorf("ValidateCommandPath() should allow path in any whitelist directory, got error: %v", err)
 		}

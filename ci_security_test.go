@@ -35,8 +35,8 @@ func TestSecurityWorkflowFailsClosed(t *testing.T) {
 	assert.NotContains(t, contents, "write-all")
 	assert.NotContains(t, contents, "@master")
 	assert.NotContains(t, contents, "-no-fail")
-	assert.Contains(t, contents, "govulncheck@8fcedea455d953a0f8470e1f41420bb6f2e72665")
-	assert.Contains(t, contents, "gosec@7b1b5cebe007d62fb58eacb90fc571112939ec30")
+	assert.Contains(t, contents, "govulncheck@ef4cb2f7cae47fe3e21fc596455f694951867b29")
+	assert.Contains(t, contents, "gosec@5eb1d104ef85ff2c905c877eb600e8c1dee33a22")
 }
 
 func TestPrimaryTestWorkflowUsesRaceDetector(t *testing.T) {
@@ -50,9 +50,9 @@ func TestReleaseWorkflowPinsSupplyChainTools(t *testing.T) {
 	require.NoError(t, err)
 	contents := string(data)
 
-	assert.Contains(t, contents, "syft-version: v1.51.1")
-	assert.Contains(t, contents, "cosign-release: v3.1.3")
-	assert.Contains(t, contents, "version: v2.18.0")
+	assert.Contains(t, contents, "syft-version: v1.57.2")
+	assert.Contains(t, contents, "cosign-release: v3.1.5")
+	assert.Contains(t, contents, "version: v2.20.3")
 	assert.Contains(t, contents, "actions/attest@")
 	assert.Contains(t, contents, "id-token: write")
 	assert.Contains(t, contents, "attestations: write")

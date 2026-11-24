@@ -24,23 +24,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
 
       - name: Vulnerability scan
         # v1.1.4 predates Go 1.27 and panics while building SSA. Pin the first
         # upstream revision tested against the Go 1.27 toolchain instead.
-        run: go run golang.org/x/vuln/cmd/govulncheck@8fcedea455d953a0f8470e1f41420bb6f2e72665 ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@ef4cb2f7cae47fe3e21fc596455f694951867b29 ./...
 
       - name: Security scan
-        run: go run github.com/securego/gosec/v2/cmd/gosec@7b1b5cebe007d62fb58eacb90fc571112939ec30 -fmt sarif -out results.sarif -exclude=G204 ./...
+        run: go run github.com/securego/gosec/v2/cmd/gosec@5eb1d104ef85ff2c905c877eb600e8c1dee33a22 -fmt sarif -out results.sarif -exclude=G204 ./...
 
       - name: Upload SARIF file
         if: always() && hashFiles('results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@6f5948dfacef28e207b48d0905cf90c03365536d # v3
+        uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
         with:
           sarif_file: results.sarif
