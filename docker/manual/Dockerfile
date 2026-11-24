@@ -1,4 +1,4 @@
-FROM golang:1.27.4-bookworm AS builder
+FROM golang:1.27.4-bookworm@sha256:ce59b41415e2524ae99926fe1f37ce48ba8c194dcbd2a56a65436cdcefa2bd34 AS builder
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
@@ -17,7 +17,7 @@ RUN go build -ldflags "-w -s \
     -X github.com/soulteary/webhook/internal/version.BuildDate=${BUILD_DATE} \
     -X github.com/soulteary/webhook/internal/version.Branch=${BRANCH}" -o webhook .
 
-FROM debian:trixie-slim
+FROM debian:trixie-slim@sha256:8aa5a7bf5a1955bddbe7d74fcdd0b91ab30e74362a8b73af672b0481b35b44a0
 LABEL maintainer "soulteary <soulteary@gmail.com>"
 # 安装 CA 证书（用于 HTTPS 请求）
 RUN apt-get update && \
