@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 7.4.1 - 2026-11-26
+
+Rebuild the core, runner and extended variants with the current Go/network/container dependencies and current kits. middleware-kit v3.0.8 fixes retained Fiber rate-limit keys when request buffers are reused. Preserve hook formats, trusted-proxy rules, command allowlists and the existing runtime variant during upgrades.
+
+- github.com/soulteary/health-kit/v4 v4.0.9 → v4.0.10.
+- github.com/soulteary/metrics-kit/v3 v3.0.7 → v3.0.8.
+- github.com/soulteary/middleware-kit/v3 v3.0.7 → v3.0.8.
+- github.com/soulteary/i18n-kit/v4 v4.0.7 → v4.0.8.
+- github.com/soulteary/logger-kit/v3 v3.0.7 → v3.0.8.
+- github.com/soulteary/version-kit/v4 v4.0.6 → v4.0.7.
+
+
+
 ### Documentation
 
 - Extend three 7.4.0 entries below with details that the released changelog omitted: the delay of asynchronous responses under saturation, the per-connection read buffer set by a non-default `-max-header-bytes`, and hook commands running in their own process group on Unix.
