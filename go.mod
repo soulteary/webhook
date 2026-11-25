@@ -12,15 +12,15 @@ require (
 	github.com/redis/go-redis/v9 v9.24.0
 	github.com/soulteary/audit-kit/v2 v2.1.8
 	github.com/soulteary/cli-kit v1.9.4
-	github.com/soulteary/health-kit/v4 v4.0.9
-	github.com/soulteary/i18n-kit/v4 v4.0.7
-	github.com/soulteary/logger-kit/v3 v3.0.7
-	github.com/soulteary/metrics-kit/v3 v3.0.7
-	github.com/soulteary/middleware-kit/v3 v3.0.7
+	github.com/soulteary/health-kit/v4 v4.0.10
+	github.com/soulteary/i18n-kit/v4 v4.0.8
+	github.com/soulteary/logger-kit/v3 v3.0.8
+	github.com/soulteary/metrics-kit/v3 v3.0.8
+	github.com/soulteary/middleware-kit/v3 v3.0.8
 	github.com/soulteary/redis-kit v1.8.4
 	github.com/soulteary/secure-kit/v2 v2.1.5
 	github.com/soulteary/tracing-kit/v2 v2.0.5
-	github.com/soulteary/version-kit/v4 v4.0.6
+	github.com/soulteary/version-kit/v4 v4.0.7
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
