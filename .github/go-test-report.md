@@ -30,12 +30,12 @@
 | internal/logger | pass | 20 | 0 | 90.32% |
 | internal/metrics | pass | 9 | 0 | 69.88% |
 | internal/middleware | pass | 63 | 0 | 83.07% |
-| internal/monitor | pass | 20 | 0 | 45.08% |
+| internal/monitor | pass | 20 | 0 | 45.42% |
 | internal/openapi | pass | 7 | 0 | 92.68% |
 | internal/pidfile | pass | 7 | 0 | 88.89% |
 | internal/platform | pass | 16 | 0 | 61.40% |
 | internal/rules | pass | 34 | 0 | 89.18% |
-| internal/security | pass | 12 | 0 | 89.62% |
+| internal/security | pass | 12 | 0 | 88.68% |
 | internal/server | pass | 116 | 0 | 76.69% |
 | internal/tracing | pass | 15 | 0 | 94.12% |
 | internal/version | pass | 1 | 0 | 0.00% |
